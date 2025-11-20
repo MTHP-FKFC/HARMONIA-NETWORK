@@ -117,6 +117,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "analog_drift", "Analog Drift",
         juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f));
 
+    // === MOJO (Analog Imperfections) ===
+    // Variance: 0% (Perfect Digital) ... 100% (Broken Analog)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "variance", "Stereo Variance",
+        juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f));
+
+    // Noise: 0% (Silence) ... 100% (Vintage Tape)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "noise", "Noise Floor",
+        juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f));
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -269,6 +280,15 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     smoothedAnalogDrift.reset(osSampleRate, 0.05);
     smoothedAnalogDrift.setCurrentAndTargetValue(0.0f);
+
+    // === MOJO INITIALIZATION ===
+    stereoDrift.prepare(sampleRate); // LFO на обычном SR
+    noiseFloor.prepare(sampleRate);  // Шум на обычном SR
+
+    smoothedVariance.reset(sampleRate, 0.05);
+    smoothedNoise.reset(sampleRate, 0.05);
+    smoothedVariance.setCurrentAndTargetValue(0.0f);
+    smoothedNoise.setCurrentAndTargetValue(0.0f);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -314,6 +334,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // === ANALOG DRIFT ===
     float analogParam = *apvts.getRawParameterValue("analog_drift");
 
+    // === MOJO ===
+    float varianceParam = *apvts.getRawParameterValue("variance");
+    float noiseParam = *apvts.getRawParameterValue("noise");
+
     // === EMPHASIS FILTERS ===
     float tightenParam = *apvts.getRawParameterValue("tone_tighten");
     float smoothParam  = *apvts.getRawParameterValue("tone_smooth");
@@ -339,6 +363,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     // Analog drift parameter smoothing
     smoothedAnalogDrift.setTargetValue(analogParam / 100.0f);
+
+    // Mojo parameter smoothing
+    smoothedVariance.setTargetValue(varianceParam / 100.0f);
+    smoothedNoise.setTargetValue(noiseParam / 100.0f);
 
     // Network Control сглаживание
     smoothedNetDepth.setTargetValue(pDepth / 100.0f);
@@ -459,6 +487,14 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         // Вычисляем просадку питания (используем globalEnergy из выше)
         float starvationMult = psu.process(globalEnergy, driftAmount);
 
+        // === STEREO VARIANCE ===
+        // Получаем текущие значения variance и noise
+        float currentVariance = smoothedVariance.getNextValue();
+        float currentNoise = smoothedNoise.getNextValue();
+
+        // Вычисляем дрейф drive для L/R каналов
+        auto drift = stereoDrift.getDrift(currentVariance);
+
         // === NETWORK CONTROL PROCESSING (The Holy Trinity) ===
         float depth = smoothedNetDepth.getNextValue();
         float sens  = smoothedNetSens.getNextValue();
@@ -578,22 +614,26 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             float punchDriveL = heatDrive * punchModL;
             float punchDriveR = heatDrive * punchModR;
 
+            // 6. Применяем Stereo Variance к драйву
+            float finalDriveL = punchDriveL * drift.driveMultL;
+            float finalDriveR = punchDriveR * drift.driveMultR;
+
             // 5. Обработка через InteractionEngine
             float procL = 0.0f, procR = 0.0f;
 
             if (useMS)
             {
                 // M/S: Mid через A, Side через B
-                float pMid = InteractionEngine::processMorph(mid + dcBias, punchDriveL * bandDriveScale[band], controlSignal, config);
-                float pSide = InteractionEngine::processMorph(side + dcBias, punchDriveR * bandDriveScale[band], controlSignal, config);
+                float pMid = InteractionEngine::processMorph(mid + dcBias, finalDriveL * bandDriveScale[band], controlSignal, config);
+                float pSide = InteractionEngine::processMorph(side + dcBias, finalDriveR * bandDriveScale[band], controlSignal, config);
                 MSMatrix::decode(pMid, pSide, procL, procR);
             }
             else
             {
                 // Обычная L/R обработка
-                procL = InteractionEngine::processMorph(inputL + dcBias, punchDriveL * bandDriveScale[band], controlSignal, config);
+                procL = InteractionEngine::processMorph(inputL + dcBias, finalDriveL * bandDriveScale[band], controlSignal, config);
                 if (numCh > 1)
-                    procR = InteractionEngine::processMorph(inputR + dcBias, punchDriveR * bandDriveScale[band], controlSignal, config);
+                    procR = InteractionEngine::processMorph(inputR + dcBias, finalDriveR * bandDriveScale[band], controlSignal, config);
             }
 
             // === DC OFFSET COMPENSATION ===
@@ -628,6 +668,19 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
                 wetSampleR = postFilters[1].processSample(0, wetSampleR);
             }
         }
+
+        // === STEREO CROSSTALK ===
+        // Взаимопроникновение каналов для "склейки" стерео
+        stereoDrift.applyCrosstalk(wetSampleL, wetSampleR, currentVariance);
+
+        // === NOISE BREATHER ===
+        // Добавляем дышаний шум
+        float signalLevel = (std::abs(wetSampleL) + std::abs(wetSampleR)) * 0.5f;
+        float noiseSample = noiseFloor.getNoiseSample(signalLevel, currentNoise);
+
+        // Подмешиваем шум к обоим каналам
+        wetSampleL += noiseSample;
+        wetSampleR += noiseSample;
 
         // === PSYCHOACOUSTIC AUTO-GAIN ===
         // Скармливаем Dry (эталон) и Wet (грязный). Получаем множитель.

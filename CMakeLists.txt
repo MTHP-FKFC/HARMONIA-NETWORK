@@ -44,6 +44,8 @@ target_sources(Cohera_Saturator PRIVATE
     src/dsp/TransientDetector.h      # <-- NEW
     src/dsp/VoltageRegulator.h       # <-- NEW
     src/dsp/ThermalModel.h           # <-- NEW
+    src/dsp/StereoVariance.h         # <-- NEW
+    src/dsp/NoiseBreather.h          # <-- NEW
     src/FIR/fir_coeffs_multi_sr.h
     src/FIR/fir_minphase_128.h
     src/CoheraTypes.h

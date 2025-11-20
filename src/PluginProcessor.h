@@ -11,6 +11,8 @@
 #include "dsp/TransientDetector.h"
 #include "dsp/VoltageRegulator.h"
 #include "dsp/ThermalModel.h"
+#include "dsp/StereoVariance.h"
+#include "dsp/NoiseBreather.h"
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -139,6 +141,13 @@ private:
     std::array<std::array<ThermalModel, 2>, kNumBands> tubes;
     // Параметр аналогового дрейфа
     juce::SmoothedValue<float> smoothedAnalogDrift;
+
+    // === MOJO (Analog Imperfections) ===
+    StereoVariance stereoDrift; // Дрейф стерео каналов
+    NoiseBreather noiseFloor;   // Дышащий шум
+    // Сглаживатели для новых параметров
+    juce::SmoothedValue<float> smoothedVariance;
+    juce::SmoothedValue<float> smoothedNoise;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;
