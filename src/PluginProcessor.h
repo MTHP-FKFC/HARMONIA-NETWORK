@@ -4,9 +4,11 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
 #include "dsp/FilterBank.h"
-#include "dsp/Waveshaper.h" // Подключаем
-#include "dsp/Envelope.h"       // <-- NEW
-#include "network/NetworkManager.h" // <-- NEW
+#include "dsp/Waveshaper.h"
+#include "dsp/Envelope.h"
+#include "dsp/SidechainNormalizer.h" // <-- NEW
+#include "dsp/AutoGainStage.h"       // <-- NEW
+#include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
 {
@@ -79,13 +81,9 @@ private:
     juce::SmoothedValue<float> smoothedOutput;
     juce::LinearSmoothedValue<float> smoothedNetworkSignal;
 
-    // Для профессионального авто-гейна нам нужны детекторы с памятью (Envelope Followers)
-    // Один для входа (эталон), один для выхода (грязь)
-    EnvelopeFollower inputLevelFollower;
-    EnvelopeFollower outputLevelFollower;
-
-    // Сглаживатель самого коэффициента компенсации, чтобы он не дергался
-    juce::LinearSmoothedValue<float> smoothedCompensation;
+    // Заменяем россыпь переменных на объекты с единой ответственностью
+    SidechainNormalizer scNormalizer;
+    AutoGainStage autoGain;
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)

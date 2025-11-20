@@ -88,14 +88,9 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     smoothedNetworkSignal.reset(sampleRate, 0.02);
 
-    // 5. НОВОЕ: Настройка детекторов уровня для Авто-Гейна
-    // Быстрее (150мс), чтобы быстрее реакция на смену режимов
-    inputLevelFollower.reset(sampleRate);
-    outputLevelFollower.reset(sampleRate);
-
-    // Ускорим авто-гейн: было 0.1 (100мс), ставим 0.05 (50мс) - быстрее реакция
-    smoothedCompensation.reset(sampleRate, 0.05);
-    smoothedCompensation.setCurrentAndTargetValue(1.0f);
+    // 5. Настройка новых модулей
+    scNormalizer.prepare(sampleRate);
+    autoGain.prepare(sampleRate);
 
     envelope.reset(sampleRate); // Для сети
 }
@@ -126,28 +121,24 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     smoothedMix.setTargetValue(targetMix);
     smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
 
-    // --- 2. СЕТЬ ---
+    // --- 2. ANALYZE INPUT & NETWORK ---
+
+    autoGain.analyzeInput(buffer);
 
     currentGroup = (int)*apvts.getRawParameterValue("group_id");
     isReference  = (*apvts.getRawParameterValue("role") > 0.5f);
 
-    // Анализ ВХОДА для авто-гейна и сети (сумма L+R)
-    float inEnergy = 0.0f;
-    for (int ch = 0; ch < numCh; ++ch)
-        inEnergy += buffer.getMagnitude(ch, 0, numSamples);
-    inEnergy /= (float)numCh;
-
-    float currentInputLevel = inputLevelFollower.process(inEnergy);
-
     if (isReference) {
         // Гейт: если бочка тише -40dB, шлем ноль.
-        float gatedLevel = currentInputLevel;
-        if (currentInputLevel < 0.01f) gatedLevel = 0.0f;
+        float maxPeak = buffer.getMagnitude(0, numSamples);
+        float gatedLevel = maxPeak;
+        if (maxPeak < 0.01f) gatedLevel = 0.0f;
 
         NetworkManager::getInstance().updateGroupSignal(currentGroup, gatedLevel);
     }
-    float targetNetValue = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
-    smoothedNetworkSignal.setTargetValue(targetNetValue);
+
+    float rawNetVal = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
+    smoothedNetworkSignal.setTargetValue(rawNetVal);
 
     // Читаем какой режим выбрал юзер
     int modeIndex = *apvts.getRawParameterValue("mode"); // 0 или 1
@@ -182,60 +173,34 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     // Предварительно рассчитываем таргет компенсации на основе ПРЕДЫДУЩЕГО блока
     // (Это стандартная практика для Auto-Gain, чтобы избежать задержек в цепи управления)
-    // Берем последнее значение детектора выхода
-    float currentWetLevel = outputLevelFollower.getCurrentValue();
-    float targetComp = 1.0f;
-    if (currentWetLevel > 0.001f && currentInputLevel > 0.001f) {
-        targetComp = currentInputLevel / currentWetLevel;
-    }
-    targetComp = juce::jlimit(0.06f, 4.0f, targetComp);
-    smoothedCompensation.setTargetValue(targetComp);
 
     for (int i = 0; i < numSamples; ++i)
     {
-        // 5.1 Обновляем управляющие сигналы (ОДИН РАЗ для стерео-пары)
+        // А. Получаем "Умный" управляющий сигнал
+        // Вся логика адаптивного порога теперь внутри класса!
+        float rawNetSample = smoothedNetworkSignal.getNextValue();
+        float controlSignal = scNormalizer.process(rawNetSample);
+
+        // Б. Рассчитываем параметры для этого сэмпла
         float driveVal = smoothedDrive.getNextValue();
-        float netVal   = smoothedNetworkSignal.getNextValue();
-        float mixVal   = smoothedMix.getNextValue();
-        float outGain  = smoothedOutput.getNextValue();
-        float compVal  = smoothedCompensation.getNextValue();
+        float compVal  = autoGain.getNextValue();
 
-        // === FIX: EXPANDER (ОБОСТРИТЕЛЬ) ===
-        // Возводим в куб. Это убивает слабые сигналы (хвосты, шум)
-        // и выделяет только самые громкие пики удара.
-        // Было вялое "уууу", станет резкое "ТЫЩ!".
-        float sharpNetVal = netVal * netVal * netVal;
-        if (sharpNetVal < 0.01f) sharpNetVal = 0.0f;
-
-        // 2. Определяем Смесь (Morph)
-        // ghostAmount: 0.0 (обычный режим) -> 1.0 (полный эффект при ударе)
-        float ghostAmount = 0.0f;
-
-        // Базовый драйв из ручки
+        // Логика режимов теперь читается легко:
         float effectiveDrive = driveVal;
+        float ghostAmount = 0.0f;
 
         if (!isReference)
         {
-            if (modeIndex == 0) // INVERSE GRIME
-            {
-                if (sharpNetVal > 0.0f) {
-                    float duck = 1.0f - (sharpNetVal * 0.8f);
-                    effectiveDrive *= std::max(0.0f, duck);
-                }
+            if (modeIndex == 0) { // Ducking
+                effectiveDrive *= (1.0f - controlSignal);
             }
-            else if (modeIndex == 1) // GHOST HARMONICS
-            {
-                // Морфинг теперь управляется ОСТРЫМ сигналом
-                ghostAmount = sharpNetVal;
-
-                // Еще сильнее разгоняем драйв на пике
-                if (ghostAmount > 0.0f) {
-                    effectiveDrive *= (1.0f + ghostAmount * 2.0f); // x3 Drive на пике!
-                }
+            else if (modeIndex == 1) { // Ghost
+                ghostAmount = controlSignal;
+                effectiveDrive *= (1.0f + ghostAmount * 1.5f);
             }
         }
 
-        // 3. Обработка полос
+        // В. Сатурация полос
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
@@ -244,28 +209,17 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             for (int ch = 0; ch < numCh; ++ch)
             {
                 float x = bandBuffers[band].getSample(ch, i);
-
-                // Применяем драйв
                 float drivenX = x * effectiveDrive;
                 float processed = 0.0f;
 
-                if (modeIndex == 1 && !isReference && band <= 2) // Ghost только для Low/Mid полос (0, 1, 2)
+                if (modeIndex == 1 && !isReference && band <= 2)
                 {
-                    // МОРФИНГ: Смешиваем Tanh (обычный) и SineFold (злой)
-                    // Если ghostAmount = 0 -> 100% Tanh
-                    // Если ghostAmount = 1 -> 100% SineFold
-
                     float cleanTube = std::tanh(drivenX);
-
-                    // Тот самый SineFold код (инлайн для скорости)
                     float fold = std::sin(drivenX * 1.5f);
-
-                    // Линейная интерполяция (Lerp)
                     processed = cleanTube * (1.0f - ghostAmount) + fold * ghostAmount;
                 }
                 else
                 {
-                    // Обычный режим (всегда Tanh)
                     processed = std::tanh(drivenX);
                 }
 
@@ -274,33 +228,34 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             }
         }
 
-        // 5.4 Auto-Gain на Wet сигнал (применяем одинаково к L и R)
+        // Г. Применение автогейна к сэмплу (ДО микширования)
         wetSampleL *= compVal;
         if (outR) wetSampleR *= compVal;
 
-        // Собираем статистику для авто-гейна (абсолютные значения)
-        accumulatedWetEnergy += std::abs(wetSampleL);
-        if (outR) accumulatedWetEnergy += std::abs(wetSampleR);
+        // Д. Mix & Output
+        float mixVal = smoothedMix.getNextValue();
+        float outGain = smoothedOutput.getNextValue();
 
-        // 5.5 Mix & Output
-        // Left
         float finalL = dryL[i] * (1.0f - mixVal) + wetSampleL * mixVal;
         finalL *= outGain;
-        finalL = std::tanh(finalL); // Safety Limiter
+        finalL = std::tanh(finalL);
         outL[i] = finalL;
 
-        // Right
         if (outR) {
             float finalR = dryR[i] * (1.0f - mixVal) + wetSampleR * mixVal;
             finalR *= outGain;
-            finalR = std::tanh(finalR); // Safety Limiter
+            finalR = std::tanh(finalR);
             outR[i] = finalR;
         }
     }
 
-    // 6. Обновляем детектор выхода (для следующего блока)
-    float avgWetEnergy = accumulatedWetEnergy / (float)(numSamples * numCh);
-    outputLevelFollower.process(avgWetEnergy);
+    // 5. UPDATE AUTO-GAIN STATE
+    // Скармливаем результат в авто-гейн, чтобы он подготовился к следующему блоку
+    autoGain.updateGainState(buffer);
+
+    // Очистка мусора в неиспользуемых каналах
+    for (int i = numCh; i < getTotalNumOutputChannels(); ++i)
+        buffer.clear(i, 0, numSamples);
 
     // Очистка мусора в неиспользуемых каналах
     for (int i = numCh; i < getTotalNumOutputChannels(); ++i)
