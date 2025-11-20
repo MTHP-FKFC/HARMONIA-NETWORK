@@ -105,8 +105,8 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float mixParam   = *apvts.getRawParameterValue("mix");          // 0..100
     float outDb      = *apvts.getRawParameterValue("output_gain");
 
-    // Маппинг Drive: 0 -> 1.0 (clean), 100 -> 16.0 (+24dB dirt)
-    float targetDriveRatio = 1.0f + (driveParam * 0.15f);
+    // Маппинг Drive: 0 -> 0.0 (bypass), 100 -> 16.0 (+24dB dirt)
+    float targetDriveRatio = (driveParam / 100.0f) * 16.0f;
     // Маппинг Mix: 0..100 -> 0..1
     float targetMix = mixParam / 100.0f;
 
@@ -160,6 +160,14 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     float effectiveDrive = currentDrive * dynamicMod;
 
+    // Авто-гейн на основе физики (приблизительный, но быстрый)
+    // Tanh "съедает" энергию. Мы компенсируем её.
+    float makeUp = 1.0f;
+    if (effectiveDrive > 1.0f) makeUp = std::sqrt(effectiveDrive); // Возвращаем энергию
+
+    // Bypass сатурации при очень низком Drive
+    bool bypassSaturation = (effectiveDrive < 0.01f);
+
     for (int band = 0; band < kNumBands; ++band)
     {
         for (int ch = 0; ch < 2; ++ch)
@@ -167,11 +175,19 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             float* data = bandBuffers[band].getWritePointer(ch);
             for (int i = 0; i < numSamples; ++i)
             {
-                // Линейная зона tanh - это x < 0.5.
-                // Если effectiveDrive близок к 1.0, tanh(x) почти равен x.
-                // Это дает чистый звук на старте.
-                float x = data[i] * effectiveDrive;
-                data[i] = std::tanh(x);
+                float x = data[i];
+
+                if (!bypassSaturation)
+                {
+                    // Saturation
+                    x *= effectiveDrive;
+                    x = std::tanh(x);
+
+                    // Makeup Gain (возвращаем громкость после компрессии tanh)
+                    x *= makeUp;
+                }
+
+                data[i] = x;
             }
         }
     }
