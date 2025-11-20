@@ -165,6 +165,13 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         NetworkManager::getInstance().updateGroupSignal(currentGroup, maxPeak);
     }
 
+    // Читаем параметры режима
+    int modeIndex = *apvts.getRawParameterValue("mode");
+
+    // Читаем сетевой сигнал для модуляции (если мы Listener)
+    float rawNetVal = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
+    smoothedNetworkSignal.setTargetValue(rawNetVal);
+
     // --- 3. DRY COPY & SPLIT ---
 
     juce::AudioBuffer<float> dryBuffer;
@@ -203,6 +210,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float mix = smoothedMix.getNextValue();
         float outG = smoothedOutput.getNextValue();
         float dynAmount = smoothedDynamics.getNextValue();
+        float netVal = smoothedNetworkSignal.getNextValue();
 
         // Predictive Gain (Грубая компенсация внутри полос)
         // Оставляем это, чтобы сумматор не переполнялся в float.
@@ -210,19 +218,38 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float predComp = 1.0f / std::sqrt(std::max(1.0f, drv));
 
         // Если мы в режиме Blend (<15% драйва), отключаем компенсацию, чтобы не менять громкость Dry
-        if (blend < 1.0f) predComp = predComp * blend + 1.0f * (1.0f - blend); 
+        if (blend < 1.0f) predComp = predComp * blend + 1.0f * (1.0f - blend);
+
+        // Network Logic
+        float effectiveDrive = drv;
+        float ghostAmount = 0.0f;
+
+        if (!isReference) {
+            if (modeIndex == 0) effectiveDrive *= (1.0f - netVal * 0.8f); // Inverse Grime
+            else if (modeIndex == 1) {
+                ghostAmount = netVal;
+                effectiveDrive *= (1.0f + ghostAmount * 2.0f); // Ghost Harmonics boost
+            }
+        }
 
         float sumL = 0.0f;
         float sumR = 0.0f;
 
         for (int band = 0; band < kNumBands; ++band)
         {
-            float bDrive = drv * bandDriveScale[band];
+            float bDrive = effectiveDrive * bandDriveScale[band];
+
+            SaturationType type = SaturationType::WarmTube;
+            float shaperMix = blend;
+
+            if (ghostAmount > 0.01f && band <= 1) {
+                type = SaturationType::Rectifier;
+                shaperMix = std::max(blend, ghostAmount);
+            }
 
             // Left
             float rawL = bandBuffers[band].getSample(0, i);
-            // Сатурируем
-            float satL = std::tanh(rawL * bDrive);
+            float satL = shapers[band].processSample(rawL, bDrive, type, shaperMix);
             // === DYNAMICS RESTORATION ===
             // Сравниваем чистый rawL и грязный satL -> выравниваем satL
             float restoredL = dynamicsRestorers[band][0].process(rawL, satL, dynAmount);
@@ -231,7 +258,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             // Right
             if (dryR) {
                 float rawR = bandBuffers[band].getSample(1, i);
-                float satR = std::tanh(rawR * bDrive);
+                float satR = shapers[band].processSample(rawR, bDrive, type, shaperMix);
                 float restoredR = dynamicsRestorers[band][1].process(rawR, satR, dynAmount);
                 sumR += restoredR * predComp;
             }
