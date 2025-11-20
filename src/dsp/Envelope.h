@@ -9,8 +9,8 @@ public:
     void reset(double sampleRate)
     {
         // Настраиваем время релиза (спада).
-        // 300 мс - хороший стандарт для музыкального "дыхания".
-        releaseCoeff = std::exp(-1.0f / (0.3f * (float)sampleRate));
+        // 150 мс - быстрее для креативных эффектов (было 300мс)
+        releaseCoeff = std::exp(-1.0f / (0.15f * (float)sampleRate));
         currentValue = 0.0f;
     }
 

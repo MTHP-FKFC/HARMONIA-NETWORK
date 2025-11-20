@@ -89,12 +89,12 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     smoothedNetworkSignal.reset(sampleRate, 0.02);
 
     // 5. НОВОЕ: Настройка детекторов уровня для Авто-Гейна
-    // Ставим медленный релиз (300мс), чтобы громкость не "пампила"
+    // Быстрее (150мс), чтобы быстрее реакция на смену режимов
     inputLevelFollower.reset(sampleRate);
     outputLevelFollower.reset(sampleRate);
 
-    // Сглаживание самой компенсации (медленное, 100мс), чтобы не было резких скачков
-    smoothedCompensation.reset(sampleRate, 0.1);
+    // Ускорим авто-гейн: было 0.1 (100мс), ставим 0.05 (50мс) - быстрее реакция
+    smoothedCompensation.reset(sampleRate, 0.05);
     smoothedCompensation.setCurrentAndTargetValue(1.0f);
 
     envelope.reset(sampleRate); // Для сети
@@ -202,31 +202,26 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         // === МОЗГ (Центр принятия решений) ===
 
+        // Дефолтные значения для "спокойного" состояния
+        SaturationType targetType = SaturationType::WarmTube;
+        float targetMix = 1.0f; // 100% Wet (обычная сатурация)
+
         if (!isReference)
         {
-            if (modeIndex == 0) // MODE: INVERSE GRIME (Ducking)
+            if (modeIndex == 0) // INVERSE GRIME
             {
-                // Чем громче Reference, тем МЕНЬШЕ драйва у нас.
-                // Мы становимся "чище", чтобы уступить место.
-                float dynamicMod = 1.0f;
-                if (netVal > 0.0f) {
-                    dynamicMod = 1.0f - (netVal * 0.6f); // Depth 60%
-                    if (dynamicMod < 0.0f) dynamicMod = 0.0f;
-                }
-                effectiveDrive *= dynamicMod;
-                satType = SaturationType::WarmTube;
+                // Логика: ducking драйва
+                float ducking = 1.0f;
+                if (netVal > 0.0f) ducking = 1.0f - (netVal * 0.6f);
+                effectiveDrive *= ducking;
             }
-            else if (modeIndex == 1) // MODE: GHOST HARMONICS
+            else if (modeIndex == 1) // GHOST HARMONICS
             {
-                // Чем громче Reference, тем БОЛЬШЕ мы превращаемся в Rectifier.
-                // netVal (0..1) управляет миксом между Tube и Rectifier.
+                // Логика: мы всегда WarmTube, но когда бьет бочка (netVal > 0)
+                // мы подмешиваем Rectifier в низкие частоты.
 
-                // Базовый драйв не трогаем.
-                effectiveDrive = driveVal;
-
-                // Если Reference молчит -> мы обычный WarmTube
-                // Если Reference бьет -> мы плавно становимся Rectifier
-                // Но только для НИЗКИХ частот (см. ниже в цикле по полосам)
+                // Здесь effectiveDrive не трогаем, трогаем ТИП сатурации.
+                // Но это работает пополосно, см. ниже.
             }
         }
 
@@ -236,37 +231,52 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         for (int band = 0; band < kNumBands; ++band)
         {
-            // Определяем тип сатурации для конкретной полосы
-            SaturationType currentBandType = satType;
-            float currentBandMix = 1.0f;
+            // Локальные настройки для текущей полосы
+            SaturationType bandType = SaturationType::WarmTube;
+            float bandMix = 1.0f; // Mix между Dry(Input) и Wet(Distorted) ВНУТРИ шейпера
 
-            // Спец-логика для Ghost Harmonics
-            if (!isReference && modeIndex == 1)
+            if (!isReference && modeIndex == 1 && band <= 1) // Ghost Harmonics (Sub & Low)
             {
-                // Применяем эффект ТОЛЬКО к 1-й и 2-й полосе (Sub и Low)
-                if (band <= 1)
+                // Если бочка бьет (netVal высокий) -> переходим в Rectifier
+                // Делаем это плавно.
+                // Если netVal = 0 (тишина) -> WarmTube (обычный жир)
+                // Если netVal = 1 (удар) -> Rectifier (октавер)
+
+                // Простая эмуляция морфинга:
+                // Если netVal > порогового значения, считаем, что это Rectifier.
+                // А силу эффекта регулируем через mix.
+
+                if (netVal > 0.1f)
                 {
-                    // Если сеть активна -> подмешиваем Rectifier
-                    if (netVal > 0.1f) {
-                        currentBandType = SaturationType::Rectifier;
-                        // Сила эффекта зависит от громкости референса
-                        currentBandMix = std::min(1.0f, netVal * 1.5f);
-                    } else {
-                        currentBandType = SaturationType::WarmTube;
-                    }
+                    bandType = SaturationType::Rectifier;
+                    // Чем сильнее удар, тем больше "призрака" подмешиваем к чистому сигналу
+                    // Важно: мы миксуем Rectifier с Clean (входным), а не с Tanh.
+                    // Это дает более четкую атаку.
+                    bandMix = std::min(1.0f, netVal * 2.0f);
+                }
+                else
+                {
+                    // В покое - обычная сатурация
+                    bandType = SaturationType::WarmTube;
+                    bandMix = 1.0f;
                 }
             }
+            else
+            {
+                // Для остальных режимов и полос
+                bandType = SaturationType::WarmTube;
+                bandMix = 1.0f; // Всегда полная сатурация (сила регулируется effectiveDrive)
+            }
 
-            // Левый канал
+            // Левый
             float xL = bandBuffers[band].getSample(0, i);
-            // Шейпер с поддержкой микса и типа
-            float processedL = shapers[band].processSample(xL, effectiveDrive, currentBandType, currentBandMix);
+            float processedL = shapers[band].processSample(xL, effectiveDrive, bandType, bandMix);
             wetSampleL += processedL;
 
-            // Правый канал
+            // Правый
             if (outR) {
                 float xR = bandBuffers[band].getSample(1, i);
-                float processedR = shapers[band].processSample(xR, effectiveDrive, currentBandType, currentBandMix);
+                float processedR = shapers[band].processSample(xR, effectiveDrive, bandType, bandMix);
                 wetSampleR += processedR;
             }
         }
