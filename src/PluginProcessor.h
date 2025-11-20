@@ -4,6 +4,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
 #include "dsp/FilterBank.h"
+#include "dsp/Waveshaper.h" // Подключаем
 // #include "network/NetworkManager.h" // Подключим позже
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -59,6 +60,14 @@ private:
     static constexpr int kNumBands = 6;
     std::array<juce::AudioBuffer<float>, kNumBands> bandBuffers;
     std::vector<juce::AudioBuffer<float>*> bandBufferPtrs;
+
+    // === DSP: Saturation ===
+    // Один шейпер на каждую полосу (если захотим хранить состояние, например DC-фильтр)
+    std::array<Waveshaper, kNumBands> shapers;
+
+    // Сглаживание параметров (чтобы звук не "хрустел" при вращении ручки)
+    juce::SmoothedValue<float> smoothedDrive;
+    juce::SmoothedValue<float> smoothedOutput;
 
     // === 3. Network (Связь) ===
     // NetworkManager* network; // Синглтон, получим ссылку позже

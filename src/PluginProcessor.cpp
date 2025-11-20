@@ -61,6 +61,15 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
         // Сохраняем указатель для API FilterBank
         bandBufferPtrs[i] = &bandBuffers[i];
     }
+
+    // Настраиваем сглаживатели
+    // Время сглаживания: 0.02 сек (20 мс) - достаточно быстро, но плавно
+    smoothedDrive.reset(sampleRate, 0.02);
+    smoothedOutput.reset(sampleRate, 0.02);
+
+    // Начальные значения
+    smoothedDrive.setCurrentAndTargetValue(1.0f); // Drive = 1.0 (нет искажений)
+    smoothedOutput.setCurrentAndTargetValue(1.0f);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -80,16 +89,54 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear(i, 0, numSamples);
 
-    // --- DSP START ---
+    // --- 1. Читаем параметры (APVTS) ---
 
-    // 1. Разделение на полосы (Split)
-    // bandBufferPtrs передается как массив указателей (C-style API твоего класса)
+    // Получаем значение в Децибелах из слайдера (0..24 dB)
+    float driveDb = *apvts.getRawParameterValue("drive_master");
+    float outDb   = *apvts.getRawParameterValue("output_gain");
+
+    // Конвертируем dB в линейное усиление (Gain)
+    float targetDrive = juce::Decibels::decibelsToGain(driveDb);
+    float targetOut   = juce::Decibels::decibelsToGain(outDb);
+
+    // Обновляем сглаживатели
+    smoothedDrive.setTargetValue(targetDrive);
+    smoothedOutput.setTargetValue(targetOut);
+
+    // --- 2. DSP: Split (Кроссовер) ---
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
 
-    // 2. Обработка полос (Сатурация)
-    // ПОКА ПУСТО: Здесь будет магия в следующих этапах.
+    // --- 3. DSP: Saturation (Сатурация полос) ---
+    // Мы обрабатываем каждую полосу отдельно!
 
-    // 3. Сборка обратно (Sum)
+    // Для оптимизации: получим текущее значение drive один раз на блок
+    // (или можно делать smoothedDrive.getNextValue() внутри цикла для супер-плавности)
+    float currentDrive = smoothedDrive.getNextValue();
+    float currentOut   = smoothedOutput.getNextValue();
+
+    for (int band = 0; band < kNumBands; ++band)
+    {
+        // Проходим по каналам (L/R)
+        for (int ch = 0; ch < totalNumInputChannels; ++ch)
+        {
+            auto* channelData = bandBuffers[band].getWritePointer(ch);
+
+            for (int i = 0; i < numSamples; ++i)
+            {
+                // Берем сэмпл
+                float inSample = channelData[i];
+
+                // Сатурируем!
+                // Используем WarmTube (tanh) для начала
+                float processed = shapers[band].processSample(inSample, currentDrive, SaturationType::WarmTube);
+
+                // Записываем обратно
+                channelData[i] = processed;
+            }
+        }
+    }
+
+    // --- 4. DSP: Sum (Сборка) ---
     buffer.clear(); // Очищаем выход перед суммированием
 
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
@@ -99,11 +146,11 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         for (int band = 0; band < kNumBands; ++band)
         {
             const auto* bandData = bandBuffers[band].getReadPointer(ch);
-
-            // Аккумулируем (суммируем) полосы
-            // out = low + mid + high ...
             juce::FloatVectorOperations::add(outData, bandData, numSamples);
         }
+
+        // Применяем Output Gain ко всему миксу
+        juce::FloatVectorOperations::multiply(outData, currentOut, numSamples);
     }
 }
 

@@ -30,6 +30,7 @@ target_sources(Cohera_Saturator PRIVATE
 
     # DSP Module
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h
+    src/dsp/Waveshaper.h    # <--- ДОБАВИЛИ ЭТО
     src/FIR/fir_coeffs_multi_sr.h
     src/FIR/fir_minphase_128.h
     src/CoheraTypes.h
