@@ -23,12 +23,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    // Диапазон от -6 dB (чисто) до +24 dB (грязь)
-    // Дефолт ставим 0.0
-    layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("drive_master", 1), "Master Drive",
-        juce::NormalisableRange<float>(-6.0f, 24.0f, 0.1f), 0.0f));
-
     // Drive: от 0% до 100% (внутри замапим это на 0..24 dB или больше)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "drive_master", "Drive",
