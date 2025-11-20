@@ -282,6 +282,22 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
     }
 
+    // === 5. PRE-MIX NORMALIZATION ===
+    // Перед микшированием убедимся, что Wet и Dry имеют compatible уровни
+    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+    {
+        float wetRms = buffer.getRMSLevel(ch, 0, numSamples);
+        float dryRms = dryBuffer.getRMSLevel(ch, 0, numSamples);
+
+        // Если Wet намного громче Dry, уменьшим Wet для безопасного микширования
+        if (wetRms > dryRms * 2.0f && dryRms > 0.001f)
+        {
+            float normalizeFactor = (dryRms * 2.0f) / wetRms;
+            normalizeFactor = juce::jlimit(0.1f, 1.0f, normalizeFactor);
+            juce::FloatVectorOperations::multiply(buffer.getWritePointer(ch), normalizeFactor, numSamples);
+        }
+    }
+
     // === 5. MIX & OUTPUT ===
 
     float currentMix = smoothedMix.getNextValue(); smoothedMix.skip(numSamples-1);
