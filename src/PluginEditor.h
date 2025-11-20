@@ -5,7 +5,7 @@
 #include "ui/CoheraLookAndFeel.h"
 #include "ui/SpectrumVisor.h"
 #include "ui/ControlGroup.h"
-#include "ui/Components/InteractionMeter.h"
+// #include "ui/Components/InteractionMeter.h"
 
 class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -30,7 +30,7 @@ private:
 
     // Components
     SpectrumVisor spectrumVisor;
-    InteractionMeter interactionMeter; // Наш новый метр
+    // InteractionMeter interactionMeter; // Наш новый метр - временно отключен
 
     // Groups
     ControlGroup satGroup { "SATURATION CORE", CoheraUI::kOrangeNeon };

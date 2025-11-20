@@ -126,9 +126,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     setupKnob(entropySlider, "entropy", CoheraUI::kOrangeNeon);
     setupKnob(noiseSlider, "noise", CoheraUI::kRedNeon);
 
-    // Interaction Meter
-    interactionMeter.setAPVTS(p.getAPVTS());
-    addAndMakeVisible(interactionMeter);
+    // Interaction Meter - temporarily disabled
+    // interactionMeter.setAPVTS(p.getAPVTS());
+    // addAndMakeVisible(interactionMeter);
 
     // --- BOTTOM MIX ---
     setupKnob(mixSlider, "mix", CoheraUI::kTextBright);
@@ -286,9 +286,9 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(juce::Rectangle<int> are
     netModeSelector.setBounds(headerArea.withSizeKeepingCentre(headerArea.getWidth() - 20, 24));
 
     // Оставшееся делим: Слева ручки, Справа Метр
-    // Метр занимает 15% ширины справа
-    auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5, 10);
-    interactionMeter.setBounds(meterArea);
+    // Метр занимает 15% ширины справа - temporarily disabled
+    // auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5, 10);
+    // interactionMeter.setBounds(meterArea);
 
     // Ручки: 3 штуки треугольником или в ряд
     // Сделаем треугольник для разнообразия (Sens сверху, Depth/Smooth снизу)
