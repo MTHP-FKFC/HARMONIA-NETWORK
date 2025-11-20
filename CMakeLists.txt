@@ -48,6 +48,7 @@ target_sources(Cohera_Saturator PRIVATE
     src/dsp/NoiseBreather.h          # <-- NEW
     src/dsp/DeltaMonitor.h           # <-- NEW
     src/dsp/StereoFocus.h            # <-- NEW
+    src/dsp/HarmonicEntropy.h        # <-- NEW
     src/FIR/fir_coeffs_multi_sr.h
     src/FIR/fir_minphase_128.h
     src/CoheraTypes.h

@@ -138,6 +138,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
     layout.add(std::make_unique<juce::AudioParameterBool>(
         "delta", "Delta Listen", false));
 
+    // === HARMONIC ENTROPY ===
+    // Entropy: 0% (Digital) ... 100% (Broken Analog)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "entropy", "Harmonic Entropy",
+        juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f));
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -303,6 +309,16 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     // === PROFESSIONAL TOOLS ===
     smoothedFocus.reset(sampleRate, 0.05);
     smoothedFocus.setCurrentAndTargetValue(0.0f);
+
+    // === HARMONIC ENTROPY ===
+    for (int b = 0; b < kNumBands; ++b) {
+        for (int ch = 0; ch < 2; ++ch) {
+            entropyModules[b][ch].prepare(osSampleRate);
+        }
+    }
+
+    smoothedEntropy.reset(sampleRate, 0.05);
+    smoothedEntropy.setCurrentAndTargetValue(0.0f);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -356,6 +372,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float focusParam = *apvts.getRawParameterValue("focus");
     bool deltaMode = *apvts.getRawParameterValue("delta") > 0.5f;
 
+    // === HARMONIC ENTROPY ===
+    float entropyParam = *apvts.getRawParameterValue("entropy");
+
     // === EMPHASIS FILTERS ===
     float tightenParam = *apvts.getRawParameterValue("tone_tighten");
     float smoothParam  = *apvts.getRawParameterValue("tone_smooth");
@@ -389,6 +408,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Professional tools
     smoothedFocus.setTargetValue(focusParam);
     deltaMonitor.setActive(deltaMode);
+
+    // Harmonic entropy
+    smoothedEntropy.setTargetValue(entropyParam / 100.0f);
 
     // Network Control сглаживание
     smoothedNetDepth.setTargetValue(pDepth / 100.0f);
@@ -543,6 +565,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         auto msScalers = stereoFocus.getDriveScalars(focusVal);
         bool processInMS = (std::abs(focusVal) > 1.0f);
 
+        // === HARMONIC ENTROPY ===
+        float entropyAmount = smoothedEntropy.getNextValue();
+
         // === PUNCH (TRANSIENT CONTROL) ===
         // Детекция транзиентов на входном сигнале
         float inL = upsampledBlock.getChannelPointer(0)[i];
@@ -624,9 +649,14 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             float biasL = tubes[band][0].process(xL) * driftAmount;
             float biasR = tubes[band][1].process(xR) * driftAmount;
 
+            // === HARMONIC ENTROPY ===
+            // Добавляем стохастический дрейф смещения
+            float entropyDriftL = entropyModules[band][0].process(entropyAmount);
+            float entropyDriftR = entropyModules[band][1].process(entropyAmount);
+
             // Применяем bias к входным сэмплам
-            float inputL = xL + biasL;
-            float inputR = xR + biasR;
+            float inputL = xL + biasL + entropyDriftL;
+            float inputR = xR + biasR + entropyDriftR;
 
             if (modeIndex == 3 && !isReference && controlSignal > 0.0f)
             {
@@ -677,10 +707,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             }
 
             // === DC OFFSET COMPENSATION ===
-            // Убираем тепловой bias после сатурации (только для WarmTube/Asymmetric)
+            // Убираем тепловой и entropy bias после сатурации (только для WarmTube/Asymmetric)
             if (userType == SaturationType::WarmTube || userType == SaturationType::Asymmetric) {
-                procL -= std::tanh(biasL * punchDriveL * bandDriveScale[band]);
-                if (numCh > 1) procR -= std::tanh(biasR * punchDriveR * bandDriveScale[band]);
+                procL -= std::tanh((biasL + entropyDriftL) * punchDriveL * bandDriveScale[band]);
+                if (numCh > 1) procR -= std::tanh((biasR + entropyDriftR) * punchDriveR * bandDriveScale[band]);
             }
 
             // 5. Predictive Gain

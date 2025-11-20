@@ -15,6 +15,7 @@
 #include "dsp/NoiseBreather.h"
 #include "dsp/DeltaMonitor.h"
 #include "dsp/StereoFocus.h"
+#include "dsp/HarmonicEntropy.h"
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -155,6 +156,11 @@ private:
     DeltaMonitor deltaMonitor;  // Delta monitoring
     StereoFocus stereoFocus;    // M/S focus control
     juce::SmoothedValue<float> smoothedFocus; // Focus parameter smoothing
+
+    // === HARMONIC ENTROPY ===
+    // Генераторы хаоса [Band][Channel] - по одному на полосу/канал
+    std::array<std::array<HarmonicEntropy, 2>, kNumBands> entropyModules;
+    juce::SmoothedValue<float> smoothedEntropy;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;
