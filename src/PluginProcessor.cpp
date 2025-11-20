@@ -150,6 +150,16 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // 3.1 Split
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
 
+    // 3.1.5 Измерим RMS каждой полосы ДО сатурации для per-band compensation
+    std::vector<std::vector<float>> bandInputRms(kNumBands, std::vector<float>(getTotalNumInputChannels()));
+    for (int band = 0; band < kNumBands; ++band)
+    {
+        for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+        {
+            bandInputRms[band][ch] = bandBuffers[band].getRMSLevel(ch, 0, numSamples);
+        }
+    }
+
     // 3.2 Saturate
     float currentDrive = smoothedDrive.getNextValue(); smoothedDrive.skip(numSamples-1);
     float netVal = smoothedNetworkSignal.getNextValue(); smoothedNetworkSignal.skip(numSamples-1);
@@ -176,21 +186,38 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
             {
                 float* data = bandBuffers[band].getWritePointer(ch);
-                for (int i = 0; i < numSamples; ++i)
-                {
-                    float x = data[i];
 
-                    if (!bypassSaturation)
+                // Per-band RMS compensation
+                float bandInRms = bandInputRms[band][ch];
+                float bandComp = 1.0f;
+
+                // Сначала применяем сатурацию и измеряем результат
+                if (!bypassSaturation)
+                {
+                    for (int i = 0; i < numSamples; ++i)
                     {
-                        // Saturation
+                        float x = data[i];
                         x *= effectiveDrive;
                         x = std::tanh(x);
-
-                        // Makeup Gain (возвращаем громкость после компрессии tanh)
-                        x *= makeUp;
+                        x *= makeUp; // Global makeup
+                        data[i] = x;
                     }
 
-                    data[i] = x;
+                    // Теперь измеряем RMS после сатурации для этой полосы
+                    float bandOutRms = bandBuffers[band].getRMSLevel(ch, 0, numSamples);
+
+                    // Компенсация для поддержания уровня полосы
+                    if (bandOutRms > 0.0001f && bandInRms > 0.0001f)
+                    {
+                        bandComp = bandInRms / bandOutRms;
+                        bandComp = juce::jlimit(0.1f, 4.0f, bandComp);
+                    }
+                }
+
+                // Применяем per-band compensation
+                if (bandComp != 1.0f)
+                {
+                    juce::FloatVectorOperations::multiply(data, bandComp, numSamples);
                 }
             }
         }
