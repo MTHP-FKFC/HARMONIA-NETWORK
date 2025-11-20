@@ -228,27 +228,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
     }
 
-    // === 4. AUTO-GAIN (RMS MATCHING) ===
-
-    // Измеряем RMS для каждого канала после сатурации и применяем компенсацию
-    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
-    {
-        float outRms = buffer.getRMSLevel(ch, 0, numSamples);
-        float inRms = inputRmsLevels[ch];
-
-        // Защита от деления на ноль
-        if (outRms < 0.0001f) outRms = 0.0001f;
-        if (inRms < 0.0001f) inRms = outRms; // Если тишина на входе, не бустим шум
-
-        // Вычисляем коэффициент компенсации для этого канала
-        float targetComp = inRms / outRms;
-
-        // Ограничиваем компенсацию, чтобы не было взрыва (макс +12dБ, мин -24dБ)
-        targetComp = juce::jlimit(0.1f, 4.0f, targetComp);
-
-        // Применяем компенсацию только к этому каналу
-        juce::FloatVectorOperations::multiply(buffer.getWritePointer(ch), targetComp, numSamples);
-    }
+    // Skip final RMS compensation - rely only on per-band compensation
 
     // --- 5. Sum ---
     buffer.clear();
@@ -278,21 +258,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
     }
 
-    // === 5. PRE-MIX NORMALIZATION ===
-    // Перед микшированием убедимся, что Wet и Dry имеют compatible уровни
-    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
-    {
-        float wetRms = buffer.getRMSLevel(ch, 0, numSamples);
-        float dryRms = dryBuffer.getRMSLevel(ch, 0, numSamples);
-
-        // Если Wet намного громче Dry, уменьшим Wet для безопасного микширования
-        if (wetRms > dryRms * 2.0f && dryRms > 0.001f)
-        {
-            float normalizeFactor = (dryRms * 2.0f) / wetRms;
-            normalizeFactor = juce::jlimit(0.1f, 1.0f, normalizeFactor);
-            juce::FloatVectorOperations::multiply(buffer.getWritePointer(ch), normalizeFactor, numSamples);
-        }
-    }
+    // Skip pre-mix normalization - let per-band compensation handle levels
 
     // === 5. MIX & OUTPUT ===
 
