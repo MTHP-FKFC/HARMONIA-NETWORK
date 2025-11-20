@@ -260,7 +260,7 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> 
     // Drive Knob - Главный герой, по центру левой части
     // Занимает 55% ширины (чуть меньше, чтобы влезли селекторы)
     auto driveArea = topHalf.removeFromLeft(topHalf.getWidth() * 0.55f);
-    driveSlider.setBounds(driveArea.reduced(5)); // reduced, чтобы не касаться краев
+    driveSlider.setBounds(driveArea.withSizeKeepingCentre(150, 150)); // Fixed 150px size
 
     // Справа от Драйва: Control Bar (Algo + Cascade)
     auto controlBar = topHalf;
