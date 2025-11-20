@@ -6,6 +6,7 @@
 #include "dsp/FilterBank.h"
 #include "dsp/Waveshaper.h"
 #include "dsp/MathSaturator.h"
+#include "dsp/DCBlocker.h"
 #include "dsp/Envelope.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
@@ -45,6 +46,10 @@ public:
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 0.0; }
 
+    // === GAIN REDUCTION METER ACCESS ===
+    // Для визуализации в Editor
+    const std::array<float, 6>& getGainReduction() const { return gainReduction; }
+
     // Кол-во программ
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
@@ -76,6 +81,10 @@ private:
     // === DSP: Divine Math Saturation ===
     // Математические сатураторы с фундаментальными константами Вселенной
     std::array<MathSaturator, kNumBands> mathShapers;
+
+    // === DC BLOCKERS ===
+    // Убивают постоянный ток от асимметричных алгоритмов ([Band][Channel])
+    std::array<std::array<DCBlocker, 2>, kNumBands> dcBlockers;
 
     // === ПРОФЕССИОНАЛЬНЫЙ ГЕЙН-СТЕЙДЖИНГ ===
 
@@ -162,6 +171,14 @@ private:
     // Генераторы хаоса [Band][Channel] - по одному на полосу/канал
     std::array<std::array<HarmonicEntropy, 2>, kNumBands> entropyModules;
     juce::SmoothedValue<float> smoothedEntropy;
+
+    // === GAIN REDUCTION METER ===
+    // Для визуализации взаимодействия (Network, Ducking, Ghost)
+    std::array<float, kNumBands> gainReduction; // 1.0 = no change, <1.0 = ducked, >1.0 = boosted
+
+    // === QUALITY MODE ===
+    // Для экономии CPU в режиме Low Quality
+    bool isHighQuality = true; // true = 4x oversampling, false = direct processing
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;

@@ -156,6 +156,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
             "Super Ellipse (Punch)"
         }, 0));
 
+    // === QUALITY MODE ===
+    // Eco = без оверсемплинга, Pro = 4x с линейной фазой
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "quality", "Quality",
+        juce::StringArray{"Eco (Low CPU)", "Pro (High Quality)"}, 1)); // Default Pro
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -333,6 +339,18 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     smoothedEntropy.reset(sampleRate, 0.05);
     smoothedEntropy.setCurrentAndTargetValue(0.0f);
+
+    // === DC BLOCKERS INITIALIZATION ===
+    for (int b = 0; b < kNumBands; ++b) {
+        for (int ch = 0; ch < 2; ++ch) {
+            dcBlockers[b][ch].reset();
+        }
+    }
+
+    // === GAIN REDUCTION METER ===
+    for (int i = 0; i < kNumBands; ++i) {
+        gainReduction[i] = 1.0f; // Начально без изменений
+    }
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -392,6 +410,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // === DIVINE MATH MODE ===
     int mathModeIdx = *apvts.getRawParameterValue("math_mode");
     MathMode currentMathMode = static_cast<MathMode>(mathModeIdx);
+
+    // === QUALITY MODE ===
+    int qualityIdx = *apvts.getRawParameterValue("quality");
+    isHighQuality = (qualityIdx == 1); // 1 = Pro, 0 = Eco
 
     // === EMPHASIS FILTERS ===
     float tightenParam = *apvts.getRawParameterValue("tone_tighten");
@@ -650,6 +672,11 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             if (currentMathMode == MathMode::PiFold)
                 predComp *= 1.2f;
 
+            // === GAIN REDUCTION METER ===
+            // Сохраняем итоговое изменение гейна для визуализации
+            // Это учитывает network modulation, heat, punch и все эффекты
+            gainReduction[band] = heatDrive * predComp; // Итоговый effective drive
+
             wetSampleL += combinedL * predComp;
             wetSampleR += combinedR * predComp;
         }
@@ -693,6 +720,11 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         // Применяем "умный" гейн
         wetSampleL *= psychoScale;
         wetSampleR *= psychoScale;
+
+        // === DC BLOCKERS ===
+        // Убиваем постоянный ток от асимметричных алгоритмов
+        wetSampleL = dcBlockers[0][0].process(wetSampleL);
+        wetSampleR = dcBlockers[0][1].process(wetSampleR);
 
         // === MIX & OUTPUT ===
         float outL_val = dryL_s * (1.0f - mixVal) + wetSampleL * mixVal;
