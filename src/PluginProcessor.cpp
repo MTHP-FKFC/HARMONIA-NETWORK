@@ -203,19 +203,28 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
     }
 
-    // 3.4 Final Per-Channel Level Compensation
-    // Компенсируем разницу уровней между каналами после сатурации
+    // 3.4 Final Level Compensation
+    // Для моно сигналов (типа kick) делаем одинаковую компенсацию для обоих каналов
+    float avgInputRms = 0.0f;
+    float avgWetRms = 0.0f;
+
     for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
     {
-        float wetRms = buffer.getRMSLevel(ch, 0, numSamples);
-        float inRms = inputRmsLevels[ch];
+        avgInputRms += inputRmsLevels[ch];
+        avgWetRms += buffer.getRMSLevel(ch, 0, numSamples);
+    }
+    avgInputRms /= getTotalNumInputChannels();
+    avgWetRms /= getTotalNumInputChannels();
 
-        if (wetRms > 0.0001f && inRms > 0.0001f)
+    // Применяем одинаковую компенсацию ко всем каналам
+    if (avgWetRms > 0.0001f && avgInputRms > 0.0001f)
+    {
+        float globalComp = avgInputRms / avgWetRms;
+        globalComp = juce::jlimit(0.7f, 1.4f, globalComp); // Мягкий диапазон
+
+        for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
         {
-            // Компенсируем уровень канала, чтобы он соответствовал входному
-            float channelComp = inRms / wetRms;
-            channelComp = juce::jlimit(0.5f, 2.0f, channelComp); // Ограничиваем диапазон
-            juce::FloatVectorOperations::multiply(buffer.getWritePointer(ch), channelComp, numSamples);
+            juce::FloatVectorOperations::multiply(buffer.getWritePointer(ch), globalComp, numSamples);
         }
     }
 
