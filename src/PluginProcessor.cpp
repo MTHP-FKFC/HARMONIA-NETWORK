@@ -81,6 +81,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
     layout.add(std::make_unique<juce::AudioParameterBool>(
         "cascade", "Cascade (Output Limiter)", false));
 
+    // === NETWORK REACTION ===
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "net_reaction", "Network Reaction",
+        juce::StringArray{
+            "Clean Gain",     // 0: Просто громкость
+            "Drive Boost",    // 1: Разгон алгоритма
+            "Rectify",        // 2: Гармоники (Ghost)
+            "Bit Crush"       // 3: Глитч (Digital)
+        }, 1)); // Default Drive Boost
+
     // === EMPHASIS FILTERS (Tone Shaping) ===
 
     // Tighten (Pre HPF): 10 Hz (выкл) ... 1000 Hz

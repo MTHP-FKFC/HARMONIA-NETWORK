@@ -30,6 +30,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     // --- VISOR ---
     addAndMakeVisible(spectrumVisor);
 
+    // --- ENERGY LINK ---
+    addAndMakeVisible(energyLink);
+
     // --- SATURATION CORE (Left) ---
     addAndMakeVisible(satGroup);
 
@@ -104,6 +107,11 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     }, 1);
     netModeSelector.setSelectedId(1);
     netModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "mode", netModeSelector);
+
+    // Net Saturation Selector
+    addAndMakeVisible(netSatSelector);
+    netSatSelector.addItemList({"Clean Gain", "Drive Boost", "Rectify", "Bit Crush"}, 1);
+    netSatAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "net_reaction", netSatSelector);
 
     // Network Knobs
     setupKnob(netSensSlider, "net_sens", "SENS", CoheraUI::kCyanNeon);
@@ -224,12 +232,17 @@ void CoheraSaturatorAudioProcessorEditor::resized()
     // 🎛️ MAIN PANELS (Оставшееся место по центру)
     // ==============================================================================
 
-    // Делим пополам с отступом посередине
-    auto leftPanel = area.removeFromLeft(area.getWidth() / 2).reduced(4, 0); // Чуть сужаем для gap
-    auto rightPanel = area.reduced(4, 0); // Оставшееся справа
+    // Делим на 3 части: Left Panel | Link (Gap) | Right Panel
+    auto centerGap = area.getWidth() * 0.08f; // 8% ширины на связку
+    auto panelWidth = (area.getWidth() - centerGap) / 2;
+
+    auto leftPanel = area.removeFromLeft(panelWidth).reduced(4, 0);
+    auto linkPanel = area.removeFromLeft(centerGap); // Место для красоты
+    auto rightPanel = area.reduced(4, 0);
 
     // Устанавливаем границы Групп (Рамки)
     satGroup.setBounds(leftPanel);
+    energyLink.setBounds(linkPanel.reduced(0, 20)); // Чуть отступ сверху/снизу
     netGroup.setBounds(rightPanel);
 
     // Заполняем внутренности групп (с учетом отступа под заголовок группы)
@@ -284,9 +297,15 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> 
 // --- ХЕЛПЕР: Раскладка Сети ---
 void CoheraSaturatorAudioProcessorEditor::layoutNetwork(juce::Rectangle<int> area)
 {
-    // Верх: Режим сети (Mode)
+    // 1. HEADER: Interaction Mode (Duck, Ghost...)
     auto headerArea = area.removeFromTop(40);
     netModeSelector.setBounds(headerArea.withSizeKeepingCentre(headerArea.getWidth() - 20, 24));
+
+    // 2. SUB-HEADER: Reaction Type (Новый селектор!)
+    // Размещаем его под режимом, чтобы было логично: "Режим Ghost" -> "Тип Rectify"
+    auto subHeader = area.removeFromTop(30);
+
+    netSatSelector.setBounds(subHeader.withSizeKeepingCentre(120, 20)); // Чуть меньше основного
 
     // Оставшееся делим: Слева ручки, Справа Метр
     // Метр занимает 15% ширины справа - temporarily disabled

@@ -51,7 +51,8 @@ namespace CoheraUI {
 
             // --- 2. ГЕОМЕТРИЯ ---
             float toAngle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
-            radius -= 10.0f; // <--- ВАЖНО: Отступ внутрь на 10px со всех сторон для текста
+            // Уменьшаем высоту bounds для самой ручки, чтобы оставить место тексту снизу
+            radius -= 11.0f; // Отступ для текста (было 10, теперь 11 для большего места)
             float arcRadius = radius * 0.80f; // Чуть меньше, чтобы влез текст
             float knobRadius = radius * 0.60f;
 
@@ -102,31 +103,21 @@ namespace CoheraUI {
             // ✍️ ТИПОГРАФИКА "DESIGNER 20 YEARS EXP"
             // ====================================================================
 
-            // 1. НАЗВАНИЕ ПАРАМЕТРА (Снизу)
-            // Прием: All Caps + Wide Tracking (разрядка) + Small Size + Dim Color
-            juce::Font nameFont("Verdana", 10.0f, juce::Font::bold);
-            nameFont.setExtraKerningFactor(0.15f); // << Секрет дорогого текста
-
-            juce::String name = slider.getName().toUpperCase();
-
-            // Очищаем имя от префиксов (tone_tighten -> TIGHTEN)
-            if (name.contains("_")) name = name.substring(name.indexOf("_") + 1);
-            if (name == "SENS") name = "SENSITIVITY"; // Полные имена выглядят дороже
-
-            g.setFont(nameFont);
+            // 1. НАЗВАНИЕ ПАРАМЕТРА (СНИЗУ)
+            g.setFont(juce::Font("Verdana", 11.0f, juce::Font::bold)); // Чуть крупнее
             g.setColour(kTextDim);
 
-            // Позиционирование текста (Имени)
-            // Рисуем НИЖЕ круга, используя bounds
-            juce::Rectangle<int> nameRect(
-                bounds.getX(),
-                center.y + radius + 5.0f, // 5px от нижнего края круга
-                bounds.getWidth(),
-                20
-            );
+            // Увеличиваем высоту под текст до 20px
+            int textH = 20;
+            // Рисуем от самого низа bounds
+            juce::Rectangle<int> nameRect(x - 5, y + height - textH, width + 10, textH);
 
-            g.setFont(nameFont);
-            g.drawFittedText(name, nameRect, juce::Justification::centredTop, 1);
+            juce::String name = slider.getName().toUpperCase();
+            if (name.contains("TONE_")) name = name.replace("TONE_", "");
+            if (name.contains("NET_")) name = name.replace("NET_", "");
+            if (name.contains("ANALOG_")) name = name.replace("ANALOG_", "");
+
+            g.drawFittedText(name, nameRect, juce::Justification::centred, 1);
 
             // 2. ТЕКУЩЕЕ ЗНАЧЕНИЕ (Внутри ручки или сверху при наведении)
             // Рисуем значение ВНУТРИ ручки, если она большая, или СВЕРХУ, если маленькая

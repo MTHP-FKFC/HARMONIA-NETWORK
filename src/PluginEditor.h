@@ -5,6 +5,7 @@
 #include "ui/CoheraLookAndFeel.h"
 #include "ui/SpectrumVisor.h"
 #include "ui/ControlGroup.h"
+#include "ui/Components/EnergyLink.h"
 // #include "ui/Components/InteractionMeter.h"
 
 class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor
@@ -30,6 +31,7 @@ private:
 
     // Components
     SpectrumVisor spectrumVisor;
+    EnergyLink energyLink; // Центральный поток энергии
     // InteractionMeter interactionMeter; // Наш новый метр - временно отключен
 
     // Groups
@@ -37,7 +39,7 @@ private:
     ControlGroup netGroup { "NETWORK INTELLIGENCE", CoheraUI::kCyanNeon };
 
     // Controls
-    juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector, qualitySelector;
+    juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector, netSatSelector, qualitySelector;
     juce::TextButton cascadeButton;
 
     // Saturation Knobs
@@ -55,7 +57,7 @@ private:
     juce::TextButton deltaButton;
 
     // Attachments
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment, qualityAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment, netSatAttachment, qualityAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> driveAttachment, dynamicsAttachment, outputAttachment, focusAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> heatAttachment, driftAttachment, varianceAttachment, entropyAttachment, noiseAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> deltaAttachment, cascadeAttachment;

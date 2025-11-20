@@ -35,6 +35,7 @@ public:
         pGroup      = apvts.getRawParameterValue("group_id");
         pRole       = apvts.getRawParameterValue("role");
         pNetMode    = apvts.getRawParameterValue("mode");
+        pNetReaction= apvts.getRawParameterValue("net_reaction");
         pCascade    = apvts.getRawParameterValue("cascade");
         // ... добавьте остальные по аналогии
     }
@@ -71,6 +72,7 @@ public:
         params.groupId = (int)pGroup->load();
         params.netRole = static_cast<NetworkRole>((int)pRole->load());
         params.netMode = static_cast<NetworkMode>((int)pNetMode->load());
+        params.netReaction = static_cast<NetReaction>((int)pNetReaction->load());
 
         return params;
     }
@@ -100,6 +102,7 @@ private:
     std::atomic<float>* pGroup = nullptr;
     std::atomic<float>* pRole = nullptr;
     std::atomic<float>* pNetMode = nullptr;
+    std::atomic<float>* pNetReaction = nullptr;
     std::atomic<float>* pCascade = nullptr;
 };
 

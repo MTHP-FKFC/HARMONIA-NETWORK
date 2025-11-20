@@ -4,6 +4,13 @@
 
 namespace Cohera {
 
+enum class NetReaction {
+    Clean,      // Просто изменение громкости
+    DriveBoost, // Разгон основного алгоритма
+    Rectify,    // Добавление гармоник (Ghost)
+    Crush       // Биткраш (Digital glitch)
+};
+
 struct ParameterSet
 {
     // === Main Controls ===
@@ -31,6 +38,7 @@ struct ParameterSet
 
     // === Network ===
     NetworkMode netMode = NetworkMode::Unmasking;
+    NetReaction netReaction = NetReaction::DriveBoost; // Новый параметр
     NetworkRole netRole = NetworkRole::Listener;
     int groupId = 0;
     float netDepth = 1.0f;
