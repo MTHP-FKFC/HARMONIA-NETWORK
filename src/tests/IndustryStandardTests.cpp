@@ -31,8 +31,8 @@ public:
             param->setValueNotifyingHost(73.5f / 100.0f); // normalized value
         if (auto* param = apvts->getParameter("mix"))
             param->setValueNotifyingHost(42.1f / 100.0f);
-        if (auto* param = apvts->getParameter("sat_type"))
-            param->setValueNotifyingHost(2.0f / 3.0f); // choice parameter (0-3 range)
+        if (auto* param = apvts->getParameter("math_mode"))
+            param->setValueNotifyingHost(5.0f / 11.0f); // choice parameter (0-11 range), set to Vintage Console
         if (auto* param = apvts->getParameter("tone_tighten"))
             param->setValueNotifyingHost((350.0f - 10.0f) / (1000.0f - 10.0f)); // normalized
 
@@ -69,7 +69,7 @@ public:
         // 8. Проверяем, что параметры восстановились (с небольшой tolerance для floating point)
         expect(abs((float)*apvts2->getRawParameterValue("drive_master") - 73.5f) < 0.1f, "Drive parameter recalled");
         expect(abs((float)*apvts2->getRawParameterValue("mix") - 42.0f) < 0.1f, "Mix parameter recalled");
-        expect(abs((float)*apvts2->getRawParameterValue("sat_type") - 2.0f) < 0.1f, "Saturation type recalled");
+        expect(abs((float)*apvts2->getRawParameterValue("math_mode") - 5.0f) < 0.1f, "Algorithm mode recalled");
         expect(abs((float)*apvts2->getRawParameterValue("tone_tighten") - 350.0f) < 300.0f, "Filter parameter recalled (skewed range tolerance)");
     }
 };

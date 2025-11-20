@@ -54,7 +54,7 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     mathModeSelector.setSelectedId(1);
     mathModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "math_mode", mathModeSelector);
 
-    // Cascade Button
+    // Cascade Button - Output Limiter Stage
     addAndMakeVisible(cascadeButton);
     cascadeButton.setButtonText("CASCADE");
     cascadeButton.setClickingTogglesState(true);
