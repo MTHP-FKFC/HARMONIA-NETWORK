@@ -95,20 +95,17 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     const int totalNumInputChannels  = getTotalNumInputChannels();
     const int numSamples = buffer.getNumSamples();
 
-    // --- 1. Параметры и Сеть ---
+    // --- 1. Читаем параметры ---
 
-    // Обновляем параметры UI
-    float driveDb = *apvts.getRawParameterValue("drive_master");
-    float outDb   = *apvts.getRawParameterValue("output_gain");
+    float driveParam = *apvts.getRawParameterValue("drive_master"); // Теперь это просто дБ (-6..+24)
+    float outDb      = *apvts.getRawParameterValue("output_gain");
 
+    // Параметры сети
     currentGroup = (int)*apvts.getRawParameterValue("group_id");
     isReference  = (*apvts.getRawParameterValue("role") > 0.5f);
 
-    // Сглаживание ручек
-    smoothedDrive.setTargetValue(juce::Decibels::decibelsToGain(driveDb));
-    smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
+    // --- 2. Сеть (Network Logic) ---
 
-    // Логика Сети (Reference / Listener)
     if (isReference)
     {
         float maxPeak = buffer.getMagnitude(0, numSamples);
@@ -116,113 +113,108 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         NetworkManager::getInstance().updateGroupSignal(currentGroup, envValue);
     }
 
-    // Читаем из сети
     float targetNetValue = 0.0f;
     if (!isReference)
     {
         targetNetValue = NetworkManager::getInstance().getGroupSignal(currentGroup);
     }
-    // Сглаживаем сетевой сигнал (чтобы не было щелчков при резкой атаке бочки)
     smoothedNetworkSignal.setTargetValue(targetNetValue);
+
+    // --- 3. Gain Staging ---
+
+    // HEADROOM (Запас): Ослабляем вход на -6dB, чтобы сумма 6 полос не клиповала
+    // При сложении полос уровень вернется в норму.
+    float headroom = 0.5f;
+
+    // Drive: Преобразуем dB в разы.
+    // -6dB = 0.5, 0dB = 1.0, +24dB = 15.8
+    float targetDriveRatio = juce::Decibels::decibelsToGain(driveParam);
+
+    smoothedDrive.setTargetValue(targetDriveRatio);
+    smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
+
+    float currentDrive = smoothedDrive.getNextValue();
+    smoothedDrive.skip(numSamples - 1);
+    float currentOut = smoothedOutput.getNextValue();
+    smoothedOutput.skip(numSamples - 1);
+
+    // --- 4. Обработка ---
 
     // Очистка выходов
     for (auto i = totalNumInputChannels; i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, numSamples);
 
-    // --- 2. DSP: Split (Кроссовер) ---
+    // Применяем Headroom ко всему входу
+    buffer.applyGain(headroom);
+
+    // Split
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
-
-    // --- 3. DSP: Saturation & Ducking (Посэмпловая обработка) ---
-
-    // Для простоты и скорости, берем параметры 1 раз на блок (кроме сети)
-    // (Если нужно супер-плавно крутить ручки, перенесем getNextValue внутрь цикла)
-    float baseDrive = smoothedDrive.getNextValue();
-    smoothedDrive.skip(numSamples - 1);
-
-    float outGain = smoothedOutput.getNextValue();
-    smoothedOutput.skip(numSamples - 1);
-
-    // Флаг "Чистого режима" (если драйв в минимуме)
-    bool bypassSaturation = (driveDb < -5.9f);
 
     for (int i = 0; i < numSamples; ++i)
     {
-        // Получаем сглаженное значение сети для этого сэмпла
         float netValue = smoothedNetworkSignal.getNextValue();
 
-        // Рассчитываем "Динамический Драйв"
-        // Если Reference (netValue) громкий -> Драйв уменьшается (Ducking)
-        // Формула: Drive * (1.0 - Network * Depth)
+        // Логика Ducking (Inverse Grime)
+        // Если сеть активна (netValue > 0), мы уменьшаем Drive
         float dynamicMod = 1.0f;
         if (!isReference && netValue > 0.0f)
         {
-            // Depth пока хардкодом 0.5 (в будущем выведем на ручку)
-            dynamicMod = 1.0f - (netValue * 0.5f);
+            dynamicMod = 1.0f - (netValue * 0.5f); // Depth 50%
             if (dynamicMod < 0.0f) dynamicMod = 0.0f;
         }
 
-        float currentSampleDrive = baseDrive * dynamicMod;
+        // Итоговый Drive для этого сэмпла
+        float effectiveDrive = currentDrive * dynamicMod;
 
-        // Расчет компенсации для этого сэмпла
-        // Чем больше драйв, тем сильнее давим выход полосы
-        float bandComp = 1.0f;
-        if (currentSampleDrive > 1.0f)
-             bandComp = 1.0f / std::pow(currentSampleDrive, 0.6f); // 0.6 - подобранный на слух коэффициент "жира"
+        // Auto-Gain Compensation
+        // Если мы бустим вход в N раз, мы делим выход на N (примерно),
+        // чтобы громкость не менялась, а менялась только "плотность".
+        // Добавляем защитный порог 1.0f, чтобы не делить на дроби (не бустить тихие звуки).
+        float comp = 1.0f / std::max(1.0f, effectiveDrive);
 
-        // Обработка всех полос и каналов для этого сэмпла
         for (int band = 0; band < kNumBands; ++band)
         {
             for (int ch = 0; ch < totalNumInputChannels; ++ch)
             {
-                // Прямой доступ к сэмплу в буфере полосы
                 float* samplePtr = bandBuffers[band].getWritePointer(ch) + i;
                 float x = *samplePtr;
 
-                if (!bypassSaturation)
-                {
-                    // 1. Input Gain
-                    x *= currentSampleDrive;
+                // 1. Drive
+                x *= effectiveDrive;
 
-                    // 2. Saturation (Tanh)
-                    x = std::tanh(x);
+                // 2. Saturation
+                x = std::tanh(x);
 
-                    // 3. Band Compensation (чтобы не орало при сумме)
-                    x *= bandComp;
-                }
+                // 3. Compensation
+                x *= comp;
 
                 *samplePtr = x;
             }
         }
     }
 
-    // --- 4. DSP: Sum & Limit (Сборка) ---
+    // --- 5. Sum ---
     buffer.clear();
-
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         auto* outData = buffer.getWritePointer(ch);
-
         for (int band = 0; band < kNumBands; ++band)
         {
             const auto* bandData = bandBuffers[band].getReadPointer(ch);
             juce::FloatVectorOperations::add(outData, bandData, numSamples);
         }
 
-        // Final Output Stage
-        for (int i = 0; i < numSamples; ++i)
+        // Убираем Headroom (возвращаем +6dB) и применяем Output Gain
+        // (1.0 / headroom) * currentOut
+        float makeup = (1.0f / headroom) * currentOut;
+        juce::FloatVectorOperations::multiply(outData, makeup, numSamples);
+
+        // Safety Brickwall на 0dB (жесткий, чтобы видеть клиппинг в DAW, а не слышать цифровой ад)
+        // Или лучше мягкий tanh, как "мастеринг лимитер"
+        for (int s=0; s<numSamples; ++s)
         {
-            float x = outData[i];
-
-            // 1. Ручка Output
-            x *= outGain;
-
-            // 2. Safety Limiter (Мягкий клиппер на выходе)
-            // Не дает сигналу превысить 0 dBfs (1.0), даже если сумма полос огромная
-            // Используем быстрый алгоритм "Hard Clip с скруглением"
-            if (x > 1.0f) x = 1.0f;
-            else if (x < -1.0f) x = -1.0f;
-
-            outData[i] = x;
+             // Мягкий клиппер в самом конце
+             outData[s] = std::tanh(outData[s]);
         }
     }
 }
