@@ -5,11 +5,18 @@
 class NeuralLink : public AbstractVisualizer
 {
 public:
-    NeuralLink(juce::AudioProcessorValueTreeState& apvts)
-        : AbstractVisualizer(60), apvts(apvts) // Высокий FPS для плавной анимации
+    NeuralLink()
+        : AbstractVisualizer(60) // Высокий FPS для плавной анимации
     {
         setInterceptsMouseClicks(false, false);
     }
+
+    void setAPVTS(juce::AudioProcessorValueTreeState& apvtsRef)
+    {
+        apvts = &apvtsRef;
+    }
+
+    bool hasAPVTS() const { return apvts != nullptr; }
 
     // Установка чувствительности (натяжение струны)
     void setTension(float t)
@@ -111,7 +118,7 @@ private:
         }
     }
 
-    juce::AudioProcessorValueTreeState& apvts;
+    juce::AudioProcessorValueTreeState* apvts = nullptr;
     float phase = 0.0f;
     float tension = 1.0f; // От 0.1 до 3.0 (Sens)
     float energyAmplitude = 0.0f;

@@ -3,7 +3,7 @@
 
 //==============================================================================
 CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (CoheraSaturatorAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p), neuralLink(p.getAPVTS())
+    : AudioProcessorEditor (&p), audioProcessor (p)
 {
     // 1. Применяем LookAndFeel
     lookAndFeel = std::make_unique<CoheraUI::CoheraLookAndFeel>();
@@ -159,6 +159,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     addAndMakeVisible(neuralLink); // NeuralLink уже инициализирован с apvts
     addAndMakeVisible(shaperScope);
 
+    // Инициализируем APVTS для визуальных компонентов
+    neuralLink.setAPVTS(audioProcessor.getAPVTS());
+
     // Запускаем таймер для анимаций (20 FPS для визуализаторов)
     startTimerHz(20);
 
@@ -231,30 +234,62 @@ void CoheraSaturatorAudioProcessorEditor::paint (juce::Graphics& g)
 // Timer callback для обновления живых визуализаторов
 void CoheraSaturatorAudioProcessorEditor::timerCallback()
 {
+    // Безопасность: проверяем, что все компоненты инициализированы
+    if (!isVisible()) return;
+
     // Обновляем энергию для всех визуализаторов
     float inputRMS = audioProcessor.getInputRMS();
     float outputRMS = audioProcessor.getOutputRMS();
 
     cosmicDust.setEnergyLevel(outputRMS); // Фон реагирует на общий уровень
 
-    // Neural Link
-    float netMode = *audioProcessor.getAPVTS().getRawParameterValue("mode");
-    neuralLink.setMode((int)netMode);
+    // Neural Link - безопасный доступ к APVTS
+    if (neuralLink.hasAPVTS())
+    {
+        auto& apvts = audioProcessor.getAPVTS();
+        if (auto* netModeParam = apvts.getRawParameterValue("mode"))
+        {
+            float netMode = *netModeParam;
+            neuralLink.setMode((int)netMode);
+        }
 
-    float netSens = *audioProcessor.getAPVTS().getRawParameterValue("net_sens");
-    neuralLink.setTension(netSens);
+        if (auto* netSensParam = apvts.getRawParameterValue("net_sens"))
+        {
+            float netSens = *netSensParam;
+            neuralLink.setTension(netSens);
+        }
+    }
+    else
+    {
+        // Fallback если APVTS еще не инициализирован
+        neuralLink.setMode(0);
+        neuralLink.setTension(1.0f);
+    }
 
     neuralLink.setEnergyLevel(inputRMS); // Энергия влияет на амплитуду волн
 
-    // Transfer Function Display
-    float drive = *audioProcessor.getAPVTS().getRawParameterValue("drive_master");
-    float mathModeF = *audioProcessor.getAPVTS().getRawParameterValue("math_mode");
-    Cohera::SaturationMode mathMode = static_cast<Cohera::SaturationMode>((int)mathModeF);
-    float cascade = *audioProcessor.getAPVTS().getRawParameterValue("cascade") > 0.5f;
+    // Transfer Function Display - безопасный доступ к параметрам
+    auto& apvts = audioProcessor.getAPVTS();
+    if (auto* driveParam = apvts.getRawParameterValue("drive_master"))
+    {
+        float drive = *driveParam;
 
-    shaperScope.setParameters(drive, mathMode, inputRMS);
-    shaperScope.setCascadeMode(cascade);
-    shaperScope.setEnergyLevel(outputRMS);
+        Cohera::SaturationMode mathMode = Cohera::SaturationMode::GoldenRatio; // default
+        if (auto* mathModeParam = apvts.getRawParameterValue("math_mode"))
+        {
+            mathMode = static_cast<Cohera::SaturationMode>((int)*mathModeParam);
+        }
+
+        bool cascade = false;
+        if (auto* cascadeParam = apvts.getRawParameterValue("cascade"))
+        {
+            cascade = *cascadeParam > 0.5f;
+        }
+
+        shaperScope.setParameters(drive, mathMode, inputRMS);
+        shaperScope.setCascadeMode(cascade);
+        shaperScope.setEnergyLevel(outputRMS);
+    }
 }
 
 void CoheraSaturatorAudioProcessorEditor::resized()
