@@ -91,7 +91,9 @@ private:
 
         for (float x = -1.0f; x <= 1.01f; x += 0.02f)
         {
-            float y = mathSaturator.processSample(x, vizDrive, mode);
+            // TEMPORARILY DISABLE MathSaturator to test basic stability
+            // float y = mathSaturator.processSample(x, vizDrive, mode);
+            float y = std::tanh(x * vizDrive); // Simple fallback
             y = juce::jlimit(-1.1f, 1.1f, y);
 
             float sx = center.x + (x * bounds.getWidth() * 0.4f);
@@ -121,7 +123,8 @@ private:
 
         // Выходной сигнал через сатуратор
         float vizDrive = 1.0f + (drive / 20.0f);
-        float outputY = mathSaturator.processSample(smoothedInput, vizDrive, mode);
+        // float outputY = mathSaturator.processSample(smoothedInput, vizDrive, mode);
+        float outputY = std::tanh(smoothedInput * vizDrive); // Simple fallback
         outputY = juce::jlimit(-1.1f, 1.1f, outputY);
 
         float dotY = center.y - (outputY * bounds.getHeight() * 0.4f);
@@ -148,7 +151,7 @@ private:
         // Сохраняем историю точек
         juce::Point<float> currentPoint(
             center.x + (smoothedInput * bounds.getWidth() * 0.4f),
-            center.y - (mathSaturator.processSample(smoothedInput, 1.0f + (drive / 20.0f), mode) * bounds.getHeight() * 0.4f)
+            center.y - (std::tanh(smoothedInput * (1.0f + (drive / 20.0f))) * bounds.getHeight() * 0.4f) // Simple fallback
         );
 
         trailPoints.push_back(currentPoint);

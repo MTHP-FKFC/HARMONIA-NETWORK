@@ -153,6 +153,7 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     deltaAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.getAPVTS(), "delta", deltaButton);
 
     // === NEW VISUAL SYSTEM v2.0 ===
+    // TEST: Enable CosmicDust + NeuralLink
     addAndMakeVisible(cosmicDust);
     cosmicDust.toBack(); // Фон всегда сзади
 
@@ -160,7 +161,7 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     addAndMakeVisible(shaperScope);
 
     // Инициализируем APVTS для визуальных компонентов
-    neuralLink.setAPVTS(audioProcessor.getAPVTS());
+    // neuralLink.setAPVTS(audioProcessor.getAPVTS());
 
     // Запускаем таймер для анимаций (20 FPS для визуализаторов)
     startTimerHz(20);
@@ -234,47 +235,22 @@ void CoheraSaturatorAudioProcessorEditor::paint (juce::Graphics& g)
 // Timer callback для обновления живых визуализаторов
 void CoheraSaturatorAudioProcessorEditor::timerCallback()
 {
-    // Безопасность: проверяем, что все компоненты инициализированы
+    // TEST: Enable only CosmicDust updates
     if (!isVisible()) return;
 
-    // Обновляем энергию для всех визуализаторов
     float inputRMS = audioProcessor.getInputRMS();
     float outputRMS = audioProcessor.getOutputRMS();
 
-    cosmicDust.setEnergyLevel(outputRMS); // Фон реагирует на общий уровень
+    cosmicDust.setEnergyLevel(outputRMS);
+    neuralLink.setEnergyLevel(inputRMS);
 
-    // Neural Link - безопасный доступ к APVTS
-    if (neuralLink.hasAPVTS())
-    {
-        auto& apvts = audioProcessor.getAPVTS();
-        if (auto* netModeParam = apvts.getRawParameterValue("mode"))
-        {
-            float netMode = *netModeParam;
-            neuralLink.setMode((int)netMode);
-        }
-
-        if (auto* netSensParam = apvts.getRawParameterValue("net_sens"))
-        {
-            float netSens = *netSensParam;
-            neuralLink.setTension(netSens);
-        }
-    }
-    else
-    {
-        // Fallback если APVTS еще не инициализирован
-        neuralLink.setMode(0);
-        neuralLink.setTension(1.0f);
-    }
-
-    neuralLink.setEnergyLevel(inputRMS); // Энергия влияет на амплитуду волн
-
-    // Transfer Function Display - безопасный доступ к параметрам
+    // FULL FUNCTIONALITY: Enable TransferFunctionDisplay with all parameters
     auto& apvts = audioProcessor.getAPVTS();
     if (auto* driveParam = apvts.getRawParameterValue("drive_master"))
     {
         float drive = *driveParam;
 
-        Cohera::SaturationMode mathMode = Cohera::SaturationMode::GoldenRatio; // default
+        Cohera::SaturationMode mathMode = Cohera::SaturationMode::GoldenRatio;
         if (auto* mathModeParam = apvts.getRawParameterValue("math_mode"))
         {
             mathMode = static_cast<Cohera::SaturationMode>((int)*mathModeParam);
