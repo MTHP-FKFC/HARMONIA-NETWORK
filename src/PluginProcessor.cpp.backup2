@@ -83,13 +83,11 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     smoothedOutput.reset(sampleRate, 0.05);
     smoothedMix.reset(sampleRate, 0.05);
     smoothedSatBlend.reset(sampleRate, 0.05);
-    smoothedCompensation.reset(sampleRate, 0.1);
 
     smoothedDrive.setCurrentAndTargetValue(1.0f);
     smoothedOutput.setCurrentAndTargetValue(1.0f);
     smoothedMix.setCurrentAndTargetValue(1.0f); // По дефолту Wet, чтобы слышать эффект
     smoothedSatBlend.setCurrentAndTargetValue(0.0f);
-    smoothedCompensation.setCurrentAndTargetValue(1.0f);
 
     smoothedNetworkSignal.reset(sampleRate, 0.02);
 
@@ -117,181 +115,172 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float mixParam   = *apvts.getRawParameterValue("mix");
     float outDb      = *apvts.getRawParameterValue("output_gain");
 
-    // Маппинг Drive: 0..100 -> 1.0..20.0
+    // Маппинг Drive
+    // 0..10 -> Чистая зона (Blend)
+    // 10..100 -> Сатурация (Boost)
     float targetSatBlend = juce::jlimit(0.0f, 1.0f, driveParam / 10.0f);
     float driveRest = juce::jmax(0.0f, driveParam - 10.0f);
-    float targetDrive = 1.0f + (driveRest * 0.2f); 
+    float targetDrive = 1.0f + (driveRest * 0.2f); // До +20dB
 
     smoothedDrive.setTargetValue(targetDrive);
     smoothedSatBlend.setTargetValue(targetSatBlend);
     smoothedMix.setTargetValue(mixParam / 100.0f);
     smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
 
-    // --- 2. АНАЛИЗ ВХОДА (RMS) ---
-
-    // Считаем энергию входного блока
-    float inputRMS = 0.0f;
-    for (int ch = 0; ch < numCh; ++ch) {
-        inputRMS += buffer.getRMSLevel(ch, 0, numSamples);
-    }
-    inputRMS /= (float)numCh;
-    
-    // Защита от деления на ноль (Noise Gate для детектора)
-    // Если сигнал тише -60dB, считаем его тишиной и не меняем гейн
-    if (inputRMS < 0.001f) inputRMS = 0.001f;
-
-    // --- 3. СЕТЬ (Логика) ---
+    // --- 2. СЕТЬ ---
 
     currentGroup = (int)*apvts.getRawParameterValue("group_id");
     isReference  = (*apvts.getRawParameterValue("role") > 0.5f);
     int modeIndex = *apvts.getRawParameterValue("mode");
 
+    // Детекция для сети (Пиковая, быстрая)
     if (isReference) {
-        float envValue = envelope.process(inputRMS); // Шлем RMS, а не пики
+        // Используем Magnitude, это самый быстрый и надежный способ для триггера
+        float maxPeak = buffer.getMagnitude(0, numSamples);
+        float envValue = envelope.process(maxPeak);
         NetworkManager::getInstance().updateGroupSignal(currentGroup, envValue);
     }
-    
+
     float rawNetVal = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
     smoothedNetworkSignal.setTargetValue(rawNetVal);
 
-    // --- 4. СОЗДАЕМ DRY КОПИЮ (Для финала) ---
+    // --- 3. DRY COPY ---
 
     juce::AudioBuffer<float> dryBuffer;
     dryBuffer.makeCopyOf(buffer);
-    
+
     juce::dsp::AudioBlock<float> dryBlock(dryBuffer);
     juce::dsp::ProcessContextReplacing<float> dryContext(dryBlock);
     dryDelayLine.process(dryContext);
 
-    // --- 5. SPLIT (Кроссовер) ---
+    // --- 4. SPLIT ---
 
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
 
-    // --- 6. SATURATION & SUM (WET) ---
-    
-    // Временный буфер для "Грязной Суммы" (чтобы измерить её громкость ДО микширования)
-    juce::AudioBuffer<float> wetSumBuffer;
-    wetSumBuffer.setSize(numCh, numSamples);
-    wetSumBuffer.clear();
+    // Настройки Tilt (меньше искажений на низах)
+    // 0(Sub)  1(Low)  2(Mid)  3(MH)  4(High) 5(Air)
+    const float bandDriveScale[6] = { 0.5f, 0.8f, 1.0f, 1.0f, 1.1f, 1.2f };
 
-    // Получаем параметры для текущего блока
-    float baseDrive = smoothedDrive.getNextValue(); smoothedDrive.skip(numSamples-1);
-    float blendVal  = smoothedSatBlend.getNextValue(); smoothedSatBlend.skip(numSamples-1);
-    float netVal    = smoothedNetworkSignal.getNextValue(); smoothedNetworkSignal.skip(numSamples-1);
+    // === КАЛИБРОВКА ===
 
-    float controlSignal = scNormalizer.process(netVal);
+    // Если сумма полос дает +12dB, мы давим её на -12dB (0.25x).
 
-    // Рассчитываем эффективный драйв (с учетом сети)
-    float effectiveDrive = baseDrive;
-    float ghostAmount = 0.0f;
+    // Это вернет уровень в ноль при Drive=0.
 
-    if (!isReference) {
-        if (modeIndex == 0) effectiveDrive *= (1.0f - controlSignal * 0.8f); // Ducking
-        else if (modeIndex == 1) { 
-            ghostAmount = controlSignal; 
-            effectiveDrive *= (1.0f + ghostAmount * 2.0f); // Boost for Ghost
-        }
-    }
+    // Подстрой это число, если будет слишком тихо (например, 0.35f).
 
-    // Обработка полос
-    for (int band = 0; band < kNumBands; ++band)
+    const float wetCalibration = 0.25f;
+
+    // --- 5. PROCESS LOOP ---
+
+    auto* dryL = dryBuffer.getReadPointer(0);
+    auto* dryR = (numCh > 1) ? dryBuffer.getReadPointer(1) : nullptr;
+    auto* outL = buffer.getWritePointer(0);
+    auto* outR = (numCh > 1) ? buffer.getWritePointer(1) : nullptr;
+
+    for (int i = 0; i < numSamples; ++i)
     {
-        SaturationType type = SaturationType::WarmTube;
-        float shaperMix = blendVal;
+        // Параметры на сэмпл
+        float baseDrive = smoothedDrive.getNextValue();
+        float blendVal  = smoothedSatBlend.getNextValue();
+        float netVal    = smoothedNetworkSignal.getNextValue();
+        float mixVal    = smoothedMix.getNextValue();
+        float outGain   = smoothedOutput.getNextValue();
 
-        if (ghostAmount > 0.01f && band <= 1) { 
-            type = SaturationType::Rectifier;
-            shaperMix = std::max(blendVal, ghostAmount); 
-        }
-        
-        // Убрали bandDriveScale и старый comp. Чистая сатурация.
-        for (int ch = 0; ch < numCh; ++ch)
+        // SC Normalizer (Умный триггер)
+        float controlSignal = scNormalizer.process(netVal);
+
+        // Логика режимов
+        float effectiveDrive = baseDrive;
+        float ghostAmount = 0.0f;
+
+        if (!isReference)
         {
-            auto* src = bandBuffers[band].getReadPointer(ch);
-            auto* dst = wetSumBuffer.getWritePointer(ch); // Складываем сразу в сумму
-            
-            for (int i = 0; i < numSamples; ++i)
-            {
-                float x = src[i] * effectiveDrive;
-                float processed = shapers[band].processSample(x, 1.0f, type, shaperMix);
-                dst[i] += processed; // Суммируем полосы
+            if (modeIndex == 0) { // Ducking
+                effectiveDrive *= (1.0f - controlSignal * 0.8f);
+            }
+            else if (modeIndex == 1) { // Ghost
+                ghostAmount = controlSignal;
+                // В Ghost режиме мы сильно разгоняем драйв на ударе
+                effectiveDrive *= (1.0f + ghostAmount * 2.0f);
             }
         }
-    }
 
-    // --- 7. REAL AUTO-GAIN (Loudness Matcher) ---
-    
-    // Измеряем громкость того, что получилось (WET)
-    float wetRMS = 0.0f;
-    for (int ch = 0; ch < numCh; ++ch) {
-        wetRMS += wetSumBuffer.getRMSLevel(ch, 0, numSamples);
-    }
-    wetRMS /= (float)numCh;
-    if (wetRMS < 0.001f) wetRMS = 0.001f;
+        // Сумматор Wet
+        float wetSampleL = 0.0f;
+        float wetSampleR = 0.0f;
 
-    // Вычисляем РЕАЛЬНЫЙ коэффициент разницы
-    float requiredGain = inputRMS / wetRMS;
-
-    // Ограничиваем безумие (не больше +18dB и не меньше -30dB)
-    // Это защита от взрывов в тишине
-    requiredGain = juce::jlimit(0.03f, 8.0f, requiredGain);
-
-    // Отправляем в сглаживатель
-    // autoGain (наш класс) используем теперь просто как сглаживатель
-    // Или можем использовать smoothedOutput, но лучше отдельный SmoothedValue
-    // Вспомним про smoothedCompensation из прошлого раза
-    
-    // ! ВАЖНО: Если мы в режиме Bypass (Drive ~ 0), форсируем gain = 1.0,
-    // чтобы не было дрожания на чистом звуке.
-    if (driveParam < 1.0f) requiredGain = 1.0f;
-
-    smoothedCompensation.setTargetValue(requiredGain);
-
-    // --- 8. FINAL MIX ---
-
-    float currentMix = smoothedMix.getNextValue(); smoothedMix.skip(numSamples-1);
-    float userOutGain = smoothedOutput.getNextValue(); smoothedOutput.skip(numSamples-1);
-
-    // Копируем результат обратно в основной buffer
-    for (int ch = 0; ch < numCh; ++ch)
-    {
-        auto* finalOut = buffer.getWritePointer(ch);
-        const auto* dryData = dryBuffer.getReadPointer(ch);
-        auto* wetData = wetSumBuffer.getWritePointer(ch);
-        
-        // Применяем сглаженную компенсацию к блоку Wet
-        // (Для идеальной точности можно по-сэмплово, но applyGain быстрее и ок для RMS)
-        // Используем smoothedCompensation.skip в конце
-        float startGain = smoothedCompensation.getCurrentValue();
-        float endGain = smoothedCompensation.getTargetValue(); // Грубое приближение для ramp
-        
-        // Применяем ramp gain к Wet буферу
-        wetSumBuffer.applyGainRamp(ch, 0, numSamples, startGain, endGain);
-
-        for (int i = 0; i < numSamples; ++i)
+        for (int band = 0; band < kNumBands; ++band)
         {
-            float dry = dryData[i];
-            float wet = wetData[i]; // Уже скомпенсированный
-            
-            // Mix
-            float mix = dry * (1.0f - currentMix) + wet * currentMix;
-            
-            // User Output Gain
-            mix *= userOutGain;
-            
-            // Hard Clip / Safety Limiter на выходе (чтобы НИКОГДА не было > 0dB)
-            // Если сигнал > 1.0, режем жестко.
-            // Это единственный способ гарантировать отсутствие +15dB.
-            mix = std::clamp(mix, -1.0f, 1.0f);
-            
-            finalOut[i] = mix;
+            // 1. Локальный драйв полосы
+            float bandDrive = effectiveDrive * bandDriveScale[band];
+
+            // 2. Тип сатурации
+            SaturationType type = SaturationType::WarmTube;
+            float shaperMix = blendVal;
+
+            if (ghostAmount > 0.01f && band <= 1) { // Только Sub и Low
+                type = SaturationType::Rectifier;
+                shaperMix = std::max(blendVal, ghostAmount);
+            }
+
+            // 3. PREDICTIVE AUTO-GAIN (Математическая компенсация)
+            // Tanh увеличивает энергию. Мы компенсируем это ПРЕВЕНТИВНО.
+            // Чем больше драйв, тем тише выход полосы.
+            // Формула 1.0 / sqrt(D) — это "Constant Power Law".
+            // Добавляем защиту max(1.0), чтобы не делить на 0 и не глушить чистый звук.
+            float comp = 1.0f / std::sqrt(std::max(1.0f, bandDrive));
+
+            // Для Ghost режима (Rectifier) нужна отдельная компенсация, он звучит тоньше
+            if (type == SaturationType::Rectifier) comp *= 1.2f;
+
+            // --- Обработка ---
+
+            // Left
+            float xL = bandBuffers[band].getSample(0, i);
+            float processedL = shapers[band].processSample(xL, bandDrive, type, shaperMix);
+
+            // HARD CLAMP FOR SUB (Защита низа)
+            // Если это саб-бас (0), мы не даем ему прыгать выше входного уровня более чем на 10%
+            if (band == 0) {
+                float maxAmp = std::abs(xL) * 1.1f;
+                if (std::abs(processedL * comp) > maxAmp) comp = maxAmp / (std::abs(processedL) + 0.0001f);
+            }
+
+            wetSampleL += processedL * comp;
+
+            // Right
+            if (outR) {
+                float xR = bandBuffers[band].getSample(1, i);
+                float processedR = shapers[band].processSample(xR, bandDrive, type, shaperMix);
+
+                if (band == 0) { // Симметричный кламп для правого канала
+                    float maxAmp = std::abs(xR) * 1.1f;
+                    if (std::abs(processedR * comp) > maxAmp) comp = maxAmp / (std::abs(processedR) + 0.0001f);
+                }
+
+                wetSampleR += processedR * comp;
+            }
+        }
+
+        // Применяем Калибровку к Wet сумме
+        wetSampleL *= wetCalibration;
+        if (outR) wetSampleR *= wetCalibration;
+
+        // MIX & OUT
+        // Если Mix=100%, мы слышим (SaturatedSum * Calibration).
+        // При Drive=0 это должно быть равно Input.
+        float finalL = dryL[i] * (1.0f - mixVal) + wetSampleL * mixVal;
+        outL[i] = std::tanh(finalL * outGain); // Soft Clipper на мастере
+
+        if (outR) {
+            float finalR = dryR[i] * (1.0f - mixVal) + wetSampleR * mixVal;
+            outR[i] = std::tanh(finalR * outGain);
         }
     }
-    
-    // Продвигаем сглаживатель состояния
 
-    // Очистка мусора
-    for (auto i = numCh; i < getTotalNumOutputChannels(); ++i)
+    // Очистка
+    for (int i = numCh; i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, numSamples);
 }
 
