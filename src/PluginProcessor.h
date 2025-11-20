@@ -8,7 +8,7 @@
 #include "dsp/Envelope.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
-#include "dsp/TransientDetector.h"
+#include "dsp/TransientSplitter.h"
 #include "dsp/VoltageRegulator.h"
 #include "dsp/ThermalModel.h"
 #include "dsp/StereoVariance.h"
@@ -133,8 +133,8 @@ private:
     juce::LinearSmoothedValue<float> smoothedGlobalHeat;
 
     // === PUNCH (Transient Control) ===
-    // Детекторы транзиентов ([0]=L, [1]=R, работают на высокой частоте)
-    std::array<TransientDetector, 2> transDetectors;
+    // Сплиттеры транзиентов ([Band][Channel], разделяют сигнал на атаку и тело)
+    std::array<std::array<TransientSplitter, 2>, kNumBands> splitters;
     juce::SmoothedValue<float> smoothedPunch;
 
     // === ANALOG MODELING ===

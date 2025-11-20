@@ -42,6 +42,7 @@ target_sources(Cohera_Saturator PRIVATE
     src/dsp/SidechainNormalizer.h    # <-- NEW
     src/dsp/AutoGainStage.h          # <-- NEW
     src/dsp/TransientDetector.h      # <-- NEW
+    src/dsp/TransientSplitter.h      # <-- NEW
     src/dsp/VoltageRegulator.h       # <-- NEW
     src/dsp/ThermalModel.h           # <-- NEW
     src/dsp/StereoVariance.h         # <-- NEW

@@ -280,7 +280,9 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     // === PUNCH INITIALIZATION ===
     // Инициализируем на ВЫСОКОЙ частоте (работаем внутри оверсемплинга)
-    for(auto& det : transDetectors) det.prepare(osSampleRate);
+    for(auto& bandSplitters : splitters)
+        for(auto& splitter : bandSplitters)
+            splitter.prepare(osSampleRate);
 
     smoothedPunch.reset(osSampleRate, 0.05);
     smoothedPunch.setCurrentAndTargetValue(0.0f);
@@ -416,12 +418,6 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     smoothedNetDepth.setTargetValue(pDepth / 100.0f);
     smoothedNetSens.setTargetValue(pSens / 100.0f);
 
-    // === PREPARE ONE-POLE FILTER COEFFICIENT FOR SMOOTH ===
-    // Вычисляем коэффициент сглаживания (экспоненциальный фильтр)
-    float smoothCoeff = 0.0f;
-    if (pSmooth > 0.0f) {
-        smoothCoeff = std::exp(-1.0f / (std::max(1.0f, pSmooth) * 0.001f * getSampleRate()));
-    }
 
     // --- 2. СЕТЬ (На обычной частоте) ---
 
@@ -517,7 +513,6 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // --- 6. PROCESS LOOP (High Rate) ---
 
     // Фиксированный Tilt (меньше грязи на низах)
-    const float bandDriveScale[6] = { 0.6f, 0.8f, 1.0f, 1.0f, 1.1f, 1.2f };
 
 
     auto* dryL = dryBuffer.getReadPointer(0);
@@ -541,67 +536,22 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         // === NETWORK CONTROL PROCESSING (The Holy Trinity) ===
         float depth = smoothedNetDepth.getNextValue();
-        float sens  = smoothedNetSens.getNextValue();
-
         // Базовые параметры
         float baseDrive = smoothedDrive.getNextValue();
-        float blendVal  = smoothedSatBlend.getNextValue();
         float mixVal    = smoothedMix.getNextValue();
         float outG      = smoothedOutput.getNextValue();
-
-        // Применяем Voltage Starvation к базовому драйву
-        // Если питание просело -> starvationMult > 1.0 -> эффективный драйв растет
-        float effectiveDrive = baseDrive * starvationMult;
 
         // === GLOBAL HEAT APPLICATION ===
         // Получаем текущую "температуру" микса
         float heatVal = smoothedGlobalHeat.getNextValue();
 
-        // Применяем bias (аналоговый дрейф) - добавляет асимметрию
-        float dcBias = heatVal * 0.1f; // До 0.1 (легкое смещение)
-
-        // === STEREO FOCUS ===
-        float focusVal = smoothedFocus.getNextValue();
-        auto msScalers = stereoFocus.getDriveScalars(focusVal);
-        bool processInMS = (std::abs(focusVal) > 1.0f);
 
         // === HARMONIC ENTROPY ===
         float entropyAmount = smoothedEntropy.getNextValue();
 
         // === PUNCH (TRANSIENT CONTROL) ===
-        // Детекция транзиентов на входном сигнале
-        float inL = upsampledBlock.getChannelPointer(0)[i];
-        float inR = (numCh > 1) ? upsampledBlock.getChannelPointer(1)[i] : inL;
-
-        // Сила транзиента (0..1)
-        float transL = transDetectors[0].process(inL);
-        float transR = transDetectors[1].process(inR);
-
         // Получаем текущий punch параметр (-1..1)
         float punchVal = smoothedPunch.getNextValue();
-
-        // Рассчитываем модификатор драйва
-        // Если punchVal > 0: Clean Attack (драйв падает на транзиенте)
-        // Если punchVal < 0: Dirty Attack (драйв растет на транзиенте)
-        float punchModL = 1.0f;
-        float punchModR = 1.0f;
-
-        if (std::abs(punchVal) > 0.01f)
-        {
-            if (punchVal > 0.0f) {
-                // Clean Attack: уменьшаем драйв до 20% в пике
-                punchModL = 1.0f - (transL * punchVal * 0.8f);
-                punchModR = 1.0f - (transR * punchVal * 0.8f);
-            } else {
-                // Dirty Attack: увеличиваем драйв до +200% в пике
-                punchModL = 1.0f - (transL * punchVal * 2.0f); // punchVal отрицательный
-                punchModR = 1.0f - (transR * punchVal * 2.0f);
-            }
-
-            // Ограничиваем снизу
-            punchModL = std::max(0.1f, punchModL);
-            punchModR = std::max(0.1f, punchModR);
-        }
 
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
@@ -612,35 +562,8 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         for (int band = 0; band < kNumBands; ++band)
         {
-            // 1. Получаем "сырой" сигнал сети для этой полосы
-            float bandNetVal = smoothedNetworkBands[band].getNextValue();
-
-            // 2. SENSITIVITY: Усиливает входящий сигнал ДО нормализации
-            float rawNetSignal = bandNetVal * sens;
-
-            // 3. NORMALIZATION: Простой гейт (замена SidechainNormalizer)
-            float normalizedSignal = rawNetSignal;
-            if (normalizedSignal < 0.05f) normalizedSignal = 0.0f; // Умный гейт
-
-            // 4. SMOOTH: One-Pole фильтр для инерции
-            if (pSmooth > 0.0f) {
-                netSmoothState = normalizedSignal * (1.0f - smoothCoeff) + netSmoothState * smoothCoeff;
-            } else {
-                netSmoothState = normalizedSignal; // Без сглаживания
-            }
-
-            // 5. DEPTH: Масштабируем итоговый контрольный сигнал
-            float controlSignal = netSmoothState * depth;
-
-            // 6. CLAMP: Защита от выхода за границы
-            controlSignal = juce::jlimit(0.0f, 1.0f, controlSignal);
-
-            // 2. Получаем конфигурацию для этой полосы
-            auto config = InteractionEngine::getConfiguration(modeIndex, band, userType);
-
-            // 3. Логика микса для Stereo Bloom (M/S)
-            bool useMS = false;
-            float mid = 0.0f, side = 0.0f;
+            // === SPLIT & CRUSH (PUNCH) ===
+            // Физическое разделение сигнала на Transient и Body
             float xL = bandBuffers[band].getSample(0, i);
             float xR = (numCh > 1) ? bandBuffers[band].getSample(1, i) : xL;
 
@@ -658,69 +581,64 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             float inputL = xL + biasL + entropyDriftL;
             float inputR = xR + biasR + entropyDriftR;
 
-            if (modeIndex == 3 && !isReference && controlSignal > 0.0f)
-            {
-                useMS = true;
-                MSMatrix::encode(inputL, inputR, mid, side);
-            }
 
             // 4. Применяем Global Heat к драйву
             float heatDrive = baseDrive * (1.0f + heatVal * 0.5f); // До +50% драйва в пике микса
 
-            // 5. Применяем Punch модификатор к драйву
-            float punchDriveL = heatDrive * punchModL;
-            float punchDriveR = heatDrive * punchModR;
+            // === SPLIT & CRUSH (PUNCH) ===
+            // Физическое разделение сигнала на Transient и Body
 
-            // 6. Применяем Stereo Variance к драйву
-            float finalDriveL = punchDriveL * drift.driveMultL;
-            float finalDriveR = punchDriveR * drift.driveMultR;
+            // 1. SPLIT: Разделяем сигнал на Transient и Body
+            auto splitL = splitters[band][0].process(inputL);
+            auto splitR = splitters[band][1].process(inputR);
 
-            // 7. Обработка через InteractionEngine
-            float procL = 0.0f, procR = 0.0f;
+            // 2. PROCESS BODY (Всегда жирный, как выбрал пользователь)
+            float processedBodyL = Waveshaper::process(splitL.body, heatDrive, userType);
+            float processedBodyR = Waveshaper::process(splitR.body, heatDrive, userType);
 
-            if (processInMS && numCh > 1)
+            // 3. PROCESS TRANSIENT (Зависит от Punch)
+            float processedTransL = 0.0f;
+            float processedTransR = 0.0f;
+
+            if (punchVal > 0.01f)
             {
-                // === STEREO FOCUS: M/S обработка ===
-                float xL = bandBuffers[band].getSample(0, i);
-                float xR = bandBuffers[band].getSample(1, i);
-
-                // M/S кодирование
-                float mid, side;
-                StereoFocus::encode(xL, xR, mid, side);
-
-                // Сатурация Mid и Side с разными драйвами
-                float midDrive = finalDriveL * bandDriveScale[band] * msScalers.midScale;
-                float sideDrive = finalDriveR * bandDriveScale[band] * msScalers.sideScale;
-
-                float satMid = Waveshaper::process(mid + dcBias, midDrive, userType);
-                float satSide = Waveshaper::process(side + dcBias, sideDrive, userType);
-
-                // M/S декодирование
-                StereoFocus::decode(satMid, satSide, procL, procR);
+                // === HARD PUNCH (Positive) ===
+                // Атака становится жесткой и агрессивной
+                float transDrive = heatDrive * (1.0f + punchVal * 2.0f); // До 3x драйва на атаку
+                processedTransL = Waveshaper::process(splitL.trans, transDrive, SaturationType::HardClip);
+                processedTransR = Waveshaper::process(splitR.trans, transDrive, SaturationType::HardClip);
+            }
+            else if (punchVal < -0.01f)
+            {
+                // === CLEAN PUNCH (Negative) ===
+                // Атака остается чистой (сохраняет динамику)
+                float transDrive = heatDrive * (1.0f - std::abs(punchVal) * 0.8f); // Снижаем драйв
+                processedTransL = Waveshaper::process(splitL.trans, transDrive, SaturationType::Clean);
+                processedTransR = Waveshaper::process(splitR.trans, transDrive, SaturationType::Clean);
             }
             else
             {
-                // Обычная L/R обработка (как было раньше)
-                procL = InteractionEngine::processMorph(inputL + dcBias, finalDriveL * bandDriveScale[band], controlSignal, config);
-                if (numCh > 1)
-                    procR = InteractionEngine::processMorph(inputR + dcBias, finalDriveR * bandDriveScale[band], controlSignal, config);
+                // === NEUTRAL (Punch = 0) ===
+                // Атака обрабатывается так же, как тело
+                processedTransL = Waveshaper::process(splitL.trans, heatDrive, userType);
+                processedTransR = Waveshaper::process(splitR.trans, heatDrive, userType);
             }
 
-            // === DC OFFSET COMPENSATION ===
-            // Убираем тепловой и entropy bias после сатурации (только для WarmTube/Asymmetric)
-            if (userType == SaturationType::WarmTube || userType == SaturationType::Asymmetric) {
-                procL -= std::tanh((biasL + entropyDriftL) * punchDriveL * bandDriveScale[band]);
-                if (numCh > 1) procR -= std::tanh((biasR + entropyDriftR) * punchDriveR * bandDriveScale[band]);
-            }
+            // 4. SUM: Склеиваем Transient и Body обратно
+            float combinedL = processedBodyL + processedTransL;
+            float combinedR = processedBodyR + processedTransR;
 
-            // 5. Predictive Gain
-            float avgScale = config.driveScaleA * (1.0f - controlSignal) + config.driveScaleB * controlSignal;
-            float predComp = 1.0f / std::sqrt(std::max(1.0f, baseDrive * bandDriveScale[band] * avgScale));
-            if (config.typeA == SaturationType::Rectifier || config.typeB == SaturationType::Rectifier)
+            // 5. Применяем Stereo Variance к результату
+            combinedL *= drift.driveMultL;
+            combinedR *= drift.driveMultR;
+
+            // 6. Predictive Compensation для Split & Crush
+            float predComp = 1.0f / std::sqrt(std::max(1.0f, heatDrive));
+            if (userType == SaturationType::Rectifier)
                 predComp *= 1.2f;
 
-            wetSampleL += procL * predComp;
-            if (numCh > 1) wetSampleR += procR * predComp;
+            wetSampleL += combinedL * predComp;
+            wetSampleR += combinedR * predComp;
         }
 
         // === POST-FILTERING (SMOOTH) ===
