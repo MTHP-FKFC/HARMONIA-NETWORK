@@ -79,6 +79,7 @@ private:
     juce::SmoothedValue<float> smoothedOutput;
     juce::LinearSmoothedValue<float> smoothedNetworkSignal;
     juce::SmoothedValue<float> smoothedCompensation;
+    juce::SmoothedValue<float> smoothedSatBlend;
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)
