@@ -74,9 +74,11 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     // 100 мс сглаживания - плавно, но не вечность
     smoothedDrive.reset(sampleRate, 0.1);
     smoothedOutput.reset(sampleRate, 0.1);
+    smoothedNetworkSignal.reset(sampleRate, 0.01); // 10ms reaction time
 
     smoothedDrive.setCurrentAndTargetValue(1.0f);
     smoothedOutput.setCurrentAndTargetValue(1.0f);
+    smoothedNetworkSignal.setCurrentAndTargetValue(0.0f);
 
     envelope.reset(sampleRate);
 }
@@ -93,125 +95,107 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     const int totalNumInputChannels  = getTotalNumInputChannels();
     const int numSamples = buffer.getNumSamples();
 
-    // --- 1. Параметры ---
+    // --- 1. Параметры и Сеть ---
 
-    // Расширим диапазон вниз, чтобы можно было сделать чистый звук
-    // Если в Editor'е слайдер от 0, то считаем, что это "добавочный" гейн.
-    // Но давай пока считать так: параметр APVTS - это dB.
+    // Обновляем параметры UI
     float driveDb = *apvts.getRawParameterValue("drive_master");
     float outDb   = *apvts.getRawParameterValue("output_gain");
 
-    float targetDrive = juce::Decibels::decibelsToGain(driveDb);
-    float targetOut   = juce::Decibels::decibelsToGain(outDb);
-
-    smoothedDrive.setTargetValue(targetDrive);
-    smoothedOutput.setTargetValue(targetOut);
-
-    // FIX: Получаем текущее значение и "проматываем" сглаживатель на длину блока,
-    // так как мы не вызываем getNextValue() для каждого сэмпла (экономим CPU).
-    float currentDrive = smoothedDrive.getNextValue();
-    smoothedDrive.skip(numSamples - 1);
-
-    float currentOut = smoothedOutput.getNextValue();
-    smoothedOutput.skip(numSamples - 1);
-
-    // === НОВАЯ ЛОГИКА КОМПЕНСАЦИИ ===
-    // Если мы наваливаем драйв, мы хотим компенсировать выходную громкость.
-    // Используем корень квадратный: это сохраняет энергию, но убирает пики.
-    // Если Drive = 4.0, мы умножим выход на 0.5.
-    float compensation = 1.0f;
-    if (currentDrive > 1.0f)
-    {
-        compensation = 1.0f / std::sqrt(currentDrive);
-    }
-
-    // === NETWORK ===
-    // 1. Читаем параметры сети (раз в блок - дешево)
     currentGroup = (int)*apvts.getRawParameterValue("group_id");
     isReference  = (*apvts.getRawParameterValue("role") > 0.5f);
 
-    // 2. Если мы Reference -> Измеряем входной сигнал и шлем в сеть
+    // Сглаживание ручек
+    smoothedDrive.setTargetValue(juce::Decibels::decibelsToGain(driveDb));
+    smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
+
+    // Логика Сети (Reference / Listener)
     if (isReference)
     {
-        // Для простоты берем RMS или Пик всего входного буфера
-        // (В будущем сделаем пополосно, пока BroadBand)
         float maxPeak = buffer.getMagnitude(0, numSamples);
-
-        // Обрабатываем через Envelope (атака/релиз)
         float envValue = envelope.process(maxPeak);
-
-        // ПИШЕМ В СЕТЬ
         NetworkManager::getInstance().updateGroupSignal(currentGroup, envValue);
     }
 
-    // 3. Если мы Listener -> Читаем из сети
-    float networkModulator = 0.0f;
+    // Читаем из сети
+    float targetNetValue = 0.0f;
     if (!isReference)
     {
-        // ЧИТАЕМ ИЗ СЕТИ
-        networkModulator = NetworkManager::getInstance().getGroupSignal(currentGroup);
+        targetNetValue = NetworkManager::getInstance().getGroupSignal(currentGroup);
     }
+    // Сглаживаем сетевой сигнал (чтобы не было щелчков при резкой атаке бочки)
+    smoothedNetworkSignal.setTargetValue(targetNetValue);
 
-    // Очистка мусора
+    // Очистка выходов
     for (auto i = totalNumInputChannels; i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, numSamples);
 
-    // --- 2. DSP: Split ---
+    // --- 2. DSP: Split (Кроссовер) ---
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
 
-    // --- 3. DSP: Saturation ---
-    // FIX: Если Drive очень маленький, просто пропускаем звук (Bypass сатурации)
-    // Это поможет проверить качество фильтров.
-    bool bypassSaturation = (driveDb < 0.1f);
+    // --- 3. DSP: Saturation & Ducking (Посэмпловая обработка) ---
 
-    for (int band = 0; band < kNumBands; ++band)
+    // Для простоты и скорости, берем параметры 1 раз на блок (кроме сети)
+    // (Если нужно супер-плавно крутить ручки, перенесем getNextValue внутрь цикла)
+    float baseDrive = smoothedDrive.getNextValue();
+    smoothedDrive.skip(numSamples - 1);
+
+    float outGain = smoothedOutput.getNextValue();
+    smoothedOutput.skip(numSamples - 1);
+
+    // Флаг "Чистого режима" (если драйв в минимуме)
+    bool bypassSaturation = (driveDb < -5.9f);
+
+    for (int i = 0; i < numSamples; ++i)
     {
-        // !!! ТЕСТ СЕТИ !!!
-        // Модифицируем Drive в зависимости от сигнала сети.
-        // Если Reference громкий (networkModulator -> 1.0), мы уменьшаем Drive.
-        // Эффект "Inverse Grime" (Грязь в тишине, чистота на ударе).
+        // Получаем сглаженное значение сети для этого сэмпла
+        float netValue = smoothedNetworkSignal.getNextValue();
 
-        float modDrive = currentDrive;
-
-        if (!isReference && networkModulator > 0.0f)
+        // Рассчитываем "Динамический Драйв"
+        // Если Reference (netValue) громкий -> Драйв уменьшается (Ducking)
+        // Формула: Drive * (1.0 - Network * Depth)
+        float dynamicMod = 1.0f;
+        if (!isReference && netValue > 0.0f)
         {
-            // Простая формула для теста:
-            // Чем громче референс, тем меньше драйва.
-            // 1.0 - networkModulator * 0.8 (глубина эффекта)
-            float ducking = 1.0f - (networkModulator * 0.8f);
-            if (ducking < 0.0f) ducking = 0.0f;
-
-            modDrive *= ducking;
+            // Depth пока хардкодом 0.5 (в будущем выведем на ручку)
+            dynamicMod = 1.0f - (netValue * 0.5f);
+            if (dynamicMod < 0.0f) dynamicMod = 0.0f;
         }
 
-        // Компенсацию считаем от МОДИФИЦИРОВАННОГО драйва
-        float compensation = (modDrive > 1.0f) ? (1.0f / std::sqrt(modDrive)) : 1.0f;
+        float currentSampleDrive = baseDrive * dynamicMod;
 
-        for (int ch = 0; ch < totalNumInputChannels; ++ch)
+        // Расчет компенсации для этого сэмпла
+        // Чем больше драйв, тем сильнее давим выход полосы
+        float bandComp = 1.0f;
+        if (currentSampleDrive > 1.0f)
+             bandComp = 1.0f / std::pow(currentSampleDrive, 0.6f); // 0.6 - подобранный на слух коэффициент "жира"
+
+        // Обработка всех полос и каналов для этого сэмпла
+        for (int band = 0; band < kNumBands; ++band)
         {
-            auto* channelData = bandBuffers[band].getWritePointer(ch);
-
-            if (!bypassSaturation)
+            for (int ch = 0; ch < totalNumInputChannels; ++ch)
             {
-                for (int i = 0; i < numSamples; ++i)
-                {
-                    // Используем modDrive вместо currentDrive
-                    float x = channelData[i] * modDrive;
-                    channelData[i] = std::tanh(x);
-                }
-            }
-            // Если bypassSaturation == true, буфер остается нетронутым (чистый выход фильтра)
-        }
+                // Прямой доступ к сэмплу в буфере полосы
+                float* samplePtr = bandBuffers[band].getWritePointer(ch) + i;
+                float x = *samplePtr;
 
-        // Применяем компенсацию к полосе
-        juce::FloatVectorOperations::multiply(
-            bandBuffers[band].getWritePointer(0), compensation, numSamples);
-        if (totalNumInputChannels > 1)
-            juce::FloatVectorOperations::multiply(
-                bandBuffers[band].getWritePointer(1), compensation, numSamples);
+                if (!bypassSaturation)
+                {
+                    // 1. Input Gain
+                    x *= currentSampleDrive;
+
+                    // 2. Saturation (Tanh)
+                    x = std::tanh(x);
+
+                    // 3. Band Compensation (чтобы не орало при сумме)
+                    x *= bandComp;
+                }
+
+                *samplePtr = x;
+            }
+        }
     }
 
-    // --- 4. DSP: Sum ---
+    // --- 4. DSP: Sum & Limit (Сборка) ---
     buffer.clear();
 
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
@@ -224,14 +208,21 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             juce::FloatVectorOperations::add(outData, bandData, numSamples);
         }
 
-        // Output Gain
-        juce::FloatVectorOperations::multiply(outData, currentOut, numSamples);
-
-        // Safety Limiter (мягкий клиппер вместо жесткого clamp)
-        for (int i=0; i<numSamples; ++i)
+        // Final Output Stage
+        for (int i = 0; i < numSamples; ++i)
         {
-            // Мягкий клиппер на выходе: tanh как мастер-лимитер
-            outData[i] = std::tanh(outData[i]);
+            float x = outData[i];
+
+            // 1. Ручка Output
+            x *= outGain;
+
+            // 2. Safety Limiter (Мягкий клиппер на выходе)
+            // Не дает сигналу превысить 0 dBfs (1.0), даже если сумма полос огромная
+            // Используем быстрый алгоритм "Hard Clip с скруглением"
+            if (x > 1.0f) x = 1.0f;
+            else if (x < -1.0f) x = -1.0f;
+
+            outData[i] = x;
         }
     }
 }

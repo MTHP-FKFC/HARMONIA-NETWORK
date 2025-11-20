@@ -69,6 +69,7 @@ private:
     // Сглаживание параметров (чтобы звук не "хрустел" при вращении ручки)
     juce::SmoothedValue<float> smoothedDrive;
     juce::SmoothedValue<float> smoothedOutput;
+    juce::LinearSmoothedValue<float> smoothedNetworkSignal; // <-- ADD THIS
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)
