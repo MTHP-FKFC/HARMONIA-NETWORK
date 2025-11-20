@@ -2,7 +2,7 @@
 
 ## 🔥 Production Ready Audio Plugin
 
-**Cohera Saturator** is a professional-grade audio saturation plugin featuring Divine Math algorithms, Network Intelligence, and a stunning cyberpunk UI.
+**Cohera Saturator** is a professional-grade audio saturation plugin featuring Divine Math algorithms, Network Intelligence, and a stunning **CYBER-MYSTICISM** UI with living, breathing interface elements.
 
 ## 📦 Installation
 
@@ -28,11 +28,18 @@ Cohera_Saturator_artefacts/Release/VST3/Cohera Saturator.vst3
 
 ## 🎛️ Features
 
+### Core DSP
 - **12 Saturation Algorithms** (Divine Math + Classic)
 - **Network Intelligence** (3 interaction modes)
-- **Professional UI** (150px knobs, cyberpunk design)
 - **High-Quality Processing** (4x oversampling, DC blocking)
 - **Complete Automation** (all parameters exposed)
+
+### 🧙‍♂️ Cyber-Mysticism UI
+- **🌀 Reactor Knob**: Drive knob pulses and glows based on input RMS level
+- **🔮 Sacred Geometry**: Golden Fibonacci spiral subtly visible in spectrum background
+- **🌫️ Cinematic Lighting**: Radial vignette creates depth and professional equipment feel
+- **✨ Dynamic Focus**: UI sections respond to mouse hover with enhanced brightness
+- **🎨 Cyberpunk Design**: Neon orange/cyan palette, glass effects, animated elements
 
 ## 🎹 Supported DAWs
 
