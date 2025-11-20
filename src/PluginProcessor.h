@@ -9,6 +9,8 @@
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
 #include "dsp/TransientDetector.h"
+#include "dsp/VoltageRegulator.h"
+#include "dsp/ThermalModel.h"
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -129,6 +131,14 @@ private:
     // Детекторы транзиентов ([0]=L, [1]=R, работают на высокой частоте)
     std::array<TransientDetector, 2> transDetectors;
     juce::SmoothedValue<float> smoothedPunch;
+
+    // === ANALOG MODELING ===
+    VoltageRegulator psu; // Блок питания (один на плагин)
+    // Тепловая модель (по одной на канал и полосу, т.к. греются они отдельно!)
+    // 6 полос * 2 канала = 12 ламп
+    std::array<std::array<ThermalModel, 2>, kNumBands> tubes;
+    // Параметр аналогового дрейфа
+    juce::SmoothedValue<float> smoothedAnalogDrift;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;

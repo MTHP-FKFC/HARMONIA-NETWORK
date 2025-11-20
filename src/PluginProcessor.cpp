@@ -112,6 +112,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "punch", "Punch",
         juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f), 0.0f));
 
+    // === ANALOG MODELING ===
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "analog_drift", "Analog Drift",
+        juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f));
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -252,6 +257,18 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     smoothedPunch.reset(osSampleRate, 0.05);
     smoothedPunch.setCurrentAndTargetValue(0.0f);
+
+    // === ANALOG MODELING INITIALIZATION ===
+    psu.prepare(sampleRate); // PSU работает на обычной частоте
+
+    for(int b = 0; b < kNumBands; ++b) {
+        for(int ch = 0; ch < 2; ++ch) {
+            tubes[b][ch].prepare(osSampleRate); // Лампы на высокой частоте
+        }
+    }
+
+    smoothedAnalogDrift.reset(osSampleRate, 0.05);
+    smoothedAnalogDrift.setCurrentAndTargetValue(0.0f);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -294,6 +311,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // === PUNCH ===
     float punchParam = *apvts.getRawParameterValue("punch") / 100.0f; // -1.0 .. 1.0
 
+    // === ANALOG DRIFT ===
+    float analogParam = *apvts.getRawParameterValue("analog_drift");
+
     // === EMPHASIS FILTERS ===
     float tightenParam = *apvts.getRawParameterValue("tone_tighten");
     float smoothParam  = *apvts.getRawParameterValue("tone_smooth");
@@ -316,6 +336,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     // Punch parameter smoothing
     smoothedPunch.setTargetValue(punchParam);
+
+    // Analog drift parameter smoothing
+    smoothedAnalogDrift.setTargetValue(analogParam / 100.0f);
 
     // Network Control сглаживание
     smoothedNetDepth.setTargetValue(pDepth / 100.0f);
@@ -370,6 +393,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     heatTarget *= (heatParam / 100.0f);
 
     smoothedGlobalHeat.setTargetValue(heatTarget);
+
+    // === ANALOG DRIFT PREPARATION ===
+    float driftAmount = smoothedAnalogDrift.getNextValue();
 
     // --- 3. DRY COPY (На обычной частоте) ---
 
@@ -429,6 +455,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     for (int i = 0; i < numSamplesHigh; ++i)
     {
+        // === GLOBAL VOLTAGE STARVATION ===
+        // Вычисляем просадку питания (используем globalEnergy из выше)
+        float starvationMult = psu.process(globalEnergy, driftAmount);
+
         // === NETWORK CONTROL PROCESSING (The Holy Trinity) ===
         float depth = smoothedNetDepth.getNextValue();
         float sens  = smoothedNetSens.getNextValue();
@@ -438,6 +468,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float blendVal  = smoothedSatBlend.getNextValue();
         float mixVal    = smoothedMix.getNextValue();
         float outG      = smoothedOutput.getNextValue();
+
+        // Применяем Voltage Starvation к базовому драйву
+        // Если питание просело -> starvationMult > 1.0 -> эффективный драйв растет
+        float effectiveDrive = baseDrive * starvationMult;
 
         // === GLOBAL HEAT APPLICATION ===
         // Получаем текущую "температуру" микса
@@ -522,10 +556,19 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             float xL = bandBuffers[band].getSample(0, i);
             float xR = (numCh > 1) ? bandBuffers[band].getSample(1, i) : xL;
 
+            // === THERMAL MODELING ===
+            // Добавляем тепловой bias перед сатурацией
+            float biasL = tubes[band][0].process(xL) * driftAmount;
+            float biasR = tubes[band][1].process(xR) * driftAmount;
+
+            // Применяем bias к входным сэмплам
+            float inputL = xL + biasL;
+            float inputR = xR + biasR;
+
             if (modeIndex == 3 && !isReference && controlSignal > 0.0f)
             {
                 useMS = true;
-                MSMatrix::encode(xL, xR, mid, side);
+                MSMatrix::encode(inputL, inputR, mid, side);
             }
 
             // 4. Применяем Global Heat к драйву
@@ -548,9 +591,16 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             else
             {
                 // Обычная L/R обработка
-                procL = InteractionEngine::processMorph(xL + dcBias, punchDriveL * bandDriveScale[band], controlSignal, config);
+                procL = InteractionEngine::processMorph(inputL + dcBias, punchDriveL * bandDriveScale[band], controlSignal, config);
                 if (numCh > 1)
-                    procR = InteractionEngine::processMorph(xR + dcBias, punchDriveR * bandDriveScale[band], controlSignal, config);
+                    procR = InteractionEngine::processMorph(inputR + dcBias, punchDriveR * bandDriveScale[band], controlSignal, config);
+            }
+
+            // === DC OFFSET COMPENSATION ===
+            // Убираем тепловой bias после сатурации (только для WarmTube/Asymmetric)
+            if (userType == SaturationType::WarmTube || userType == SaturationType::Asymmetric) {
+                procL -= std::tanh(biasL * punchDriveL * bandDriveScale[band]);
+                if (numCh > 1) procR -= std::tanh(biasR * punchDriveR * bandDriveScale[band]);
             }
 
             // 5. Predictive Gain
