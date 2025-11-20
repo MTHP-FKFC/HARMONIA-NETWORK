@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "dsp/Waveshaper.h"
+#include "dsp/InteractionEngine.h"
 #include "dsp/MSMatrix.h"
 
 
@@ -50,6 +51,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
             "Gated (Reverse)",    // 2: Реф тихий -> Мы злее
             "Stereo Bloom",       // 3: Реф громкий -> Мы расширяемся
             "Sympathetic"         // 4: Реф частоты -> Мы резонируем
+        }, 0));
+
+    // Тип сатурации (базовый выбор пользователя)
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "sat_type", "Saturation Type",
+        juce::StringArray{
+            "Warm Tube",    // 0: Tanh
+            "Asymmetric",   // 1: Even Harmonics
+            "Hard Clip",    // 2: Brickwall
+            "Bit Crush"     // 3: Digital
         }, 0));
 
     // Dynamics Preservation
@@ -244,121 +255,58 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
+        // Читаем выбор пользователя (базовый тип сатурации)
+        int userSatTypeIdx = *apvts.getRawParameterValue("sat_type");
+        SaturationType userType = static_cast<SaturationType>(userSatTypeIdx + 1); // +1 т.к. Clean=0 мы не дали в UI
+
         for (int band = 0; band < kNumBands; ++band)
         {
-            // 1. Читаем сеть для полосы
+            // 1. Получаем сигнал сети для этой полосы
             float bandNetVal = smoothedNetworkBands[band].getNextValue();
             float controlSignal = bandNetVal;
             if (controlSignal < 0.02f) controlSignal = 0.0f;
 
-            // Данные сэмпла
+            // 2. Получаем конфигурацию для этой полосы
+            auto config = InteractionEngine::getConfiguration(modeIndex, band, userType);
+
+            // 3. Логика микса для Stereo Bloom (M/S)
+            bool useMS = false;
+            float mid = 0.0f, side = 0.0f;
             float xL = bandBuffers[band].getSample(0, i);
             float xR = (numCh > 1) ? bandBuffers[band].getSample(1, i) : xL;
 
-            // Переменные для обработки
-            float driveL = baseDrive * bandDriveScale[band];
-            float driveR = driveL; // По дефолту драйв одинаковый
-
-            SaturationType type = SaturationType::WarmTube;
-            float shaperMix = blendVal;
-
-            // Флаг, что мы работаем в M/S режиме
-            bool useMS = false;
-            float mid = 0.0f, side = 0.0f;
-
-            if (!isReference)
+            if (modeIndex == 3 && !isReference && controlSignal > 0.0f)
             {
-                switch (modeIndex)
-                {
-                    case 0: // UNMASKING
-                        if (controlSignal > 0.0f) {
-                            float duck = 1.0f - (controlSignal * 0.8f);
-                            driveL *= duck; driveR *= duck;
-                        }
-                        break;
-
-                    case 1: // GHOST
-                        if (band <= 2 && controlSignal > 0.0f) {
-                            type = SaturationType::Rectifier;
-                            shaperMix = std::max(blendVal, controlSignal);
-                            float boost = (1.0f + controlSignal * 2.0f);
-                            driveL *= boost; driveR *= boost;
-                        }
-                        break;
-
-                    case 2: // GATED
-                        {
-                            float reverseSignal = 1.0f - controlSignal;
-                            if (band <= 2 && reverseSignal > 0.0f) {
-                                type = SaturationType::Rectifier;
-                                shaperMix = std::max(blendVal, reverseSignal);
-                                float boost = (1.0f + reverseSignal * 1.5f);
-                                driveL *= boost; driveR *= boost;
-                            }
-                        }
-                        break;
-
-                    case 3: // STEREO BLOOM
-                        // Реф бьет -> Side канал получает буст драйва
-                        if (controlSignal > 0.0f)
-                        {
-                            useMS = true;
-                            MSMatrix::encode(xL, xR, mid, side);
-
-                            // Mid канал: чуть дакаем (освобождаем центр)
-                            // Side канал: бустим драйв!
-                            float bloomAmount = controlSignal * 3.0f;
-
-                            driveR = driveL * (1.0f + bloomAmount);
-                            driveL = driveL * 0.8f;
-                        }
-                        break;
-
-                    case 4: // SYMPATHETIC
-                        // Сатурируем только частоты, которые есть в референсе
-                        if (controlSignal > 0.1f)
-                        {
-                            float resonance = controlSignal * 1.5f;
-                            driveL *= (1.0f + resonance);
-                            driveR *= (1.0f + resonance);
-
-                            // На ВЧ добавляем звон
-                            if (band >= 3) {
-                                type = SaturationType::Rectifier;
-                                shaperMix = std::min(0.5f, resonance);
-                            }
-                        }
-                        break;
-                }
+                useMS = true;
+                MSMatrix::encode(xL, xR, mid, side);
             }
 
-            // 2. ПРИМЕНЕНИЕ
+            // 4. Обработка через InteractionEngine
             float procL = 0.0f, procR = 0.0f;
 
             if (useMS)
             {
-                // Обработка в режиме Mid/Side
-                float pMid = shapers[band].processSample(mid, driveL, type, shaperMix);
-                float pSide = shapers[band].processSample(side, driveR, type, shaperMix);
-
-                // Декодируем обратно в L/R
+                // M/S: Mid через A, Side через B
+                float pMid = InteractionEngine::processMorph(mid, baseDrive * bandDriveScale[band], controlSignal, config);
+                float pSide = InteractionEngine::processMorph(side, baseDrive * bandDriveScale[band], controlSignal, config);
                 MSMatrix::decode(pMid, pSide, procL, procR);
             }
             else
             {
                 // Обычная L/R обработка
-                procL = shapers[band].processSample(xL, driveL, type, shaperMix);
-                if (finalR)
-                    procR = shapers[band].processSample(xR, driveR, type, shaperMix);
+                procL = InteractionEngine::processMorph(xL, baseDrive * bandDriveScale[band], controlSignal, config);
+                if (numCh > 1)
+                    procR = InteractionEngine::processMorph(xR, baseDrive * bandDriveScale[band], controlSignal, config);
             }
 
-            // 3. Predictive Gain
-            float avgBandDrive = (driveL + driveR) * 0.5f;
-            float predComp = 1.0f / std::sqrt(std::max(1.0f, avgBandDrive));
-            if (type == SaturationType::Rectifier) predComp *= 1.2f;
+            // 5. Predictive Gain
+            float avgScale = config.driveScaleA * (1.0f - controlSignal) + config.driveScaleB * controlSignal;
+            float predComp = 1.0f / std::sqrt(std::max(1.0f, baseDrive * bandDriveScale[band] * avgScale));
+            if (config.typeA == SaturationType::Rectifier || config.typeB == SaturationType::Rectifier)
+                predComp *= 1.2f;
 
             wetSampleL += procL * predComp;
-            if (finalR) wetSampleR += procR * predComp;
+            if (numCh > 1) wetSampleR += procR * predComp;
         }
 
         // === PSYCHOACOUSTIC AUTO-GAIN ===

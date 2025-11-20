@@ -1,65 +1,58 @@
 #pragma once
-
 #include <cmath>
 #include <algorithm>
+#include <juce_core/juce_core.h>
 
 enum class SaturationType
 {
-    Clean,
-    WarmTube,   // Tanh
-    HardClip,   // Limit
-    Rectifier,  // Ghost Harmonics (Octave Up)
-    Crush       // Bitcrush (для будущих фич)
+    Clean,       // Прозрачный
+    WarmTube,    // Tanh
+    Asymmetric,  // Even Harmonics
+    Rectifier,   // Sine Fold (Ghost)
+    BitCrush,    // Digital
+    HardClip     // Brickwall
 };
 
 class Waveshaper
 {
 public:
-    Waveshaper() = default;
-
-    // mix: 0.0 = Clean (Input), 1.0 = Full Effect
-    float processSample(float input, float drive, SaturationType type, float mix = 1.0f)
+    // Чистая функция: Вход + Драйв + Тип -> Выход
+    static float process(float input, float drive, SaturationType type)
     {
-        float wet = input;
-
-        // Drive scaling specifically for different types to match loudness
         float x = input * drive;
 
         switch (type)
         {
+            case SaturationType::Clean:
+                return input; // Драйв не влияет на чистоту
+
             case SaturationType::WarmTube:
-                // Классика
-                wet = std::tanh(x);
-                break;
+                return std::tanh(x);
+
+            case SaturationType::Asymmetric:
+                {
+                    // Смещенный tanh для четных гармоник
+                    float bias = 0.2f;
+                    return (std::tanh(x + bias) - std::tanh(bias)) * 1.1f;
+                }
 
             case SaturationType::HardClip:
-                wet = std::clamp(x, -1.0f, 1.0f);
-                break;
+                return juce::jlimit(-1.0f, 1.0f, x);
 
-            case SaturationType::Rectifier: // Ghost/Foldback
+            case SaturationType::Rectifier:
+                // Sine Foldback (Ghost)
+                // Добавляем гейн, так как foldback съедает энергию
+                return (std::sin(x * 1.5f) * 0.8f + input * 0.2f) * 1.2f;
+
+            case SaturationType::BitCrush:
                 {
-                    // SINE FOLDBACK DISTORTION
-                    // Это секрет "рычащих" басов в DnB и Dubstep.
-                    // Вместо обрезки, волна "отражается" обратно.
-                    // Дает металлический призвук и кучу гармоник.
-
-                    // Умножаем на 1.5, чтобы эффект наступал раньше
-                    float arg = x * 1.5f;
-
-                    // std::sin от большого аргумента создает "завороты" волны
-                    wet = std::sin(arg);
-
-                    // Добавляем немного оригинального низа, чтобы не терять тело
-                    wet = wet * 0.8f + x * 0.2f;
+                    // Эмуляция биткраша
+                    float depth = 16.0f / std::max(1.0f, drive);
+                    float crushed = std::round(input * depth) / depth;
+                    // Жесткий клип на выходе биткраша
+                    return juce::jlimit(-1.0f, 1.0f, crushed);
                 }
-                break;
-
-            case SaturationType::Clean:
-            default:
-                return input;
         }
-
-        // Линейная интерполяция (Crossfade)
-        return input + mix * (wet - input);
+        return input;
     }
 };
