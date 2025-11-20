@@ -127,13 +127,14 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     smoothedNetworkSignal.setTargetValue(targetNetValue);
 
     // === 2. СОЗДАЕМ DRY КОПИЮ ===
-
-    // Копируем входной буфер, чтобы потом смешать его с обработанным
+    // Копируем ЧИСТЫЙ вход (без headroom), чтобы Dry был оригинальным уровнем
     juce::AudioBuffer<float> dryBuffer;
     dryBuffer.makeCopyOf(buffer);
 
+    // Применяем headroom ТОЛЬКО к Wet пути (buffer)
+    buffer.applyGain(0.5f); // -6dB headroom
+
     // Прогоняем Dry через задержку, равную задержке фильтров
-    // Это ВАЖНО, иначе при миксе (50/50) будет гребенчатый фильтр (то самое "тускло")
     juce::dsp::AudioBlock<float> dryBlock(dryBuffer);
     juce::dsp::ProcessContextReplacing<float> dryContext(dryBlock);
     dryDelayLine.process(dryContext);
