@@ -13,8 +13,11 @@ public:
 
         // Параметры сети
         addSlider(depthSlider, depthAtt, apvts, "net_depth", "Depth");
+        depthSlider.setName("Net_Depth");
         addSlider(sensSlider, sensAtt, apvts, "net_sens", "Sens");
+        sensSlider.setName("Net_Sens");
         addSlider(smoothSlider, smoothAtt, apvts, "net_smooth", "Smooth");
+        smoothSlider.setName("Net_Smooth");
         
         // Режим взаимодействия
         modeCombo.addItemList({"Unmasking", "Ghost", "Gated", "Stereo Bloom", "Sympathetic"}, 1);

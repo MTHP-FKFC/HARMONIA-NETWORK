@@ -21,10 +21,11 @@ CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 {
     // Запуск интеграционных тестов в Debug режиме
 #if JUCE_DEBUG
+    std::cout << "=== RUNNING COHERA SATURATOR INTEGRATION TESTS ===" << std::endl;
     juce::UnitTestRunner runner;
     runner.setPassesAreLogged(true); // Включаем вывод успешных тестов
     runner.runAllTests();
-    juce::Logger::outputDebugString("=== Integration Tests Complete ===");
+    std::cout << "=== TESTS COMPLETED ===" << std::endl;
 #endif
 
     // Новая архитектура инициализирована в конструкторе

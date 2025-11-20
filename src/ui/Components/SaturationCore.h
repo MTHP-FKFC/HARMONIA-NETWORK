@@ -12,9 +12,13 @@ public:
 
         // Слайдеры
         addSlider(driveSlider, driveAtt, apvts, "drive_master", "Drive");
+        driveSlider.setName("Drive");
         addSlider(tightenSlider, tightenAtt, apvts, "tone_tighten", "Tighten");
+        tightenSlider.setName("Tighten");
         addSlider(smoothSlider, smoothAtt, apvts, "tone_smooth", "Smooth");
+        smoothSlider.setName("Smooth");
         addSlider(punchSlider, punchAtt, apvts, "punch", "Punch");
+        punchSlider.setName("Punch");
         
         // Выбор Алгоритма (Math Mode или Sat Type - выбери один основной)
         // Давай используем "math_mode" как самый крутой

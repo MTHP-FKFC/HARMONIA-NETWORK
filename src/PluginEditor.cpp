@@ -3,23 +3,23 @@
 CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(CoheraSaturatorAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p),
       saturationCore(p.getAPVTS()),
-      networkBrain(p.getAPVTS())
+      networkBrain(p.getAPVTS()),
+      topBar(p.getAPVTS())
 {
-    // Применяем стиль
     setLookAndFeel(&lnf);
-    
-    // Добавляем компоненты
+
+    addAndMakeVisible(topBar);
+    addAndMakeVisible(spectrumVisor);
     addAndMakeVisible(saturationCore);
     addAndMakeVisible(networkBrain);
     
-    // Mix & Output (Глобальные, внизу)
-    mixSlider.setSliderStyle(juce::Slider::LinearHorizontal);
-    mixSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
+    // Mix knob (внизу по центру)
+    mixSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    mixSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     addAndMakeVisible(mixSlider);
     mixAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "mix", mixSlider);
-    
-    // Размер окна
-    setSize(800, 600);
+
+    setSize(900, 650); // Чуть шире для удобства
     setResizable(true, true);
 }
 
@@ -31,29 +31,23 @@ CoheraSaturatorAudioProcessorEditor::~CoheraSaturatorAudioProcessorEditor()
 void CoheraSaturatorAudioProcessorEditor::paint(juce::Graphics& g)
 {
     g.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
-    
-    // Заголовок (Заглушка для TopBar)
-    g.setColour(juce::Colours::white);
-    g.setFont(20.0f);
-    g.drawText("COHERA SATURATOR", getLocalBounds().removeFromTop(40), juce::Justification::centred);
 }
 
 void CoheraSaturatorAudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
     
-    // Header
-    auto header = area.removeFromTop(40);
+    topBar.setBounds(area.removeFromTop(50));
     
-    // Footer (Mix knob)
-    auto footer = area.removeFromBottom(50).reduced(100, 10);
-    mixSlider.setBounds(footer);
+    // Footer (Mix)
+    auto footer = area.removeFromBottom(60);
+    mixSlider.setBounds(footer.getCentreX() - 30, footer.getY(), 60, 60);
+
+    // Main area
+    auto visorArea = area.removeFromTop(250); // Большой экран
+    spectrumVisor.setBounds(visorArea.reduced(10, 0));
     
-    // Visor (Middle) - пока пустое место под визуализацию
-    auto visorArea = area.removeFromTop(area.getHeight() * 0.45f);
-    
-    // Main Controls (Bottom Split)
-    auto controlsArea = area;
-    saturationCore.setBounds(controlsArea.removeFromLeft(controlsArea.getWidth() / 2));
-    networkBrain.setBounds(controlsArea);
+    auto controls = area.reduced(10);
+    saturationCore.setBounds(controls.removeFromLeft(controls.getWidth() / 2).reduced(5));
+    networkBrain.setBounds(controls.reduced(5));
 }

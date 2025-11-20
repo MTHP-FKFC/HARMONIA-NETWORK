@@ -2,8 +2,10 @@
 #include "JuceHeader.h"
 #include "PluginProcessor.h"
 #include "ui/CoheraLookAndFeel.h"
+#include "ui/components/TopBar.h"
 #include "ui/components/SaturationCore.h"
 #include "ui/components/NetworkBrain.h"
+#include "ui/components/SpectrumVisor.h"
 
 class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor
 {
@@ -18,12 +20,12 @@ public:
 private:
     CoheraSaturatorAudioProcessor& audioProcessor;
     CoheraLookAndFeel lnf;
-    
-    // Панели
+
+    TopBar topBar;
+    SpectrumVisor spectrumVisor;
     SaturationCore saturationCore;
     NetworkBrain networkBrain;
     
-    // Footer controls
     juce::Slider mixSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAtt;
 

@@ -51,6 +51,7 @@ target_sources(Cohera_Saturator PRIVATE
     # Tests
     src/tests/TestHelpers.h
     src/tests/EngineIntegrationTests.cpp
+    src/tests/TestRunner.cpp
 
     # DSP Module
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h
@@ -110,3 +111,47 @@ target_link_libraries(Cohera_Saturator PRIVATE
     juce::juce_data_structures
     juce::juce_events
 )
+
+# Create separate test executable (закомментировано, пока нет .cpp файлов)
+# add_executable(Cohera_Tests
+#     src/tests/TestRunner.cpp
+#     src/dsp/FilterBank.cpp
+#     # src/dsp/Waveshaper.cpp (добавим позже)
+#     # src/dsp/InteractionEngine.cpp (добавим позже)
+#     src/dsp/MSMatrix.cpp
+#     src/dsp/Envelope.cpp
+#     src/dsp/DynamicsRestorer.cpp
+#     src/dsp/PsychoAcousticGain.cpp
+#     src/dsp/VoltageRegulator.cpp
+#     src/dsp/ThermalModel.cpp
+#     src/dsp/StereoVariance.cpp
+#     src/dsp/NoiseBreather.cpp
+#     src/dsp/DeltaMonitor.cpp
+#     src/dsp/StereoFocus.cpp
+#     src/dsp/HarmonicEntropy.cpp
+#     src/dsp/TransientDetector.cpp
+#     src/dsp/TransientSplitter.cpp
+#     src/dsp/AutoGainStage.cpp
+#     src/dsp/SidechainNormalizer.cpp
+#     src/network/NetworkManager.cpp
+#     src/parameters/ParameterSet.cpp
+#     src/parameters/ParameterManager.cpp
+#     src/engine/SaturationEngine.cpp
+#     src/engine/BandProcessingEngine.cpp
+#     src/engine/AnalogModelingEngine.cpp
+# )
+
+# target_include_directories(Cohera_Tests PRIVATE src)
+
+# target_link_libraries(Cohera_Tests PRIVATE
+#     juce::juce_recommended_config_flags
+#     juce::juce_recommended_warning_flags
+#     juce::juce_core
+#     juce::juce_audio_basics
+#     juce::juce_audio_processors
+#     juce::juce_dsp
+# )
+
+# set_target_properties(Cohera_Tests PROPERTIES
+#     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Cohera_Saturator_artefacts/Tests"
+# )
