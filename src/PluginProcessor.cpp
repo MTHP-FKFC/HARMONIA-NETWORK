@@ -100,6 +100,17 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     psychoGain.prepare(sampleRate); // <-- NEW
 
+    // Инициализация полосных энвелопов и сглаживателей сети
+    for (int i = 0; i < kNumBands; ++i)
+    {
+        // Настраиваем детекторы (быстрые)
+        bandEnvelopes[i].reset(sampleRate);
+
+        // Настраиваем сглаживатели приема (10-20мс)
+        smoothedNetworkBands[i].reset(sampleRate, 0.01);
+        smoothedNetworkBands[i].setCurrentAndTargetValue(0.0f);
+    }
+
     // SOFT START:
     // Начинаем с тишины (0.0)
     // Поднимаемся до полной громкости (1.0) за 200 мс.
@@ -118,7 +129,6 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     smoothedNetworkSignal.reset(sampleRate, 0.02);
 
     // 5. Настройка новых модулей
-    envelope.reset(sampleRate); // Для сети
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -154,23 +164,41 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
     smoothedDynamics.setTargetValue(dynParam / 100.0f);
 
-    // --- 2. СЕТЬ (Пока заглушка для стабильности звука) ---
+    // --- 2. СЕТЕВАЯ ЛОГИКА (Per-Band) ---
 
     currentGroup = (int)*apvts.getRawParameterValue("group_id");
     isReference  = (*apvts.getRawParameterValue("role") > 0.5f);
-    
-    if (isReference) {
-        // Шлем пик (просто чтобы видеть, что сеть жива, на звук не влияет пока)
-        float maxPeak = buffer.getMagnitude(0, numSamples);
-        NetworkManager::getInstance().updateGroupSignal(currentGroup, maxPeak);
-    }
 
     // Читаем параметры режима
     int modeIndex = *apvts.getRawParameterValue("mode");
 
-    // Читаем сетевой сигнал для модуляции (если мы Listener)
-    float rawNetVal = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
-    smoothedNetworkSignal.setTargetValue(rawNetVal);
+    // Если Reference -> Анализируем каждую полосу и шлем в сеть
+    if (isReference)
+    {
+        for (int b = 0; b < kNumBands; ++b)
+        {
+            // Берем пик громкости в этой полосе (из L и R)
+            float peakL = bandBuffers[b].getMagnitude(0, 0, numSamples);
+            float peakR = (numCh > 1) ? bandBuffers[b].getMagnitude(1, 0, numSamples) : 0.0f;
+            float maxBandPeak = std::max(peakL, peakR);
+
+            // Обрабатываем энвелопом
+            float envVal = bandEnvelopes[b].process(maxBandPeak);
+
+            // Шлем в сеть
+            NetworkManager::getInstance().updateBandSignal(currentGroup, b, envVal);
+        }
+    }
+
+    // Если Listener -> Читаем каждую полосу из сети и готовим сглаживатели
+    for (int b = 0; b < kNumBands; ++b)
+    {
+        float targetVal = 0.0f;
+        if (!isReference) {
+            targetVal = NetworkManager::getInstance().getBandSignal(currentGroup, b);
+        }
+        smoothedNetworkBands[b].setTargetValue(targetVal);
+    }
 
     // --- 3. DRY COPY & SPLIT ---
 
@@ -192,11 +220,6 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Фиксированный Tilt (меньше грязи на низах)
     const float bandDriveScale[6] = { 0.6f, 0.8f, 1.0f, 1.0f, 1.1f, 1.2f };
 
-    // ФИЗИЧЕСКАЯ КОМПЕНСАЦИЯ СУММЫ:
-    // Сумма 6 некоррелированных полос дает прирост энергии.
-    // Гасим сумму на -9dB (0.35), чтобы вернуть к уровню входа.
-    // Плюс простая авто-компенсация драйва (1/drive).
-    const float baseSumCompensation = 0.35f; 
 
     auto* dryL = dryBuffer.getReadPointer(0);
     auto* dryR = (numCh > 1) ? dryBuffer.getReadPointer(1) : nullptr;
@@ -205,62 +228,74 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     for (int i = 0; i < numSamples; ++i)
     {
-        float drv = smoothedDrive.getNextValue();
-        float blend = smoothedSatBlend.getNextValue();
-        float mix = smoothedMix.getNextValue();
-        float outG = smoothedOutput.getNextValue();
-        float dynAmount = smoothedDynamics.getNextValue();
-        float netVal = smoothedNetworkSignal.getNextValue();
+        // Базовые параметры
+        float baseDrive = smoothedDrive.getNextValue();
+        float blendVal  = smoothedSatBlend.getNextValue();
+        float mixVal    = smoothedMix.getNextValue();
+        float outG      = smoothedOutput.getNextValue();
 
-        // Predictive Gain (Грубая компенсация внутри полос)
-        // Оставляем это, чтобы сумматор не переполнялся в float.
-        // Формула: 1/sqrt(drive)
-        float predComp = 1.0f / std::sqrt(std::max(1.0f, drv));
-
-        // Если мы в режиме Blend (<15% драйва), отключаем компенсацию, чтобы не менять громкость Dry
-        if (blend < 1.0f) predComp = predComp * blend + 1.0f * (1.0f - blend);
-
-        // Network Logic
-        float effectiveDrive = drv;
-        float ghostAmount = 0.0f;
-
-        if (!isReference) {
-            if (modeIndex == 0) effectiveDrive *= (1.0f - netVal * 0.8f); // Inverse Grime
-            else if (modeIndex == 1) {
-                ghostAmount = netVal;
-                effectiveDrive *= (1.0f + ghostAmount * 2.0f); // Ghost Harmonics boost
-            }
-        }
-
-        float sumL = 0.0f;
-        float sumR = 0.0f;
+        float wetSampleL = 0.0f;
+        float wetSampleR = 0.0f;
 
         for (int band = 0; band < kNumBands; ++band)
         {
-            float bDrive = effectiveDrive * bandDriveScale[band];
+            // 1. Получаем сигнал сети для ЭТОЙ полосы
+            float bandNetVal = smoothedNetworkBands[band].getNextValue();
 
+            // "Умный" нормалайзер/гейт для этой полосы
+            // (Можно использовать scNormalizer, но он один. Пока сделаем простую логику)
+            float controlSignal = bandNetVal;
+            // Простой гейт шума
+            if (controlSignal < 0.05f) controlSignal = 0.0f;
+
+            // 2. ЛОГИКА ВЗАИМОДЕЙСТВИЯ (Per-Band!)
+            float effectiveBandDrive = baseDrive * bandDriveScale[band];
             SaturationType type = SaturationType::WarmTube;
-            float shaperMix = blend;
+            float shaperMix = blendVal;
 
-            if (ghostAmount > 0.01f && band <= 1) {
-                type = SaturationType::Rectifier;
-                shaperMix = std::max(blend, ghostAmount);
+            if (!isReference)
+            {
+                if (modeIndex == 0) // MODE: SPECTRAL UNMASKING (ex-Inverse Grime)
+                {
+                    // Если в ЭТОЙ полосе референс громкий -> МЫ в этой полосе становимся тише/чище.
+                    // А в других полосах остаемся жирными!
+                    // Это и есть Spectral Burn-Through.
+                    if (controlSignal > 0.0f) {
+                        float duck = 1.0f - (controlSignal * 0.8f); // Depth
+                        effectiveBandDrive *= duck;
+                    }
+                }
+                else if (modeIndex == 1) // MODE: GHOST HARMONICS
+                {
+                    // Ghost только на низах, как и раньше
+                    if (band <= 1 && controlSignal > 0.0f) {
+                        type = SaturationType::Rectifier;
+                        shaperMix = std::max(blendVal, controlSignal);
+                        effectiveBandDrive *= (1.0f + controlSignal * 2.0f);
+                    }
+                    // А вот на верхах можно сделать что-то другое!
+                    // Например, если бочка бьет, верха становятся "Ярче" (Exciter)
+                    if (band >= 3 && controlSignal > 0.0f) {
+                         effectiveBandDrive *= (1.0f + controlSignal * 0.5f);
+                    }
+                }
             }
 
+            // 3. Predictive Gain (с учетом измененного драйва)
+            float predComp = 1.0f / std::sqrt(std::max(1.0f, effectiveBandDrive));
+            if (type == SaturationType::Rectifier) predComp *= 1.2f;
+
+            // 4. Обработка
             // Left
             float rawL = bandBuffers[band].getSample(0, i);
-            float satL = shapers[band].processSample(rawL, bDrive, type, shaperMix);
-            // === DYNAMICS RESTORATION ===
-            // Сравниваем чистый rawL и грязный satL -> выравниваем satL
-            float restoredL = dynamicsRestorers[band][0].process(rawL, satL, dynAmount);
-            sumL += restoredL * predComp;
+            float satL = shapers[band].processSample(rawL, effectiveBandDrive, type, shaperMix);
+            wetSampleL += satL * predComp;
 
             // Right
             if (dryR) {
                 float rawR = bandBuffers[band].getSample(1, i);
-                float satR = shapers[band].processSample(rawR, bDrive, type, shaperMix);
-                float restoredR = dynamicsRestorers[band][1].process(rawR, satR, dynAmount);
-                sumR += restoredR * predComp;
+                float satR = shapers[band].processSample(rawR, effectiveBandDrive, type, shaperMix);
+                wetSampleR += satR * predComp;
             }
         }
 
@@ -269,14 +304,14 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float dryL_s = dryL[i];
         float dryR_s = dryR ? dryR[i] : 0.0f;
 
-        float psychoScale = psychoGain.processStereoSample(dryL_s, dryR_s, sumL, sumR);
+        float psychoScale = psychoGain.processStereoSample(dryL_s, dryR_s, wetSampleL, wetSampleR);
 
         // Применяем "умный" гейн
-        sumL *= psychoScale;
-        sumR *= psychoScale;
+        wetSampleL *= psychoScale;
+        wetSampleR *= psychoScale;
 
         // === MIX & OUTPUT ===
-        float outL_val = dryL_s * (1.0f - mix) + sumL * mix;
+        float outL_val = dryL_s * (1.0f - mixVal) + wetSampleL * mixVal;
         outL_val *= outG;
 
         // Soft Clip (Мастеринг-качество)
@@ -285,7 +320,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         finalL[i] = outL_val;
 
         if (finalR) {
-            float outR_val = dryR_s * (1.0f - mix) + sumR * mix;
+            float outR_val = dryR_s * (1.0f - mixVal) + wetSampleR * mixVal;
             outR_val *= outG;
             if (std::abs(outR_val) > 1.0f) outR_val = std::tanh(outR_val);
             finalR[i] = outR_val;

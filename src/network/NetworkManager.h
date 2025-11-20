@@ -7,6 +7,7 @@
 static constexpr int MAX_INSTANCES = 64;
 // Кол-во групп (0..7)
 static constexpr int MAX_GROUPS = 8;
+static constexpr int NUM_BANDS = 6; // Наши 6 полос
 
 class NetworkManager
 {
@@ -20,24 +21,24 @@ public:
 
     // === API для Аудио Потока (REALTIME SAFE) ===
 
-    // 1. Reference пишет свою громкость
-    // groupIdx: 0-7
-    // value: 0.0 - 1.0 (Envelope)
-    void updateGroupSignal(int groupIdx, float value)
+    // 1. Reference пишет энергию конкретной полосы
+    // groupIdx: 0-7, bandIdx: 0-5
+    // value: 0.0 - 1.0 (Envelope полосы)
+    void updateBandSignal(int groupIdx, int bandIdx, float value)
     {
-        if (groupIdx >= 0 && groupIdx < MAX_GROUPS)
+        if (groupIdx >= 0 && groupIdx < MAX_GROUPS && bandIdx >= 0 && bandIdx < NUM_BANDS)
         {
             // store(memory_order_relaxed) - самая быстрая операция
-            groupSignals[groupIdx].store(value, std::memory_order_relaxed);
+            groupBandSignals[groupIdx][bandIdx].store(value, std::memory_order_relaxed);
         }
     }
 
-    // 2. Listener читает громкость группы
-    float getGroupSignal(int groupIdx) const
+    // 2. Listener читает энергию полосы
+    float getBandSignal(int groupIdx, int bandIdx) const
     {
-        if (groupIdx >= 0 && groupIdx < MAX_GROUPS)
+        if (groupIdx >= 0 && groupIdx < MAX_GROUPS && bandIdx >= 0 && bandIdx < NUM_BANDS)
         {
-            return groupSignals[groupIdx].load(std::memory_order_relaxed);
+            return groupBandSignals[groupIdx][bandIdx].load(std::memory_order_relaxed);
         }
         return 0.0f;
     }
@@ -46,11 +47,12 @@ private:
     NetworkManager()
     {
         // Инициализируем нулями
-        for (auto& val : groupSignals) val.store(0.0f);
+        for (auto& group : groupBandSignals)
+            for (auto& band : group)
+                band.store(0.0f);
     }
 
-    // Таблица сигналов.
-    // Индекс массива = ID группы.
-    // Значение = Громкость Reference трека в этой группе.
-    std::array<std::atomic<float>, MAX_GROUPS> groupSignals;
+    // Двумерный массив атомиков: [Группа][Полоса]
+    // Значение = Энергия Reference трека в этой группе и полосе
+    std::array<std::array<std::atomic<float>, NUM_BANDS>, MAX_GROUPS> groupBandSignals;
 };

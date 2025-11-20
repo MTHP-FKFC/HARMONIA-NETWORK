@@ -96,7 +96,11 @@ private:
     juce::LinearSmoothedValue<float> startupFader;
 
     // === NETWORK ===
-    EnvelopeFollower envelope; // Измеритель громкости (для Reference)
+    // Вместо одного envelope, теперь массив по полосам
+    std::array<EnvelopeFollower, kNumBands> bandEnvelopes;
+
+    // Сглаживатели для приема данных из сети (чтобы модуляция была плавной)
+    std::array<juce::LinearSmoothedValue<float>, kNumBands> smoothedNetworkBands;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;
