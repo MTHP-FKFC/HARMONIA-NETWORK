@@ -202,18 +202,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
     }
 
-    // Skip final RMS compensation - rely only on per-band compensation
-
-    // --- 5. Sum ---
-    buffer.clear();
-    for (int ch = 0; ch < totalNumInputChannels; ++ch)
-    {
-        auto* outData = buffer.getWritePointer(ch);
-        for (int band = 0; band < kNumBands; ++band)
-        {
-            const auto* bandData = bandBuffers[band].getReadPointer(ch);
-            juce::FloatVectorOperations::add(outData, bandData, numSamples);
-        }
+    // Wet signal is now ready in buffer
 
     // === 4.5. DRY SIGNAL COMPENSATION ===
     // Применяем небольшую RMS компенсацию к Dry сигналу для consistency между каналами
@@ -264,7 +253,6 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             }
         }
     }
-}
 
 // === Сохранение состояния ===
 
