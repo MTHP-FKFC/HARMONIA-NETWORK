@@ -7,7 +7,6 @@
 #include "dsp/Waveshaper.h"
 #include "dsp/Envelope.h"
 #include "dsp/SidechainNormalizer.h" // <-- NEW
-#include "dsp/AutoGainStage.h"       // <-- NEW
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -84,7 +83,6 @@ private:
 
     // Заменяем россыпь переменных на объекты с единой ответственностью
     SidechainNormalizer scNormalizer;
-    AutoGainStage autoGain;
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)

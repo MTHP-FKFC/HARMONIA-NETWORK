@@ -93,6 +93,7 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     // 5. Настройка новых модулей
     scNormalizer.prepare(sampleRate);
+    autoGain.prepare(sampleRate);
 
     envelope.reset(sampleRate); // Для сети
 }
@@ -107,6 +108,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 {
     juce::ScopedNoDenormals noDenormals;
     const int numSamples = buffer.getNumSamples();
+    // Гарантируем, что работаем минимум со стерео, если хост дает моно - дублируем логику
     const int numCh = juce::jmin(buffer.getNumChannels(), 2);
 
     // --- 1. ПАРАМЕТРЫ ---
@@ -142,7 +144,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float rawNetVal = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
     smoothedNetworkSignal.setTargetValue(rawNetVal);
 
-    // --- 3. DRY COPY ---
+    // --- 3. DRY КОПИЯ (для фазовой компенсации) ---
 
     juce::AudioBuffer<float> dryBuffer;
     dryBuffer.makeCopyOf(buffer);
@@ -155,113 +157,146 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
 
-    // Настройки Tilt (меньше искажений на низах)
-    // 0(Sub)  1(Low)  2(Mid)  3(MH)  4(High) 5(Air)
-    const float bandDriveScale[6] = { 0.5f, 0.8f, 1.0f, 1.0f, 1.1f, 1.2f };
+    // --- 5. ГЛАВНЫЙ ЦИКЛ ОБРАБОТКИ (ПОСЭМПЛОВЫЙ) ---
 
-    // --- 5. PROCESS LOOP ---
+    // Здесь мы считаем управляющие сигналы ОДИН РАЗ и применяем ко ВСЕМ каналам
 
+    // Для измерения выхода (для автогейна следующего блока)
+    float accumulatedWetEnergy = 0.0f;
+
+    // Указатели на данные
+    // Предполагаем стерео (или моно). Для безопасности берем указатели заранее.
     auto* dryL = dryBuffer.getReadPointer(0);
     auto* dryR = (numCh > 1) ? dryBuffer.getReadPointer(1) : nullptr;
+
     auto* outL = buffer.getWritePointer(0);
     auto* outR = (numCh > 1) ? buffer.getWritePointer(1) : nullptr;
 
+    // Предварительно рассчитываем таргет компенсации на основе ПРЕДЫДУЩЕГО блока
+    // (Это стандартная практика для Auto-Gain, чтобы избежать задержек в цепи управления)
+
     for (int i = 0; i < numSamples; ++i)
     {
-        // Параметры на сэмпл
-        float baseDrive = smoothedDrive.getNextValue();
-        float blendVal  = smoothedSatBlend.getNextValue();
-        float netVal    = smoothedNetworkSignal.getNextValue();
-        float mixVal    = smoothedMix.getNextValue();
-        float outGain   = smoothedOutput.getNextValue();
+        // А. Получаем "Умный" управляющий сигнал
+        // Вся логика адаптивного порога теперь внутри класса!
+        float rawNetSample = smoothedNetworkSignal.getNextValue();
+        float controlSignal = scNormalizer.process(rawNetSample);
 
-        // SC Normalizer (Умный триггер)
-        float controlSignal = scNormalizer.process(netVal);
+        // Б. Рассчитываем параметры для этого сэмпла
+        float driveVal  = smoothedDrive.getNextValue();
+        float blendVal  = smoothedSatBlend.getNextValue(); // <-- НОВОЕ: Степень сатурации (0=Clean, 1=Full)
+        float compVal   = autoGain.getNextValue();
 
-        // Логика режимов
-        float effectiveDrive = baseDrive;
+        // Логика режимов теперь читается легко:
+        float effectiveDrive = driveVal;
         float ghostAmount = 0.0f;
 
         if (!isReference)
         {
             if (modeIndex == 0) { // Ducking
-                effectiveDrive *= (1.0f - controlSignal * 0.8f);
+                effectiveDrive *= (1.0f - controlSignal);
             }
             else if (modeIndex == 1) { // Ghost
                 ghostAmount = controlSignal;
-                // В Ghost режиме мы сильно разгоняем драйв на ударе
-                effectiveDrive *= (1.0f + ghostAmount * 2.0f);
+                effectiveDrive *= (1.0f + ghostAmount * 1.5f);
             }
         }
 
-        // Сумматор Wet
+
+        // В. Сатурация полос
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
+        // Определяем Spectral Tilt для драйва
+        // Сильно уменьшаем драйв на Сабе (0) и Низах (1).
+        // Это даст чистый, плотный низ, но грязную середину.
+        // Band 0 (Sub): 0.4x (Почти чисто)
+        // Band 1 (Bass): 0.7x
+        static const float bandDriveScale[6] = { 0.4f, 0.7f, 1.0f, 1.0f, 1.1f, 1.2f };
+
         for (int band = 0; band < kNumBands; ++band)
         {
-            // 1. Локальный драйв полосы
-            float bandDrive = effectiveDrive * bandDriveScale[band];
-
-            // 2. Тип сатурации
+            // Определяем тип сатурации
             SaturationType type = SaturationType::WarmTube;
-            float shaperMix = blendVal;
+            float shaperMix = blendVal; // Базовый микс из ручки Drive
 
-            if (ghostAmount > 0.01f && band <= 1) { // Только Sub и Low
+            if (ghostAmount > 0.01f && band <= 1) { // Ghost Logic
                 type = SaturationType::Rectifier;
+                // В режиме Ghost мы форсируем микс в 100%, если идет удар
                 shaperMix = std::max(blendVal, ghostAmount);
             }
 
-            // 3. PREDICTIVE AUTO-GAIN (Математическая компенсация)
-            // Tanh увеличивает энергию. Мы компенсируем это ПРЕВЕНТИВНО.
-            // Чем больше драйв, тем тише выход полосы.
-            // Формула 1.0 / sqrt(D) — это "Constant Power Law".
-            // Добавляем защиту max(1.0), чтобы не делить на 0 и не глушить чистый звук.
-            float comp = 1.0f / std::sqrt(std::max(1.0f, bandDrive));
-
-            // Для Ghost режима (Rectifier) нужна отдельная компенсация, он звучит тоньше
-            if (type == SaturationType::Rectifier) comp *= 1.2f;
-
-            // --- Обработка ---
+            // Применяем Tilt к драйву этой полосы
+            float tiltDrive = effectiveDrive * bandDriveScale[band];
 
             // Left
             float xL = bandBuffers[band].getSample(0, i);
-            float processedL = shapers[band].processSample(xL, bandDrive, type, shaperMix);
-
-            // HARD CLAMP FOR SUB (Защита низа)
-            // Если это саб-бас (0), мы не даем ему прыгать выше входного уровня более чем на 10%
-            if (band == 0) {
-                float maxAmp = std::abs(xL) * 1.1f;
-                if (std::abs(processedL * comp) > maxAmp) comp = maxAmp / (std::abs(processedL) + 0.0001f);
-            }
-
-            wetSampleL += processedL * comp;
+            wetSampleL += shapers[band].processSample(xL, tiltDrive, type, shaperMix);
 
             // Right
-            if (outR) {
+            if (numCh > 1) {
                 float xR = bandBuffers[band].getSample(1, i);
-                float processedR = shapers[band].processSample(xR, bandDrive, type, shaperMix);
-
-                if (band == 0) { // Симметричный кламп для правого канала
-                    float maxAmp = std::abs(xR) * 1.1f;
-                    if (std::abs(processedR * comp) > maxAmp) comp = maxAmp / (std::abs(processedR) + 0.0001f);
-                }
-
-                wetSampleR += processedR * comp;
+                wetSampleR += shapers[band].processSample(xR, tiltDrive, type, shaperMix);
             }
         }
 
-        // MIX & OUT
+        // Г. Применение автогейна к сэмплу (ДО микширования)
+        // Если blendVal близок к 0 (мы в чистом режиме), то компенсация не нужна (она может испортить звук).
+        // Плавно вводим компенсацию вместе с сатурацией.
+        float effectiveComp = 1.0f + (compVal - 1.0f) * blendVal;
+
+        wetSampleL *= effectiveComp;
+        if (outR) wetSampleR *= effectiveComp;
+
+        // Д. Mix & Output
+        float mixVal = smoothedMix.getNextValue();
+        float outGain = smoothedOutput.getNextValue();
+
         float finalL = dryL[i] * (1.0f - mixVal) + wetSampleL * mixVal;
-        outL[i] = std::tanh(finalL * outGain); // Soft Clipper на мастере
+        finalL *= outGain;
+
+        // Safety Limiter с запасом -0.3 dB
+        float ceiling = 0.96f;
+
+        // Мягкое колено лимитера
+        if (finalL > ceiling)
+            finalL = ceiling + std::tanh(finalL - ceiling) * 0.01f;
+        else if (finalL < -ceiling)
+            finalL = -ceiling + std::tanh(finalL + ceiling) * 0.01f;
+
+        // Жесткая обрезка "на всякий случай"
+        if (finalL > 1.0f) finalL = 1.0f;
+        if (finalL < -1.0f) finalL = -1.0f;
+
+        outL[i] = finalL;
 
         if (outR) {
             float finalR = dryR[i] * (1.0f - mixVal) + wetSampleR * mixVal;
-            outR[i] = std::tanh(finalR * outGain);
+            finalR *= outGain;
+
+            // Safety Limiter с запасом -0.3 dB
+            if (finalR > ceiling)
+                finalR = ceiling + std::tanh(finalR - ceiling) * 0.01f;
+            else if (finalR < -ceiling)
+                finalR = -ceiling + std::tanh(finalR + ceiling) * 0.01f;
+
+            // Жесткая обрезка "на всякий случай"
+            if (finalR > 1.0f) finalR = 1.0f;
+            if (finalR < -1.0f) finalR = -1.0f;
+
+            outR[i] = finalR;
         }
     }
 
-    // Очистка
+    // 5. UPDATE AUTO-GAIN STATE
+    // Скармливаем результат в авто-гейн, чтобы он подготовился к следующему блоку
+    autoGain.updateGainState(buffer);
+
+    // Очистка мусора в неиспользуемых каналах
+    for (int i = numCh; i < getTotalNumOutputChannels(); ++i)
+        buffer.clear(i, 0, numSamples);
+
+    // Очистка мусора в неиспользуемых каналах
     for (int i = numCh; i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, numSamples);
 }
