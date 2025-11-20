@@ -238,10 +238,27 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             juce::FloatVectorOperations::add(outData, bandData, numSamples);
         }
 
-        // === 5. MIX & OUTPUT ===
+    // === 4.5. DRY SIGNAL COMPENSATION ===
+    // Применяем небольшую RMS компенсацию к Dry сигналу для consistency между каналами
+    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+    {
+        float dryRms = dryBuffer.getRMSLevel(ch, 0, numSamples);
+        float inRms = inputRmsLevels[ch];
 
-        float currentMix = smoothedMix.getNextValue(); smoothedMix.skip(numSamples-1);
-        float currentOutGain = smoothedOutput.getNextValue(); smoothedOutput.skip(numSamples-1);
+        if (dryRms > 0.0001f && inRms > 0.0001f)
+        {
+            // Для Dry сигнала делаем небольшую нормализацию уровней каналов
+            // Не полную компенсацию, чтобы сохранить оригинальную динамику
+            float dryComp = inRms / dryRms;
+            dryComp = juce::jlimit(0.7f, 1.4f, dryComp); // Ограничиваем диапазон для Dry
+            juce::FloatVectorOperations::multiply(dryBuffer.getWritePointer(ch), dryComp, numSamples);
+        }
+    }
+
+    // === 5. MIX & OUTPUT ===
+
+    float currentMix = smoothedMix.getNextValue(); smoothedMix.skip(numSamples-1);
+    float currentOutGain = smoothedOutput.getNextValue(); smoothedOutput.skip(numSamples-1);
 
         for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
         {
