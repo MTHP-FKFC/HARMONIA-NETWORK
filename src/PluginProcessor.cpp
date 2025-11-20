@@ -100,6 +100,14 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     psychoGain.prepare(sampleRate); // <-- NEW
 
+    // SOFT START:
+    // Начинаем с тишины (0.0)
+    // Поднимаемся до полной громкости (1.0) за 200 мс.
+    // Этого времени хватит, чтобы FIR-фильтры заполнились данными.
+    startupFader.reset(sampleRate, 0.2f);
+    startupFader.setCurrentAndTargetValue(0.0f);
+    startupFader.setTargetValue(1.0f);
+
     smoothedDrive.setCurrentAndTargetValue(1.0f);
     smoothedOutput.setCurrentAndTargetValue(1.0f);
     smoothedMix.setCurrentAndTargetValue(1.0f); // По дефолту Wet, чтобы слышать эффект
@@ -255,6 +263,14 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             if (std::abs(outR_val) > 1.0f) outR_val = std::tanh(outR_val);
             finalR[i] = outR_val;
         }
+
+        // === SOFT START FADE ===
+        // Получаем множитель (от 0.0 до 1.0)
+        // После первых 200мс он всегда будет равен 1.0 и перестанет влиять на звук.
+        float fade = startupFader.getNextValue();
+
+        finalL[i] *= fade;
+        if (finalR) finalR[i] *= fade;
     }
     
     // Очистка

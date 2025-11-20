@@ -92,6 +92,9 @@ private:
     // НОВЫЙ МОДУЛЬ
     PsychoAcousticGain psychoGain;
 
+    // Плавный пуск при инициализации
+    juce::LinearSmoothedValue<float> startupFader;
+
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)
 
