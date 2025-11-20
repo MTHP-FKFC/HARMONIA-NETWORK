@@ -98,6 +98,13 @@ public:
     {
         updateLatency(); // Проверяем, не изменилась ли задержка
 
+        // 0. RMS измерение для Reactor Knob анимации
+        float rms = 0.0f;
+        for (int ch = 0; ch < dryBuffer.getNumChannels(); ++ch)
+            rms += dryBuffer.getRMSLevel(ch, 0, dryBuffer.getNumSamples());
+        rms /= dryBuffer.getNumChannels();
+        inputRMS.store(rms);
+
         // 1. Network
         auto netModulations = networkController.process(dryBuffer, params);
 
@@ -133,9 +140,16 @@ private:
         }
     }
 
+public:
+    // RMS измерение для Reactor Knob анимации
+    float getInputRMS() const { return inputRMS.load(); }
+
+private:
     double sampleRate = 44100.0;
     juce::uint32 blockSize = 512;
     float currentLatency = 0.0f;
+
+    std::atomic<float> inputRMS { 0.0f };
 
     std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
     FilterBankEngine filterBankEngine;

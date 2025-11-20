@@ -6,6 +6,7 @@
 #include "ui/SpectrumVisor.h"
 #include "ui/ControlGroup.h"
 #include "ui/Components/EnergyLink.h"
+#include "ui/components/ReactorKnob.h"
 // #include "ui/Components/InteractionMeter.h"
 
 class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor
@@ -43,7 +44,7 @@ private:
     juce::TextButton cascadeButton;
 
     // Saturation Knobs
-    juce::Slider driveSlider;
+    ReactorKnob driveSlider;
     juce::Slider tightenSlider, smoothSlider, punchSlider, dynamicsSlider;
 
     // Network Knobs

@@ -73,6 +73,9 @@ public:
     // Getter for Analyzer
     SimpleFFT& getAnalyzer() { return analyzer; }
 
+    // Public access for Reactor Knob animation
+    Cohera::ProcessingEngine& getProcessingEngine() { return processingEngine; }
+
 private:
     // === 1. Параметры (State) ===
 

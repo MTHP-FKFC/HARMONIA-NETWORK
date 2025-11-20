@@ -17,6 +17,9 @@ public:
         g.setColour(CoheraUI::kPanel.darker(0.3f));
         g.fillRoundedRectangle(bounds, 6.0f);
 
+        // 1.5. Sacred Geometry (Золотая Спираль)
+        drawSacredGeometry(g, area.getWidth(), area.getHeight());
+
         // 2. Сетка (Grid)
         drawGrid(g, area.getWidth(), area.getHeight());
 
@@ -113,6 +116,45 @@ private:
             g.setColour(CoheraUI::kTextDim.withAlpha(0.4f));
             g.drawText(juce::String(db), 5, y - 5, 25, 10, juce::Justification::left);
         }
+    }
+
+    // Sacred Geometry (Золотая Спираль Фибоначчи)
+    void drawSacredGeometry(juce::Graphics& g, float w, float h)
+    {
+        g.setColour(CoheraUI::kTextDim.withAlpha(0.03f)); // Едва заметно
+
+        // Рисуем Золотую Спираль (приблизительно)
+        juce::Path spiral;
+        float x = w * 0.1f, y = h * 0.8f;
+        float boxW = w * 0.8f;
+        float boxH = h * 0.6f;
+
+        spiral.startNewSubPath(x, y + boxH);
+
+        // Несколько итераций золотого сечения
+        for(int i = 0; i < 6; ++i) {
+            // Это упрощенная визуализация, главное - эстетика
+            spiral.cubicTo(x, y, x + boxW, y, x + boxW, y + boxH);
+
+            // Уменьшаем бокс по Phi (золотое сечение)
+            float newW = boxW / 1.618f;
+            float newH = boxH / 1.618f;
+            x += (boxW - newW) / 2;
+            y += (boxH - newH) / 2;
+            boxW = newW;
+            boxH = newH;
+        }
+
+        g.strokePath(spiral, juce::PathStrokeType(1.0f));
+
+        // Добавим пару окружностей "Сакральной геометрии"
+        float centerX = w * 0.5f;
+        float centerY = h * 0.5f;
+        float radius1 = 80.0f;
+        float radius2 = radius1 / 1.618f; // Золотое сечение
+
+        g.drawEllipse(centerX - radius1, centerY - radius1, radius1 * 2, radius1 * 2, 1.0f);
+        g.drawEllipse(centerX - radius2, centerY - radius2, radius2 * 2, radius2 * 2, 1.0f);
     }
 
     // Вспомогательные функции для маппинга

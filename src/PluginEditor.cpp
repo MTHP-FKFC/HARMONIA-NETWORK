@@ -64,12 +64,16 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     cascadeButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange.withAlpha(0.6f));
     cascadeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.getAPVTS(), "cascade", cascadeButton);
 
-    // Drive Big Knob
+    // Drive Big Knob (Reactor Knob with RMS animation)
     addAndMakeVisible(driveSlider);
     driveSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     driveSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     driveSlider.setColour(juce::Slider::thumbColourId, CoheraUI::kOrangeNeon);
     driveSlider.setName("DRIVE"); // Для правильного выбора цвета в drawRotarySlider
+
+    // Подключаем RMS источник для анимации реактора
+    driveSlider.setRMSGetter([this]() { return audioProcessor.getProcessingEngine().getInputRMS(); });
+
     driveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "drive_master", driveSlider);
 
     // Dynamics Attachment
@@ -177,16 +181,40 @@ void CoheraSaturatorAudioProcessorEditor::setupKnob(juce::Slider& s, juce::Strin
 
 void CoheraSaturatorAudioProcessorEditor::paint (juce::Graphics& g)
 {
-    g.fillAll (CoheraUI::kBackground);
+    auto area = getLocalBounds().toFloat();
 
-    // Top Bar BG
+    // 1. Базовый темный фон
+    g.fillAll(CoheraUI::kBackground);
+
+    // 2. Радиальный градиент (Vignette) - Свет в центре, тьма по краям
+    // Создает фокус на центре интерфейса
+    juce::ColourGradient vignette(
+        CoheraUI::kBackground.brighter(0.05f), area.getCentreX(), area.getCentreY(),
+        juce::Colours::black, 0, 0, true);
+
+    g.setGradientFill(vignette);
+    g.fillAll();
+
+    // 3. Top Bar с тенью
     g.setColour(CoheraUI::kPanel);
     g.fillRect(0, 0, getWidth(), 50);
 
-    // Logo
+    // Тень под шапкой
+    juce::ColourGradient shadow(
+        juce::Colours::black.withAlpha(0.5f), 0, 50,
+        juce::Colours::transparentBlack, 0, 60, false);
+    g.setGradientFill(shadow);
+    g.fillRect(0, 50, getWidth(), 10);
+
+    // Логотип с легким свечением
     g.setColour(CoheraUI::kTextBright);
     g.setFont(juce::Font("Verdana", 20.0f, juce::Font::bold));
-    g.drawText("COHERA SATURATOR", 20, 0, 200, 50, juce::Justification::centredLeft);
+    g.drawText("COHERA", 20, 0, 200, 50, juce::Justification::centredLeft);
+
+    // Вторая часть логотипа другим весом шрифта
+    g.setColour(CoheraUI::kOrangeNeon);
+    g.setFont(juce::Font("Verdana", 20.0f, juce::Font::plain));
+    g.drawText("SATURATOR", 110, 0, 200, 50, juce::Justification::centredLeft);
 }
 
 void CoheraSaturatorAudioProcessorEditor::resized()
