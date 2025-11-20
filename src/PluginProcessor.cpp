@@ -196,88 +196,75 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float outGain  = smoothedOutput.getNextValue();
         float compVal  = smoothedCompensation.getNextValue();
 
+        // Убираем шум: если сигнал сети слабый (< 5%), считаем его нулем
+        if (netVal < 0.05f) netVal = 0.0f;
+
+        // 2. Определяем Смесь (Morph)
+        // ghostAmount: 0.0 (обычный режим) -> 1.0 (полный эффект при ударе)
+        float ghostAmount = 0.0f;
+
+        // Базовый драйв из ручки
         float effectiveDrive = driveVal;
-        SaturationType satType = SaturationType::WarmTube; // Дефолт
-        float satMix = 1.0f; // Дефолт - полностью обработанный
-
-        // === МОЗГ (Центр принятия решений) ===
-
-        // Дефолтные значения для "спокойного" состояния
-        SaturationType targetType = SaturationType::WarmTube;
-        float targetMix = 1.0f; // 100% Wet (обычная сатурация)
 
         if (!isReference)
         {
-            if (modeIndex == 0) // INVERSE GRIME
+            if (modeIndex == 0) // MODE: INVERSE GRIME (Duck)
             {
-                // Логика: ducking драйва
-                float ducking = 1.0f;
-                if (netVal > 0.0f) ducking = 1.0f - (netVal * 0.6f);
-                effectiveDrive *= ducking;
+                // Просто дакинг драйва
+                if (netVal > 0.0f) {
+                    float duck = 1.0f - (netVal * 0.8f); // 80% ducking
+                    effectiveDrive *= std::max(0.0f, duck);
+                }
             }
-            else if (modeIndex == 1) // GHOST HARMONICS
+            else if (modeIndex == 1) // MODE: GHOST HARMONICS (Morph)
             {
-                // Логика: мы всегда WarmTube, но когда бьет бочка (netVal > 0)
-                // мы подмешиваем Rectifier в низкие частоты.
+                // Мы перетекаем в "Злой" режим пропорционально удару бочки.
+                // netVal (0..1) -> ghostAmount (0..1)
+                ghostAmount = netVal;
 
-                // Здесь effectiveDrive не трогаем, трогаем ТИП сатурации.
-                // Но это работает пополосно, см. ниже.
+                // Бустим драйв в момент удара, чтобы Foldback "зарычал"
+                if (ghostAmount > 0.0f) {
+                    effectiveDrive *= (1.0f + ghostAmount * 1.0f); // До x2 драйва на ударе
+                }
             }
         }
 
-        // === ОБРАБОТКА ПОЛОС ===
+        // 3. Обработка полос
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
         for (int band = 0; band < kNumBands; ++band)
         {
-            // Локальные настройки для текущей полосы
-            SaturationType bandType = SaturationType::WarmTube;
-            float bandMix = 1.0f; // Mix между Dry(Input) и Wet(Distorted) ВНУТРИ шейпера
-
-            if (!isReference && modeIndex == 1 && band <= 1) // Ghost Harmonics (Sub & Low)
+            for (int ch = 0; ch < numCh; ++ch)
             {
-                // Если бочка бьет (netVal высокий) -> переходим в Rectifier
-                // Делаем это плавно.
-                // Если netVal = 0 (тишина) -> WarmTube (обычный жир)
-                // Если netVal = 1 (удар) -> Rectifier (октавер)
+                float x = bandBuffers[band].getSample(ch, i);
 
-                // Простая эмуляция морфинга:
-                // Если netVal > порогового значения, считаем, что это Rectifier.
-                // А силу эффекта регулируем через mix.
+                // Применяем драйв
+                float drivenX = x * effectiveDrive;
+                float processed = 0.0f;
 
-                if (netVal > 0.1f)
+                if (modeIndex == 1 && !isReference && band <= 2) // Ghost только для Low/Mid полос (0, 1, 2)
                 {
-                    bandType = SaturationType::Rectifier;
-                    // Чем сильнее удар, тем больше "призрака" подмешиваем к чистому сигналу
-                    // Важно: мы миксуем Rectifier с Clean (входным), а не с Tanh.
-                    // Это дает более четкую атаку.
-                    bandMix = std::min(1.0f, netVal * 2.0f);
+                    // МОРФИНГ: Смешиваем Tanh (обычный) и SineFold (злой)
+                    // Если ghostAmount = 0 -> 100% Tanh
+                    // Если ghostAmount = 1 -> 100% SineFold
+
+                    float cleanTube = std::tanh(drivenX);
+
+                    // Тот самый SineFold код (инлайн для скорости)
+                    float fold = std::sin(drivenX * 1.5f);
+
+                    // Линейная интерполяция (Lerp)
+                    processed = cleanTube * (1.0f - ghostAmount) + fold * ghostAmount;
                 }
                 else
                 {
-                    // В покое - обычная сатурация
-                    bandType = SaturationType::WarmTube;
-                    bandMix = 1.0f;
+                    // Обычный режим (всегда Tanh)
+                    processed = std::tanh(drivenX);
                 }
-            }
-            else
-            {
-                // Для остальных режимов и полос
-                bandType = SaturationType::WarmTube;
-                bandMix = 1.0f; // Всегда полная сатурация (сила регулируется effectiveDrive)
-            }
 
-            // Левый
-            float xL = bandBuffers[band].getSample(0, i);
-            float processedL = shapers[band].processSample(xL, effectiveDrive, bandType, bandMix);
-            wetSampleL += processedL;
-
-            // Правый
-            if (outR) {
-                float xR = bandBuffers[band].getSample(1, i);
-                float processedR = shapers[band].processSample(xR, effectiveDrive, bandType, bandMix);
-                wetSampleR += processedR;
+                if (ch == 0) wetSampleL += processed;
+                else         wetSampleR += processed;
             }
         }
 

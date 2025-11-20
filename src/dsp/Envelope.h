@@ -9,8 +9,8 @@ public:
     void reset(double sampleRate)
     {
         // Настраиваем время релиза (спада).
-        // 150 мс - быстрее для креативных эффектов (было 300мс)
-        releaseCoeff = std::exp(-1.0f / (0.15f * (float)sampleRate));
+        // 50 мс - очень быстро для резкой реакции на удар бочки
+        releaseCoeff = std::exp(-1.0f / (0.05f * (float)sampleRate));
         currentValue = 0.0f;
     }
 

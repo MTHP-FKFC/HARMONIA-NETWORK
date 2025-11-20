@@ -36,24 +36,21 @@ public:
                 wet = std::clamp(x, -1.0f, 1.0f);
                 break;
 
-            case SaturationType::Rectifier:
+            case SaturationType::Rectifier: // Ghost/Foldback
                 {
-                    // NEW ALGORITHM: Foldback Distortion instead of pure Rectifier
-                    // Это звучит жирнее и сохраняет больше энергии, но все равно дает октаву.
-                    // Суть: если сигнал выходит за 1.0, он "отражается" обратно.
+                    // SINE FOLDBACK DISTORTION
+                    // Это секрет "рычащих" басов в DnB и Dubstep.
+                    // Вместо обрезки, волна "отражается" обратно.
+                    // Дает металлический призвук и кучу гармоник.
 
-                    float folding = std::abs(x);
-                    // Если громко - загибаем волну вниз
-                    if (folding > 1.0f) {
-                        // fmod дает пилообразный эффект, звучит агрессивно
-                        folding = 2.0f - std::fmod(folding, 2.0f);
-                        if (folding > 1.0f) folding = 2.0f - folding;
-                    }
+                    // Умножаем на 1.5, чтобы эффект наступал раньше
+                    float arg = x * 1.5f;
 
-                    // Восстанавливаем знак (или убираем для октавера)
-                    // Для Ghost Harmonics нам нужен именно Absolute (все волны вверх)
-                    // Смещаем вниз и умножаем, чтобы вернуть RMS
-                    wet = (folding - 0.5f) * 2.5f; // Boost 2.5x чтобы компенсировать потерю низа
+                    // std::sin от большого аргумента создает "завороты" волны
+                    wet = std::sin(arg);
+
+                    // Добавляем немного оригинального низа, чтобы не терять тело
+                    wet = wet * 0.8f + x * 0.2f;
                 }
                 break;
 
