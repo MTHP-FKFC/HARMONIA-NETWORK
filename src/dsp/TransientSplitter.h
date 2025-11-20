@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include <algorithm>
-#include <JuceHeader.h>
+#include "../JuceHeader.h"
 
 class TransientSplitter
 {
