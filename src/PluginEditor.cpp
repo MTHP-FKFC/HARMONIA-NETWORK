@@ -1,54 +1,337 @@
 #include "PluginEditor.h"
+#include "PluginProcessor.h"
 
-CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(CoheraSaturatorAudioProcessor& p)
-    : AudioProcessorEditor(&p), audioProcessor(p),
-      saturationCore(p.getAPVTS()),
-      networkBrain(p.getAPVTS()),
-      topBar(p.getAPVTS()),
-      spectrumVisor(p.getAnalyzer(), p.getAPVTS())
+//==============================================================================
+CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (CoheraSaturatorAudioProcessor& p)
+    : AudioProcessorEditor (&p), audioProcessor (p)
 {
-    setLookAndFeel(&lnf);
+    // 1. Применяем LookAndFeel
+    lookAndFeel = std::make_unique<CoheraUI::CoheraLookAndFeel>();
+    setLookAndFeel(lookAndFeel.get());
 
-    addAndMakeVisible(topBar);
+    // 2. Создаем компоненты
+
+    // --- TOP BAR ---
+    addAndMakeVisible(groupSelector);
+    groupSelector.addItemList({"Group 1", "Group 2", "Group 3", "Group 4", "Group 5", "Group 6", "Group 7", "Group 8"}, 1);
+    groupSelector.setSelectedId(1);
+    groupAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "group_id", groupSelector);
+
+    addAndMakeVisible(roleSelector);
+    roleSelector.addItemList({"Listener", "Reference"}, 1);
+    roleSelector.setSelectedId(1);
+    roleAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "role", roleSelector);
+
+    // Quality Selector
+    addAndMakeVisible(qualitySelector);
+    qualitySelector.addItemList({"Eco Mode", "Pro (4x)"}, 1);
+    qualityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "quality", qualitySelector);
+
+    // --- VISOR ---
     addAndMakeVisible(spectrumVisor);
-    addAndMakeVisible(saturationCore);
-    addAndMakeVisible(networkBrain);
-    
-    // Mix knob (внизу по центру)
-    mixSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    mixSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
-    addAndMakeVisible(mixSlider);
-    mixAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "mix", mixSlider);
 
-    setSize(900, 650); // Чуть шире для удобства
+    // --- SATURATION CORE (Left) ---
+    addAndMakeVisible(satGroup);
+
+    // Algorithm Selector
+    addAndMakeVisible(mathModeSelector);
+    mathModeSelector.addItemList(juce::StringArray{
+        "Golden Ratio (Harmony)",
+        "Euler Tube (Warmth)",
+        "Pi Fold (Width)",
+        "Fibonacci (Grit)",
+        "Super Ellipse (Punch)"
+    }, 1);
+    mathModeSelector.setSelectedId(1);
+    mathModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "math_mode", mathModeSelector);
+
+    // Sat Type Selector
+    addAndMakeVisible(satTypeSelector);
+    satTypeSelector.addItemList({"Warm Tube", "Asymmetric", "Hard Clip", "Bit Crush"}, 1);
+    satTypeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "sat_type", satTypeSelector);
+
+    // Drive Big Knob
+    addAndMakeVisible(driveSlider);
+    driveSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    driveSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    driveSlider.setColour(juce::Slider::thumbColourId, CoheraUI::kOrangeNeon);
+    driveSlider.setName("drive"); // Для правильного выбора цвета в drawRotarySlider
+    driveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "drive_master", driveSlider);
+
+    // Dynamics Attachment
+    dynamicsAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "dynamics", dynamicsSlider);
+
+    // Output Attachment
+    outputAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "output_gain", outputSlider);
+
+    // Focus Attachment
+    focusAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "focus", focusSlider);
+
+    // Mojo Attachments
+    heatAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "heat", heatSlider);
+    driftAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "analog_drift", driftSlider);
+    varianceAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "variance", varianceSlider);
+    entropyAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "entropy", entropySlider);
+    noiseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "noise", noiseSlider);
+
+    // Tone Knobs
+    setupKnob(tightenSlider, "tone_tighten", CoheraUI::kOrangeNeon);
+    setupKnob(punchSlider, "punch", CoheraUI::kOrangeNeon);
+    setupKnob(smoothSlider, "tone_smooth", CoheraUI::kOrangeNeon);
+
+    // --- NETWORK BRAIN (Right) ---
+    addAndMakeVisible(netGroup);
+
+    // Network Mode Selector
+    addAndMakeVisible(netModeSelector);
+    netModeSelector.addItemList(juce::StringArray{
+        "Unmasking (Duck)",
+        "Ghost (Follow)",
+        "Gated (Reverse)",
+        "Stereo Bloom",
+        "Sympathetic"
+    }, 1);
+    netModeSelector.setSelectedId(1);
+    netModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "mode", netModeSelector);
+
+    // Network Knobs
+    setupKnob(netSensSlider, "net_sens", CoheraUI::kCyanNeon);
+    setupKnob(netDepthSlider, "net_depth", CoheraUI::kCyanNeon);
+    setupKnob(netSmoothSlider, "net_smooth", CoheraUI::kCyanNeon);
+
+    // Dynamics Knob
+    setupKnob(dynamicsSlider, "dynamics", CoheraUI::kOrangeNeon);
+
+    // Output Knob
+    setupKnob(outputSlider, "output_gain", CoheraUI::kTextBright);
+
+    // Focus Knob
+    setupKnob(focusSlider, "focus", CoheraUI::kTextBright);
+
+    // Mojo Knobs
+    setupKnob(heatSlider, "heat", CoheraUI::kOrangeNeon);
+    setupKnob(driftSlider, "drift", CoheraUI::kCyanNeon);
+    setupKnob(varianceSlider, "variance", CoheraUI::kOrangeNeon);
+    setupKnob(entropySlider, "entropy", CoheraUI::kOrangeNeon);
+    setupKnob(noiseSlider, "noise", CoheraUI::kRedNeon);
+
+    // Interaction Meter
+    interactionMeter.setAPVTS(p.getAPVTS());
+    addAndMakeVisible(interactionMeter);
+
+    // --- BOTTOM MIX ---
+    setupKnob(mixSlider, "mix", CoheraUI::kTextBright);
+
+    // Delta Button
+    addAndMakeVisible(deltaButton);
+    deltaButton.setButtonText(u8"Δ");
+    deltaButton.setClickingTogglesState(true);
+    deltaButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow.withAlpha(0.6f));
+    deltaAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.getAPVTS(), "delta", deltaButton);
+
+    // Базовый размер
+    setSize (900, 650);
     setResizable(true, true);
+    setResizeLimits(600, 400, 1920, 1080);
 }
 
 CoheraSaturatorAudioProcessorEditor::~CoheraSaturatorAudioProcessorEditor()
 {
     setLookAndFeel(nullptr);
+    lookAndFeel.reset();
 }
 
-void CoheraSaturatorAudioProcessorEditor::paint(juce::Graphics& g)
+// Хелпер для быстрой настройки ручек
+void CoheraSaturatorAudioProcessorEditor::setupKnob(juce::Slider& s, juce::String paramId, juce::Colour c)
 {
-    g.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
+    addAndMakeVisible(s);
+    s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    s.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+    s.setColour(juce::Slider::thumbColourId, c);
+
+    // Храним аттачменты в векторе, чтобы не создавать кучу named variables
+    sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.getAPVTS(), paramId, s));
+}
+
+void CoheraSaturatorAudioProcessorEditor::paint (juce::Graphics& g)
+{
+    g.fillAll (CoheraUI::kBackground);
+
+    // Top Bar BG
+    g.setColour(CoheraUI::kPanel);
+    g.fillRect(0, 0, getWidth(), 50);
+
+    // Logo
+    g.setColour(CoheraUI::kTextBright);
+    g.setFont(juce::Font("Verdana", 20.0f, juce::Font::bold));
+    g.drawText("COHERA SATURATOR", 20, 0, 200, 50, juce::Justification::centredLeft);
 }
 
 void CoheraSaturatorAudioProcessorEditor::resized()
 {
     auto area = getLocalBounds();
-    
-    topBar.setBounds(area.removeFromTop(50));
-    
-    // Footer (Mix)
-    auto footer = area.removeFromBottom(60);
-    mixSlider.setBounds(footer.getCentreX() - 30, footer.getY(), 60, 60);
 
-    // Main area
-    auto visorArea = area.removeFromTop(250); // Большой экран
-    spectrumVisor.setBounds(visorArea.reduced(10, 0));
-    
-    auto controls = area.reduced(10);
-    saturationCore.setBounds(controls.removeFromLeft(controls.getWidth() / 2).reduced(5));
-    networkBrain.setBounds(controls.reduced(5));
+    // 1. Глобальные отступы (Padding)
+    // "Воздух" по краям — признак дорогого дизайна
+    area.reduce(16, 16);
+
+    // ==============================================================================
+    // 🔝 HEADER & VISOR (35% высоты)
+    // ==============================================================================
+    auto topSection = area.removeFromTop(static_cast<int>(getHeight() * 0.38f));
+
+    // Top Bar (Selectors) - 40px height fixed inside proportional area
+    auto topBar = topSection.removeFromTop(40);
+
+    // Right Align selectors: Role -> Group -> Quality
+    roleSelector.setBounds(topBar.removeFromRight(100));
+    topBar.removeFromRight(10); // Spacer
+    groupSelector.setBounds(topBar.removeFromRight(80));
+    topBar.removeFromRight(10); // Spacer
+    qualitySelector.setBounds(topBar.removeFromRight(90));
+
+    topSection.removeFromTop(10); // Spacer to Visor
+
+    // Visor занимает всё оставшееся место в топе
+    spectrumVisor.setBounds(topSection);
+
+    area.removeFromTop(16); // Spacer между Визором и Панелями
+
+    // ==============================================================================
+    // 🦶 FOOTER (18% высоты) - Снизу вверх
+    // ==============================================================================
+    auto footerHeight = static_cast<int>(getHeight() * 0.18f);
+    auto footerArea = area.removeFromBottom(footerHeight);
+    layoutFooter(footerArea);
+
+    area.removeFromBottom(16); // Spacer перед футером
+
+    // ==============================================================================
+    // 🎛️ MAIN PANELS (Оставшееся место по центру)
+    // ==============================================================================
+
+    // Делим пополам с отступом посередине
+    auto leftPanel = area.removeFromLeft(area.getWidth() / 2).reduced(4, 0); // Чуть сужаем для gap
+    auto rightPanel = area.reduced(4, 0); // Оставшееся справа
+
+    // Устанавливаем границы Групп (Рамки)
+    satGroup.setBounds(leftPanel);
+    netGroup.setBounds(rightPanel);
+
+    // Заполняем внутренности групп (с учетом отступа под заголовок группы)
+    // Отступ сверху 30px под текст "SATURATION CORE"
+    layoutSaturation(leftPanel.reduced(12, 12).withTrimmedTop(25));
+    layoutNetwork(rightPanel.reduced(12, 12).withTrimmedTop(25));
+}
+
+// --- ХЕЛПЕР: Раскладка Сатурации ---
+void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> area)
+{
+    // Верхняя половина: Drive (King) + Два селектора (Algo + Sat Type)
+    auto topHalf = area.removeFromTop(area.getHeight() * 0.55f);
+
+    // Drive Knob - Главный герой, по центру левой части
+    // Занимает 55% ширины (чуть меньше, чтобы влезли селекторы)
+    auto driveArea = topHalf.removeFromLeft(topHalf.getWidth() * 0.55f);
+    driveSlider.setBounds(driveArea.reduced(5)); // reduced, чтобы не касаться краев
+
+    // Справа от Драйва: ДВА селектора (Algo + Type)
+    auto selectorsArea = topHalf;
+
+    // Делим вертикально пополам с отступом
+    int selHeight = 24;
+    int gap = 8;
+    int totalH = selHeight * 2 + gap;
+    int startY = (selectorsArea.getHeight() - totalH) / 2;
+
+    auto selRect = selectorsArea.reduced(5, 0);
+    selRect.setY(selectorsArea.getY() + startY);
+    selRect.setHeight(totalH);
+
+    mathModeSelector.setBounds(selRect.removeFromTop(selHeight)); // Algo
+    selRect.removeFromTop(gap);
+    satTypeSelector.setBounds(selRect.removeFromTop(selHeight));  // Sat Type
+
+    // Нижняя половина: 4 ручки тона в ряд (Tighten, Punch, Dyn, Smooth)
+    // Используем FlexBox для идеального распределения
+    juce::FlexBox toneFlex;
+    toneFlex.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
+
+    // Массив ручек для добавления
+    juce::Slider* knobs[] = { &tightenSlider, &punchSlider, &dynamicsSlider, &smoothSlider };
+
+    for (auto* k : knobs) {
+        toneFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMargin(2.0f));
+    }
+
+    toneFlex.performLayout(area.reduced(0, 5)); // Немного воздуха сверху/снизу
+}
+
+// --- ХЕЛПЕР: Раскладка Сети ---
+void CoheraSaturatorAudioProcessorEditor::layoutNetwork(juce::Rectangle<int> area)
+{
+    // Верх: Режим сети (Mode)
+    auto headerArea = area.removeFromTop(40);
+    netModeSelector.setBounds(headerArea.withSizeKeepingCentre(headerArea.getWidth() - 20, 24));
+
+    // Оставшееся делим: Слева ручки, Справа Метр
+    // Метр занимает 15% ширины справа
+    auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5, 10);
+    interactionMeter.setBounds(meterArea);
+
+    // Ручки: 3 штуки треугольником или в ряд
+    // Сделаем треугольник для разнообразия (Sens сверху, Depth/Smooth снизу)
+    auto knobArea = area.reduced(5, 0);
+
+    auto topKnobRow = knobArea.removeFromTop(knobArea.getHeight() / 2);
+    netSensSlider.setBounds(topKnobRow.withSizeKeepingCentre(topKnobRow.getHeight(), topKnobRow.getHeight()));
+
+    // Нижний ряд (Depth, Smooth)
+    juce::FlexBox netFlex;
+    netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
+    netFlex.items.add(juce::FlexItem(netDepthSlider).withFlex(1.0f));
+    netFlex.items.add(juce::FlexItem(netSmoothSlider).withFlex(1.0f));
+
+    netFlex.performLayout(knobArea);
+}
+
+// --- ХЕЛПЕР: Футер (Mix & Mojo) ---
+void CoheraSaturatorAudioProcessorEditor::layoutFooter(juce::Rectangle<int> area)
+{
+    // Простое разделение на 3 равные части
+    int sectionWidth = area.getWidth() / 3;
+
+    auto leftSection = area.removeFromLeft(sectionWidth);
+    auto centerSection = area.removeFromLeft(sectionWidth);
+    auto rightSection = area; // Оставшееся
+
+    // === 1. MOJO RACK (Left) ===
+    // 5 ручек в ряд: Heat, Drift, Variance, Entropy, Noise
+    juce::FlexBox mojoFlex;
+    mojoFlex.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
+
+    juce::Slider* mojoKnobs[] = { &heatSlider, &driftSlider, &varianceSlider, &entropySlider, &noiseSlider };
+
+    for (auto* k : mojoKnobs) {
+        mojoFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMargin(juce::FlexItem::Margin(0, 2, 0, 2)));
+    }
+    mojoFlex.performLayout(leftSection.reduced(0, 5));
+
+    // === 2. MIX CENTER ===
+    // Mix Knob
+    mixSlider.setBounds(centerSection.withSizeKeepingCentre(70, 70));
+
+    // Delta Button (Маленькая кнопка рядом с Mix)
+    int btnSize = 20;
+    deltaButton.setBounds(mixSlider.getRight() - 10, mixSlider.getY(), btnSize, btnSize);
+
+    // === 3. OUTPUT SECTION (Right) ===
+    // Focus и Output рядом
+    juce::FlexBox outFlex;
+    outFlex.justifyContent = juce::FlexBox::JustifyContent::flexEnd;
+
+    outFlex.items.add(juce::FlexItem(focusSlider).withFlex(1.0f).withMaxWidth(70).withMargin(5));
+    outFlex.items.add(juce::FlexItem(outputSlider).withFlex(1.0f).withMaxWidth(70).withMargin(5));
+
+    outFlex.performLayout(rightSection.reduced(0, 5));
 }

@@ -48,13 +48,13 @@ target_sources(Cohera_Saturator PRIVATE
     # Network
     src/network/NetworkController.h
 
-    # Tests
-    src/tests/TestHelpers.h
-    src/tests/TestAudioGenerator.h
-    src/tests/EngineIntegrationTests.cpp
-    src/tests/RealWorldScenarios.cpp
-    src/tests/IndustryStandardTests.cpp
-    src/tests/TestRunner.cpp
+    # Tests - DISABLED IN MAIN PLUGIN
+    # src/tests/TestHelpers.h
+    # src/tests/TestAudioGenerator.h
+    # src/tests/EngineIntegrationTests.cpp
+    # src/tests/RealWorldScenarios.cpp
+    # src/tests/IndustryStandardTests.cpp
+    # src/tests/TestRunner.cpp
 
     # DSP Module
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h

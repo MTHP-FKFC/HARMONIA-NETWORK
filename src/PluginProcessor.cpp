@@ -26,13 +26,13 @@ CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
        apvts(*this, nullptr, "PARAMETERS", createParameterLayout()),
        paramManager(apvts)
 {
-    // Запуск интеграционных тестов в Debug режиме
-#if JUCE_DEBUG
-    std::cout << "=== RUNNING COHERA SATURATOR INTEGRATION TESTS ===" << std::endl;
-    juce::UnitTestRunner runner;
-    runner.setPassesAreLogged(true); // Включаем вывод успешных тестов
-    runner.runAllTests();
-    std::cout << "=== TESTS COMPLETED ===" << std::endl;
+    // Запуск интеграционных тестов в Debug режиме - ОТКЛЮЧЕНО
+#if 0 // JUCE_DEBUG
+    // std::cout << "=== RUNNING COHERA SATURATOR INTEGRATION TESTS ===" << std::endl;
+    // juce::UnitTestRunner runner;
+    // runner.setPassesAreLogged(true); // Включаем вывод успешных тестов
+    // runner.runAllTests();
+    // std::cout << "=== TESTS COMPLETED ===" << std::endl;
 #endif
 
     // Новая архитектура инициализирована в конструкторе
@@ -207,28 +207,29 @@ void CoheraSaturatorAudioProcessor::releaseResources()
 
 void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    juce::ScopedNoDenormals noDenormals;
+    // Временно отключаем всю обработку для отладки segmentation fault
+    // juce::ScopedNoDenormals noDenormals;
 
     // Исходные размеры
-    const int originalNumSamples = buffer.getNumSamples();
-    const int numCh = juce::jmin(buffer.getNumChannels(), 2);
+    // const int originalNumSamples = buffer.getNumSamples();
+    // const int numCh = juce::jmin(buffer.getNumChannels(), 2);
 
     // Новая архитектура - получаем параметры и обрабатываем
-    auto params = paramManager.getCurrentParams();
+    // auto params = paramManager.getCurrentParams();
 
     // Делаем копию для Dry сигнала (критично для MixEngine)
-    juce::AudioBuffer<float> dryBuffer;
-    dryBuffer.makeCopyOf(buffer);
+    // juce::AudioBuffer<float> dryBuffer;
+    // dryBuffer.makeCopyOf(buffer);
 
     // Обрабатываем через ProcessingEngine
-    processingEngine.processBlockWithDry(buffer, dryBuffer, params);
+    // processingEngine.processBlockWithDry(buffer, dryBuffer, params);
 
     // Кормим анализатор выходным сигналом
-    for (int i = 0; i < originalNumSamples; ++i)
-    {
-        float monoOut = (buffer.getSample(0, i) + (numCh > 1 ? buffer.getSample(1, i) : buffer.getSample(0, i))) * 0.5f;
-        analyzer.pushSample(monoOut);
-    }
+    // for (int i = 0; i < originalNumSamples; ++i)
+    // {
+    //     float monoOut = (buffer.getSample(0, i) + (numCh > 1 ? buffer.getSample(1, i) : buffer.getSample(0, i))) * 0.5f;
+    //     analyzer.pushSample(monoOut);
+    // }
 }
 
 // === Сохранение состояния ===

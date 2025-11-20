@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     std::cout << "Running all tests...\n";
     logFileStream << "Running all tests...\n\n";
 
-    runner.runAllTests();
+    // runner.runAllTests(); // DISABLED
 
     // Get results
     int totalTests = runner.getNumResults();

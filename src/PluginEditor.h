@@ -1,33 +1,67 @@
 #pragma once
-#include "JuceHeader.h"
+
+#include <juce_gui_basics/juce_gui_basics.h>
 #include "PluginProcessor.h"
 #include "ui/CoheraLookAndFeel.h"
-#include "ui/Components/TopBar.h"
-#include "ui/Components/SaturationCore.h"
-#include "ui/Components/NetworkBrain.h"
-#include "ui/Components/SpectrumVisor.h"
+#include "ui/SpectrumVisor.h"
+#include "ui/ControlGroup.h"
+#include "ui/Components/InteractionMeter.h"
 
 class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
-    CoheraSaturatorAudioProcessorEditor(CoheraSaturatorAudioProcessor& p);
-
+    CoheraSaturatorAudioProcessorEditor (CoheraSaturatorAudioProcessor&);
     ~CoheraSaturatorAudioProcessorEditor() override;
 
-    void paint(juce::Graphics& g) override;
+    void paint (juce::Graphics&) override;
     void resized() override;
 
 private:
+    void setupKnob(juce::Slider& s, juce::String paramId, juce::Colour c);
+
+    // Layout helpers
+    void layoutSaturation(juce::Rectangle<int> area);
+    void layoutNetwork(juce::Rectangle<int> area);
+    void layoutFooter(juce::Rectangle<int> area);
+
     CoheraSaturatorAudioProcessor& audioProcessor;
-    CoheraLookAndFeel lnf;
 
-    TopBar topBar;
+    static inline std::unique_ptr<CoheraUI::CoheraLookAndFeel> sharedLookAndFeel;
+
+    // Components
     SpectrumVisor spectrumVisor;
-    SaturationCore saturationCore;
-    NetworkBrain networkBrain;
-    
-    juce::Slider mixSlider;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAtt;
+    InteractionMeter interactionMeter; // Наш новый метр
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CoheraSaturatorAudioProcessorEditor)
+    // Groups
+    ControlGroup satGroup { "SATURATION CORE", CoheraUI::kOrangeNeon };
+    ControlGroup netGroup { "NETWORK INTELLIGENCE", CoheraUI::kCyanNeon };
+
+    // Controls
+    juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector;
+
+    // Saturation Knobs
+    juce::Slider driveSlider;
+    juce::Slider tightenSlider, smoothSlider, punchSlider, dynamicsSlider;
+
+    // Network Knobs
+    juce::Slider netSensSlider, netDepthSlider, netSmoothSlider;
+
+    // Global / Mojo Knobs (Footer)
+    juce::Slider mixSlider, outputSlider, focusSlider;
+    juce::Slider heatSlider, driftSlider, varianceSlider, entropySlider, noiseSlider; // Mojo ручки
+
+    // Buttons & Selectors
+    juce::ComboBox qualitySelector, satTypeSelector;
+    juce::TextButton deltaButton;
+
+    // Attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment, qualityAttachment, satTypeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> driveAttachment, dynamicsAttachment, outputAttachment, focusAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> heatAttachment, driftAttachment, varianceAttachment, entropyAttachment, noiseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> deltaAttachment;
+    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
+
+    std::unique_ptr<CoheraUI::CoheraLookAndFeel> lookAndFeel;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CoheraSaturatorAudioProcessorEditor)
 };
