@@ -120,6 +120,13 @@ public:
 
         // 5. Mix (ioBuffer = Wet, dryBuffer = Dry)
         mixEngine.process(ioBlock, dryBuffer, params.mix, params.outputGain);
+
+        // 6. Output RMS измерение для визуализации
+        float outputRms = 0.0f;
+        for (int ch = 0; ch < ioBuffer.getNumChannels(); ++ch)
+            outputRms += ioBuffer.getRMSLevel(ch, 0, ioBuffer.getNumSamples());
+        outputRms /= ioBuffer.getNumChannels();
+        outputRMS.store(outputRms);
     }
 
     float getLatency() const { return currentLatency; }
@@ -150,6 +157,7 @@ private:
     float currentLatency = 0.0f;
 
     std::atomic<float> inputRMS { 0.0f };
+    std::atomic<float> outputRMS { 0.0f };
 
     std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
     FilterBankEngine filterBankEngine;

@@ -3,7 +3,7 @@
 
 //==============================================================================
 CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (CoheraSaturatorAudioProcessor& p)
-    : AudioProcessorEditor (&p), audioProcessor (p)
+    : AudioProcessorEditor (&p), audioProcessor (p), neuralLink(p.getAPVTS())
 {
     // 1. Применяем LookAndFeel
     lookAndFeel = std::make_unique<CoheraUI::CoheraLookAndFeel>();
@@ -152,6 +152,16 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     deltaButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::yellow.withAlpha(0.6f));
     deltaAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.getAPVTS(), "delta", deltaButton);
 
+    // === NEW VISUAL SYSTEM v2.0 ===
+    addAndMakeVisible(cosmicDust);
+    cosmicDust.toBack(); // Фон всегда сзади
+
+    addAndMakeVisible(neuralLink); // NeuralLink уже инициализирован с apvts
+    addAndMakeVisible(shaperScope);
+
+    // Запускаем таймер для анимаций (20 FPS для визуализаторов)
+    startTimerHz(20);
+
     // Базовый размер
     setSize (900, 650);
     setResizable(true, true);
@@ -160,6 +170,7 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
 
 CoheraSaturatorAudioProcessorEditor::~CoheraSaturatorAudioProcessorEditor()
 {
+    stopTimer();
     setLookAndFeel(nullptr);
     lookAndFeel.reset();
 }
@@ -217,8 +228,40 @@ void CoheraSaturatorAudioProcessorEditor::paint (juce::Graphics& g)
     g.drawText("SATURATOR", 110, 0, 200, 50, juce::Justification::centredLeft);
 }
 
+// Timer callback для обновления живых визуализаторов
+void CoheraSaturatorAudioProcessorEditor::timerCallback()
+{
+    // Обновляем энергию для всех визуализаторов
+    float inputRMS = audioProcessor.getInputRMS();
+    float outputRMS = audioProcessor.getOutputRMS();
+
+    cosmicDust.setEnergyLevel(outputRMS); // Фон реагирует на общий уровень
+
+    // Neural Link
+    float netMode = *audioProcessor.getAPVTS().getRawParameterValue("mode");
+    neuralLink.setMode((int)netMode);
+
+    float netSens = *audioProcessor.getAPVTS().getRawParameterValue("net_sens");
+    neuralLink.setTension(netSens);
+
+    neuralLink.setEnergyLevel(inputRMS); // Энергия влияет на амплитуду волн
+
+    // Transfer Function Display
+    float drive = *audioProcessor.getAPVTS().getRawParameterValue("drive_master");
+    float mathModeF = *audioProcessor.getAPVTS().getRawParameterValue("math_mode");
+    Cohera::SaturationMode mathMode = static_cast<Cohera::SaturationMode>((int)mathModeF);
+    float cascade = *audioProcessor.getAPVTS().getRawParameterValue("cascade") > 0.5f;
+
+    shaperScope.setParameters(drive, mathMode, inputRMS);
+    shaperScope.setCascadeMode(cascade);
+    shaperScope.setEnergyLevel(outputRMS);
+}
+
 void CoheraSaturatorAudioProcessorEditor::resized()
 {
+    // Cosmic Dust - всегда на весь экран, позади всего
+    cosmicDust.setBounds(getLocalBounds());
+
     auto area = getLocalBounds();
 
     // 1. Глобальные отступы (Padding)
@@ -270,7 +313,7 @@ void CoheraSaturatorAudioProcessorEditor::resized()
 
     // Устанавливаем границы Групп (Рамки)
     satGroup.setBounds(leftPanel);
-    energyLink.setBounds(linkPanel.reduced(0, 20)); // Чуть отступ сверху/снизу
+    neuralLink.setBounds(linkPanel.reduced(0, 20)); // Чуть отступ сверху/снизу
     netGroup.setBounds(rightPanel);
 
     // Заполняем внутренности групп (с учетом отступа под заголовок группы)
@@ -289,6 +332,10 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> 
     // Занимает 55% ширины (чуть меньше, чтобы влезли селекторы)
     auto driveArea = topHalf.removeFromLeft(topHalf.getWidth() * 0.55f);
     driveSlider.setBounds(driveArea.withSizeKeepingCentre(150, 150)); // Fixed 150px size
+
+    // Transfer Function Display - под Drive ручкой
+    auto scopeArea = topHalf.removeFromBottom(70).reduced(10, 5);
+    shaperScope.setBounds(scopeArea);
 
     // Справа от Драйва: Control Bar (Algo + Cascade)
     auto controlBar = topHalf;

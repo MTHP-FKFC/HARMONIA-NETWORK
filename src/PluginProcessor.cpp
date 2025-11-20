@@ -243,6 +243,13 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     //     float monoOut = (buffer.getSample(0, i) + (numCh > 1 ? buffer.getSample(1, i) : buffer.getSample(0, i))) * 0.5f;
     //     analyzer.pushSample(monoOut);
     // }
+
+    // Измеряем output RMS для визуализации
+    float outputRms = 0.0f;
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
+        outputRms += buffer.getRMSLevel(ch, 0, buffer.getNumSamples());
+    outputRms /= buffer.getNumChannels();
+    outputRMS.store(outputRms);
 }
 
 // === Сохранение состояния ===

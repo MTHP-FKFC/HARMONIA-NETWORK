@@ -76,6 +76,13 @@ public:
     // Public access for Reactor Knob animation
     Cohera::ProcessingEngine& getProcessingEngine() { return processingEngine; }
 
+    // Public access for Visual System
+    float getInputRMS() const { return processingEngine.getInputRMS(); }
+    float getOutputRMS() const { return outputRMS.load(); }
+
+private:
+    std::atomic<float> outputRMS { 0.0f };
+
 private:
     // === 1. Параметры (State) ===
 

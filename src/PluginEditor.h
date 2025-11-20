@@ -7,9 +7,12 @@
 #include "ui/ControlGroup.h"
 #include "ui/Components/EnergyLink.h"
 #include "ui/components/ReactorKnob.h"
+#include "ui/visuals/CosmicDust.h"
+#include "ui/visuals/NeuralLink.h"
+#include "ui/visuals/TransferFunctionDisplay.h"
 // #include "ui/Components/InteractionMeter.h"
 
-class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor
+class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
 public:
     CoheraSaturatorAudioProcessorEditor (CoheraSaturatorAudioProcessor&);
@@ -17,6 +20,7 @@ public:
 
     void paint (juce::Graphics&) override;
     void resized() override;
+    void timerCallback() override;
 
 private:
     void setupKnob(juce::Slider& s, juce::String paramId, juce::String displayName, juce::Colour c);
@@ -65,6 +69,11 @@ private:
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
 
     std::unique_ptr<CoheraUI::CoheraLookAndFeel> lookAndFeel;
+
+    // New Visual System v2.0
+    CosmicDust cosmicDust;
+    NeuralLink neuralLink;
+    TransferFunctionDisplay shaperScope;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CoheraSaturatorAudioProcessorEditor)
 };
