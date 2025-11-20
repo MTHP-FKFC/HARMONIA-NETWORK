@@ -115,10 +115,12 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float mixParam   = *apvts.getRawParameterValue("mix");
     float outDb      = *apvts.getRawParameterValue("output_gain");
 
-    // Маппинг: 0..100 -> 1.0..16.0
-    float targetSatBlend = juce::jlimit(0.0f, 1.0f, driveParam / 10.0f); // Blend быстрее (на 10%)
+    // Маппинг Drive
+    // 0..10 -> Чистая зона (Blend)
+    // 10..100 -> Сатурация (Boost)
+    float targetSatBlend = juce::jlimit(0.0f, 1.0f, driveParam / 10.0f);
     float driveRest = juce::jmax(0.0f, driveParam - 10.0f);
-    float targetDrive = 1.0f + (driveRest * 0.15f);
+    float targetDrive = 1.0f + (driveRest * 0.2f); // До +20dB
 
     smoothedDrive.setTargetValue(targetDrive);
     smoothedSatBlend.setTargetValue(targetSatBlend);
@@ -158,6 +160,16 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Настройки Tilt (меньше искажений на низах)
     // 0(Sub)  1(Low)  2(Mid)  3(MH)  4(High) 5(Air)
     const float bandDriveScale[6] = { 0.5f, 0.8f, 1.0f, 1.0f, 1.1f, 1.2f };
+
+    // === КАЛИБРОВКА ===
+
+    // Если сумма полос дает +12dB, мы давим её на -12dB (0.25x).
+
+    // Это вернет уровень в ноль при Drive=0.
+
+    // Подстрой это число, если будет слишком тихо (например, 0.35f).
+
+    const float wetCalibration = 0.25f;
 
     // --- 5. PROCESS LOOP ---
 
@@ -251,7 +263,13 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             }
         }
 
+        // Применяем Калибровку к Wet сумме
+        wetSampleL *= wetCalibration;
+        if (outR) wetSampleR *= wetCalibration;
+
         // MIX & OUT
+        // Если Mix=100%, мы слышим (SaturatedSum * Calibration).
+        // При Drive=0 это должно быть равно Input.
         float finalL = dryL[i] * (1.0f - mixVal) + wetSampleL * mixVal;
         outL[i] = std::tanh(finalL * outGain); // Soft Clipper на мастере
 
