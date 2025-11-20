@@ -52,11 +52,10 @@ private:
     juce::Slider heatSlider, driftSlider, varianceSlider, entropySlider, noiseSlider; // Mojo ручки
 
     // Buttons & Selectors
-    juce::ComboBox satTypeSelector;
     juce::TextButton deltaButton;
 
     // Attachments
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment, qualityAttachment, satTypeAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment, qualityAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> driveAttachment, dynamicsAttachment, outputAttachment, focusAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> heatAttachment, driftAttachment, varianceAttachment, entropyAttachment, noiseAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> deltaAttachment, cascadeAttachment;

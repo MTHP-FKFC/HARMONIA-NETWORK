@@ -238,7 +238,7 @@ void CoheraSaturatorAudioProcessorEditor::resized()
 // --- ХЕЛПЕР: Раскладка Сатурации ---
 void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> area)
 {
-    // Верхняя половина: Drive (King) + Два селектора (Algo + Sat Type)
+    // Верхняя половина: Drive (King) + Control Bar (Algo + Cascade)
     auto topHalf = area.removeFromTop(area.getHeight() * 0.55f);
 
     // Drive Knob - Главный герой, по центру левой части
@@ -246,22 +246,22 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> 
     auto driveArea = topHalf.removeFromLeft(topHalf.getWidth() * 0.55f);
     driveSlider.setBounds(driveArea.reduced(5)); // reduced, чтобы не касаться краев
 
-    // Справа от Драйва: ДВА селектора (Algo + Type)
-    auto selectorsArea = topHalf;
+    // Справа от Драйва: Control Bar (Algo + Cascade)
+    auto controlBar = topHalf;
 
     // Делим вертикально пополам с отступом
-    int selHeight = 24;
+    int controlHeight = 24;
     int gap = 8;
-    int totalH = selHeight * 2 + gap;
-    int startY = (selectorsArea.getHeight() - totalH) / 2;
+    int totalH = controlHeight * 2 + gap;
+    int startY = (controlBar.getHeight() - totalH) / 2;
 
-    auto selRect = selectorsArea.reduced(5, 0);
-    selRect.setY(selectorsArea.getY() + startY);
-    selRect.setHeight(totalH);
+    auto controlRect = controlBar.reduced(5, 0);
+    controlRect.setY(controlBar.getY() + startY);
+    controlRect.setHeight(totalH);
 
-    mathModeSelector.setBounds(selRect.removeFromTop(selHeight)); // Algo
-    selRect.removeFromTop(gap);
-    cascadeButton.setBounds(selRect.removeFromTop(selHeight));  // Cascade Button
+    mathModeSelector.setBounds(controlRect.removeFromTop(controlHeight)); // Algo
+    controlRect.removeFromTop(gap);
+    cascadeButton.setBounds(controlRect.removeFromTop(controlHeight));  // Cascade Button
 
     // Нижняя половина: 4 ручки тона в ряд (Tighten, Punch, Dyn, Smooth)
     // Используем FlexBox для идеального распределения
