@@ -7,6 +7,7 @@
 #include "dsp/Waveshaper.h"
 #include "dsp/Envelope.h"
 #include "dsp/DynamicsRestorer.h"
+#include "dsp/PsychoAcousticGain.h"
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -87,6 +88,9 @@ private:
 
     // Параметр "Dynamics" (насколько мы возвращаем атаку)
     juce::SmoothedValue<float> smoothedDynamics;
+
+    // НОВЫЙ МОДУЛЬ
+    PsychoAcousticGain psychoGain;
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)
