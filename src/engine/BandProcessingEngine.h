@@ -30,38 +30,39 @@ public:
         for(auto& dcb : dcBlockers) dcb.reset();
     }
 
-    // Главный метод обработки полосы
+    // Обновленная сигнатура: добавляем driveTilt
+    // driveTilt: статический множитель (0.5 для Sub, 1.2 для Air и т.д.)
+    // netModulation: динамический модулятор от сети (пока не используется, но передаем)
     void process(juce::dsp::AudioBlock<float>& block,
                  const ParameterSet& params,
+                 float driveTilt = 1.0f,
                  float netModulation = 0.0f)
     {
         // 1. Analog Modeling (Mojo)
-        // Возвращает множители драйва для L/R каналов
         auto [driveMultL, driveMultR] = analogEngine.process(block, params);
 
-        // 2. Network Logic Stub (Пока заглушка, но место готово)
-        // netModulation придет извне (от ProcessingEngine)
+        // 2. Network Logic (Заглушка)
+        // В будущем: float netFactor = ...logic(netModulation)...
 
-        // 3. Рассчитываем средний множитель драйва
-        float avgDriveMult = (driveMultL + driveMultR) * 0.5f;
+        // 3. Итоговый множитель драйва
+        // Tilt * (Average Analog Drift) * (Global Heat)
+        float combinedDriveMult = driveTilt * (driveMultL + driveMultR) * 0.5f;
 
-        // Global Heat (имитация просадки питания)
+        // Global Heat (имитация просадки напряжения = буст драйва)
         if (params.globalHeat > 0.0f) {
-            avgDriveMult *= (1.0f + params.globalHeat * 0.2f);
+            combinedDriveMult *= (1.0f + params.globalHeat * 0.2f);
         }
 
         // 4. Transient & Saturation
-        // Применяем сатурацию с учетом транзиентов
-        transientEngine.process(block, params, avgDriveMult);
+        transientEngine.process(block, params, combinedDriveMult);
 
-        // 5. DC Blocker (убираем постоянку после нелинейности)
+        // 5. DC Blocker
         size_t numSamples = block.getNumSamples();
         size_t numChannels = block.getNumChannels();
 
         for (size_t ch = 0; ch < numChannels; ++ch)
         {
             if (ch >= 2) break;
-
             float* data = block.getChannelPointer(ch);
             for (size_t i = 0; i < numSamples; ++i)
             {

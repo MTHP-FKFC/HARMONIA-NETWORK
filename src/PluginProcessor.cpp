@@ -362,7 +362,7 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = samplesPerBlock;
     spec.numChannels = 2;
-    testBandEngine.prepare(spec);
+    testFilterBankEngine.prepare(spec);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -384,6 +384,22 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Исходные размеры
     const int originalNumSamples = buffer.getNumSamples();
     const int numCh = juce::jmin(buffer.getNumChannels(), 2);
+
+    // === TEMPORARY FILTERBANK ENGINE TEST ===
+    // Создаем AudioBlock из буфера
+    juce::dsp::AudioBlock<float> block(buffer);
+
+    // Получаем параметры через ParameterManager
+    auto params = testParameterManager->getCurrentParams();
+
+    // Создаем массив модуляций (фейковые данные для теста)
+    std::array<float, 6> dummyMods = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+
+    // Обрабатываем через FilterBankEngine
+    testFilterBankEngine.process(block, params, dummyMods);
+
+    // Выходим рано для теста
+    return;
 
     // --- 1. ПАРАМЕТРЫ ---
 

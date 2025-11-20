@@ -14,7 +14,7 @@
 #include "parameters/ParameterSet.h"
 #include "parameters/ParameterManager.h"
 #include "engine/SaturationEngine.h"
-#include "engine/BandProcessingEngine.h"
+#include "engine/FilterBankEngine.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
 // #include "dsp/TransientSplitter.h" // TEMPORARILY COMMENTED
@@ -63,6 +63,9 @@ public:
     void setCurrentProgram(int) override {}
     const juce::String getProgramName(int) override { return {}; }
     void changeProgramName(int, const juce::String&) override {}
+
+    // Getter for APVTS
+    juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
 
 private:
     // === 1. Параметры (State) ===
@@ -190,7 +193,7 @@ private:
     // === TEST REFACTORING ===
     // Temporary test members for refactoring
     Cohera::ParameterManager* testParameterManager = nullptr;
-    Cohera::BandProcessingEngine testBandEngine;
+    Cohera::FilterBankEngine testFilterBankEngine;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;

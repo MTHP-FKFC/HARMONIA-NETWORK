@@ -1,34 +1,59 @@
 #include "PluginEditor.h"
-#include "PluginProcessor.h"
 
 CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(CoheraSaturatorAudioProcessor& p)
-    : AudioProcessorEditor(&p), audioProcessor(p)
+    : AudioProcessorEditor(&p), audioProcessor(p),
+      saturationCore(p.getAPVTS()),
+      networkBrain(p.getAPVTS())
 {
-    // Базовый размер окна
-    setSize(600, 400);
+    // Применяем стиль
+    setLookAndFeel(&lnf);
+    
+    // Добавляем компоненты
+    addAndMakeVisible(saturationCore);
+    addAndMakeVisible(networkBrain);
+    
+    // Mix & Output (Глобальные, внизу)
+    mixSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    mixSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
+    addAndMakeVisible(mixSlider);
+    mixAtt = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "mix", mixSlider);
+    
+    // Размер окна
+    setSize(800, 600);
+    setResizable(true, true);
 }
 
 CoheraSaturatorAudioProcessorEditor::~CoheraSaturatorAudioProcessorEditor()
 {
+    setLookAndFeel(nullptr);
 }
 
 void CoheraSaturatorAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // Темный, "дорогой" фон (Cohera Style)
-    g.fillAll(juce::Colour::fromRGB(20, 20, 25));
-
+    g.fillAll(findColour(juce::ResizableWindow::backgroundColourId));
+    
+    // Заголовок (Заглушка для TopBar)
     g.setColour(juce::Colours::white);
-    g.setFont(24.0f);
-    
-    // Центрированный текст
-    g.drawFittedText("Cohera Saturator", getLocalBounds(), juce::Justification::centred, 1);
-    
-    g.setFont(14.0f);
-    g.setColour(juce::Colours::grey);
-    g.drawFittedText("Phase 1: Skeleton Init", getLocalBounds().translated(0, 30), juce::Justification::centred, 1);
+    g.setFont(20.0f);
+    g.drawText("COHERA SATURATOR", getLocalBounds().removeFromTop(40), juce::Justification::centred);
 }
 
 void CoheraSaturatorAudioProcessorEditor::resized()
 {
-    // Здесь будет лейаут компонентов
+    auto area = getLocalBounds();
+    
+    // Header
+    auto header = area.removeFromTop(40);
+    
+    // Footer (Mix knob)
+    auto footer = area.removeFromBottom(50).reduced(100, 10);
+    mixSlider.setBounds(footer);
+    
+    // Visor (Middle) - пока пустое место под визуализацию
+    auto visorArea = area.removeFromTop(area.getHeight() * 0.45f);
+    
+    // Main Controls (Bottom Split)
+    auto controlsArea = area;
+    saturationCore.setBounds(controlsArea.removeFromLeft(controlsArea.getWidth() / 2));
+    networkBrain.setBounds(controlsArea);
 }

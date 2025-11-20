@@ -41,6 +41,7 @@ target_sources(Cohera_Saturator PRIVATE
     src/engine/TransientEngine.h
     src/engine/AnalogModelingEngine.h
     src/engine/BandProcessingEngine.h
+    src/engine/FilterBankEngine.h
 
     # DSP Module
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h
@@ -74,6 +75,9 @@ target_sources(Cohera_Saturator PRIVATE
     # src/network/NetworkManager.cpp (добавим позже)
 
     # UI Module
+    src/ui/CoheraLookAndFeel.h
+    src/ui/components/SaturationCore.h
+    src/ui/components/NetworkBrain.h
     # src/ui/LookAndFeel.cpp (добавим позже)
 )
 
