@@ -233,7 +233,7 @@ void CoheraSaturatorAudioProcessorEditor::resized()
     // ==============================================================================
 
     // Делим на 3 части: Left Panel | Link (Gap) | Right Panel
-    auto centerGap = area.getWidth() * 0.08f; // 8% ширины на связку
+    auto centerGap = area.getWidth() * 0.12f; // 12% ширины на связку - увеличено для видимости
     auto panelWidth = (area.getWidth() - centerGap) / 2;
 
     auto leftPanel = area.removeFromLeft(panelWidth).reduced(4, 0);
@@ -260,7 +260,7 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> 
     // Drive Knob - Главный герой, по центру левой части
     // Занимает 55% ширины (чуть меньше, чтобы влезли селекторы)
     auto driveArea = topHalf.removeFromLeft(topHalf.getWidth() * 0.55f);
-    driveSlider.setBounds(driveArea.reduced(5)); // reduced, чтобы не касаться краев
+    driveSlider.setBounds(driveArea.reduced(5, 5).withTrimmedBottom(-20)); // Даем место для лейбла снизу
 
     // Справа от Драйва: Control Bar (Algo + Cascade)
     auto controlBar = topHalf;
@@ -317,13 +317,13 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(juce::Rectangle<int> are
     auto knobArea = area.reduced(5, 0);
 
     auto topKnobRow = knobArea.removeFromTop(knobArea.getHeight() / 2);
-    netSensSlider.setBounds(topKnobRow.withSizeKeepingCentre(topKnobRow.getHeight(), topKnobRow.getHeight()));
+    netSensSlider.setBounds(topKnobRow.withSizeKeepingCentre(topKnobRow.getHeight() + 20, topKnobRow.getHeight() + 20));
 
     // Нижний ряд (Depth, Smooth)
     juce::FlexBox netFlex;
     netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
-    netFlex.items.add(juce::FlexItem(netDepthSlider).withFlex(1.0f));
-    netFlex.items.add(juce::FlexItem(netSmoothSlider).withFlex(1.0f));
+    netFlex.items.add(juce::FlexItem(netDepthSlider).withFlex(1.0f).withMaxWidth(80).withMaxHeight(80));
+    netFlex.items.add(juce::FlexItem(netSmoothSlider).withFlex(1.0f).withMaxWidth(80).withMaxHeight(80));
 
     netFlex.performLayout(knobArea);
 }
@@ -346,13 +346,13 @@ void CoheraSaturatorAudioProcessorEditor::layoutFooter(juce::Rectangle<int> area
     juce::Slider* mojoKnobs[] = { &heatSlider, &driftSlider, &varianceSlider, &entropySlider, &noiseSlider };
 
     for (auto* k : mojoKnobs) {
-        mojoFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMargin(juce::FlexItem::Margin(0, 2, 0, 2)));
+        mojoFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMaxWidth(70).withMaxHeight(70).withMargin(juce::FlexItem::Margin(0, 2, 0, 2)));
     }
     mojoFlex.performLayout(leftSection.reduced(0, 5));
 
     // === 2. MIX CENTER ===
     // Mix Knob
-    mixSlider.setBounds(centerSection.withSizeKeepingCentre(70, 70));
+    mixSlider.setBounds(centerSection.withSizeKeepingCentre(100, 100));
 
     // Delta Button (Маленькая кнопка рядом с Mix)
     int btnSize = 20;
@@ -363,8 +363,8 @@ void CoheraSaturatorAudioProcessorEditor::layoutFooter(juce::Rectangle<int> area
     juce::FlexBox outFlex;
     outFlex.justifyContent = juce::FlexBox::JustifyContent::flexEnd;
 
-    outFlex.items.add(juce::FlexItem(focusSlider).withFlex(1.0f).withMaxWidth(70).withMargin(5));
-    outFlex.items.add(juce::FlexItem(outputSlider).withFlex(1.0f).withMaxWidth(70).withMargin(5));
+    outFlex.items.add(juce::FlexItem(focusSlider).withFlex(1.0f).withMaxWidth(85).withMaxHeight(85).withMargin(5));
+    outFlex.items.add(juce::FlexItem(outputSlider).withFlex(1.0f).withMaxWidth(85).withMaxHeight(85).withMargin(5));
 
     outFlex.performLayout(rightSection.reduced(0, 5));
 }

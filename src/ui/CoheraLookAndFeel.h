@@ -103,14 +103,13 @@ namespace CoheraUI {
             // ✍️ ТИПОГРАФИКА "DESIGNER 20 YEARS EXP"
             // ====================================================================
 
-            // 1. НАЗВАНИЕ ПАРАМЕТРА (СНИЗУ)
-            g.setFont(juce::Font("Verdana", 11.0f, juce::Font::bold)); // Чуть крупнее
+            // 1. НАЗВАНИЕ ПАРАМЕТРА (СНИЗУ) - рисуем ЗА ПРЕДЕЛАМИ компонента
+            g.setFont(juce::Font("Verdana", 11.0f, juce::Font::bold));
             g.setColour(kTextDim);
 
-            // Увеличиваем высоту под текст до 20px
-            int textH = 20;
-            // Рисуем от самого низа bounds
-            juce::Rectangle<int> nameRect(x - 5, y + height - textH, width + 10, textH);
+            // Рисуем лейбл НИЖЕ компонента слайдера (за его пределами)
+            int labelHeight = 18;
+            juce::Rectangle<int> nameRect(x - 2, y + height + 2, width + 4, labelHeight);
 
             juce::String name = slider.getName().toUpperCase();
             if (name.contains("TONE_")) name = name.replace("TONE_", "");
