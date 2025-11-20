@@ -70,7 +70,11 @@ private:
 
     // === ПРОФЕССИОНАЛЬНЫЙ ГЕЙН-СТЕЙДЖИНГ ===
 
-    // Линия задержки для Dry-сигнала (компенсация FIR-фильтров)
+    // 4x Oversampling (анти-алиасинг для сатурации)
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
+    static constexpr size_t oversamplingFactor = 4;
+
+    // Линия задержки для Dry-сигнала (компенсация FIR-фильтров + оверсемплинг)
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> dryDelayLine;
 
     // Плавный микс (Dry/Wet)

@@ -94,37 +94,82 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
 
 void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // 1. Фильтры (как было)
+    // 1. Инициализируем Оверсемплер (4x)
+    // 2 = 4x upsampling (2^2)
+    // filterHalfBandFIREquiripple = Линейная фаза (высшее качество)
+    // true = isMaxQuality (максимальное подавление зеркальных частот)
+    oversampler = std::make_unique<juce::dsp::Oversampling<float>>(2, 2, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple, true);
+    oversampler->initProcessing(samplesPerBlock);
+
+    // Внутренняя частота (High Rate)
+    double osSampleRate = sampleRate * (double)oversamplingFactor;
+    // Внутренний размер блока (максимальный)
+    int osBlockSize = samplesPerBlock * (int)oversamplingFactor;
+
+    // 2. Готовим Фильтры (на ВЫСОКОЙ частоте!)
     FilterBankConfig config;
-    config.sampleRate = sampleRate;
-    config.maxBlockSize = (juce::uint32)samplesPerBlock;
+    config.sampleRate = osSampleRate; // <--- ВАЖНО!
+    config.maxBlockSize = (juce::uint32)osBlockSize;
     config.numBands = kNumBands;
     config.phaseMode = FilterPhaseMode::LinearFIR256;
     config.profile = CrossoverProfile::Default;
+
     filterBank->prepare(config);
 
-    // ВАЖНО: Получаем задержку фильтров
-    int latency = filterBank->getLatencySamples();
-    setLatencySamples(latency);
+    // 3. Рассчитываем Латенси (Задержку)
+    // Задержка Оверсемплера (в сэмплах исходной частоты)
+    float osLatency = oversampler->getLatencyInSamples();
 
-    // 2. Инициализируем Dry Delay Line (чтобы фаза совпадала)
-    dryDelayLine.prepare({sampleRate, (juce::uint32)samplesPerBlock, (juce::uint32)getTotalNumInputChannels()});
-    dryDelayLine.setDelay((float)latency); // Выравниваем Dry под Wet
+    // Задержка Кроссовера (она в сэмплах ВЫСОКОЙ частоты)
+    // Переводим в сэмплы ОБЫЧНОЙ частоты (разделить на фактор)
+    float xoverLatencyHigh = (float)filterBank->getLatencySamples();
+    float xoverLatencyNorm = xoverLatencyHigh / (float)oversamplingFactor;
 
-    // 3. Буферы (как было)
+    // Общая задержка системы
+    float totalLatency = osLatency + xoverLatencyNorm;
+
+    setLatencySamples((int)totalLatency);
+
+    // Настраиваем Dry Delay Line (на ОБЫЧНОЙ частоте)
+    // Dry сигнал не идет в оверсемплер, он ждет снаружи
+    dryDelayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 2 });
+    dryDelayLine.setDelay(totalLatency);
+
+    // 4. Буферы полос (увеличенного размера)
     bandBufferPtrs.resize(kNumBands);
     for (int i = 0; i < kNumBands; ++i) {
-        bandBuffers[i].setSize(2, samplesPerBlock);
+        bandBuffers[i].setSize(2, osBlockSize); // <--- Большой размер!
         bandBufferPtrs[i] = &bandBuffers[i];
     }
 
-    // 4. Сглаживание параметров
-    smoothedDrive.reset(sampleRate, 0.05);
-    smoothedOutput.reset(sampleRate, 0.05);
+    // 5. Сглаживатели
+    // High Rate сглаживатели (работают в цикле оверсемплинга)
+    smoothedDrive.reset(osSampleRate, 0.05);
+    smoothedSatBlend.reset(osSampleRate, 0.05);
+    smoothedNetDepth.reset(osSampleRate, 0.05);
+    smoothedNetSens.reset(osSampleRate, 0.05);
+
+    // Low Rate сглаживатели (работают на финальном миксе)
     smoothedMix.reset(sampleRate, 0.05);
-    smoothedSatBlend.reset(sampleRate, 0.05);
-    smoothedCompensation.reset(sampleRate, 0.1);
+    smoothedOutput.reset(sampleRate, 0.05);
     smoothedDynamics.reset(sampleRate, 0.05);
+
+    // Устанавливаем начальные значения
+    smoothedDrive.setCurrentAndTargetValue(1.0f);
+    smoothedOutput.setCurrentAndTargetValue(1.0f);
+    smoothedMix.setCurrentAndTargetValue(1.0f);
+    smoothedSatBlend.setCurrentAndTargetValue(0.0f);
+    smoothedDynamics.setCurrentAndTargetValue(0.5f);
+    smoothedNetDepth.setCurrentAndTargetValue(1.0f);
+    smoothedNetSens.setCurrentAndTargetValue(1.0f);
+
+    // 6. Сеть и детекторы (на обычной частоте - анализируем вход до апсемплинга)
+    smoothedNetworkSignal.reset(sampleRate, 0.02);
+    for (int i = 0; i < kNumBands; ++i) {
+        smoothedNetworkBands[i].reset(sampleRate, 0.02);
+        smoothedNetworkBands[i].setCurrentAndTargetValue(0.0f);
+        bandEnvelopes[i].reset(sampleRate);
+    }
 
     // Инициализация Dynamics Restorers
     for (int b = 0; b < kNumBands; ++b) {
@@ -133,46 +178,15 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
         }
     }
 
-    psychoGain.prepare(sampleRate); // <-- NEW
+    psychoGain.prepare(sampleRate);
 
-    // Инициализация полосных энвелопов и сглаживателей сети
-    for (int i = 0; i < kNumBands; ++i)
-    {
-        // Настраиваем детекторы (быстрые)
-        bandEnvelopes[i].reset(sampleRate);
-
-        // Настраиваем сглаживатели приема (20ms - достаточно быстро для транзиентов, но без треска)
-        smoothedNetworkBands[i].reset(sampleRate, 0.02f);
-        smoothedNetworkBands[i].setCurrentAndTargetValue(0.0f);
-    }
-
-    // === Network Control (The Holy Trinity) ===
-    smoothedNetDepth.reset(sampleRate, 0.05);
-    smoothedNetDepth.setCurrentAndTargetValue(1.0f); // 100% depth
-
-    smoothedNetSens.reset(sampleRate, 0.05);
-    smoothedNetSens.setCurrentAndTargetValue(1.0f); // 100% sensitivity
-
-    netSmoothState = 0.0f; // Reset One-Pole filter state
-
-    // SOFT START:
-    // Начинаем с тишины (0.0)
-    // Поднимаемся до полной громкости (1.0) за 200 мс.
-    // Этого времени хватит, чтобы FIR-фильтры заполнились данными.
+    // 7. Плавный пуск (на обычной частоте)
     startupFader.reset(sampleRate, 0.2f);
     startupFader.setCurrentAndTargetValue(0.0f);
     startupFader.setTargetValue(1.0f);
 
-    smoothedDrive.setCurrentAndTargetValue(1.0f);
-    smoothedOutput.setCurrentAndTargetValue(1.0f);
-    smoothedMix.setCurrentAndTargetValue(1.0f); // По дефолту Wet, чтобы слышать эффект
-    smoothedSatBlend.setCurrentAndTargetValue(0.0f);
-    smoothedCompensation.setCurrentAndTargetValue(1.0f);
-    smoothedDynamics.setCurrentAndTargetValue(0.5f);
-
-    smoothedNetworkSignal.reset(sampleRate, 0.02);
-
-    // 5. Настройка новых модулей
+    // 8. Сброс состояния One-Pole фильтра
+    netSmoothState = 0.0f;
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -184,7 +198,9 @@ void CoheraSaturatorAudioProcessor::releaseResources()
 void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    const int numSamples = buffer.getNumSamples();
+
+    // Исходные размеры
+    const int originalNumSamples = buffer.getNumSamples();
     const int numCh = juce::jmin(buffer.getNumChannels(), 2);
 
     // --- 1. ПАРАМЕТРЫ ---
@@ -193,10 +209,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float mixParam   = *apvts.getRawParameterValue("mix");          // 0..100
     float outDb      = *apvts.getRawParameterValue("output_gain");
 
-    // Умный маппинг драйва (0..15% blend, 15..100% boost)
+    // Умный маппинг драйва
     float targetSatBlend = juce::jlimit(0.0f, 1.0f, driveParam / 15.0f);
     float driveRest = juce::jmax(0.0f, driveParam - 15.0f);
-    float targetDrive = 1.0f + (driveRest * 0.2f); // Макс x18
+    float targetDrive = 1.0f + (driveRest * 0.2f);
 
     // Читаем параметр Dynamics
     float dynParam = *apvts.getRawParameterValue("dynamics");
@@ -217,43 +233,31 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     smoothedNetDepth.setTargetValue(pDepth / 100.0f);
     smoothedNetSens.setTargetValue(pSens / 100.0f);
 
-    // --- 2. СЕТЕВАЯ ЛОГИКА (Per-Band) ---
+    // === PREPARE ONE-POLE FILTER COEFFICIENT FOR SMOOTH ===
+    // Вычисляем коэффициент сглаживания (экспоненциальный фильтр)
+    float smoothCoeff = 0.0f;
+    if (pSmooth > 0.0f) {
+        smoothCoeff = std::exp(-1.0f / (std::max(1.0f, pSmooth) * 0.001f * getSampleRate()));
+    }
+
+    // --- 2. СЕТЬ (На обычной частоте) ---
 
     currentGroup = (int)*apvts.getRawParameterValue("group_id");
     isReference  = (*apvts.getRawParameterValue("role") > 0.5f);
-
-    // Читаем параметры режима
     int modeIndex = *apvts.getRawParameterValue("mode");
 
-    // Если Reference -> Анализируем каждую полосу и шлем в сеть
-    if (isReference)
-    {
-        for (int b = 0; b < kNumBands; ++b)
-        {
-            // Берем пик громкости в этой полосе (из L и R)
-            float peakL = bandBuffers[b].getMagnitude(0, 0, numSamples);
-            float peakR = (numCh > 1) ? bandBuffers[b].getMagnitude(1, 0, numSamples) : 0.0f;
-            float maxBandPeak = std::max(peakL, peakR);
-
-            // Обрабатываем энвелопом
-            float envVal = bandEnvelopes[b].process(maxBandPeak);
-
-            // Шлем в сеть
-            NetworkManager::getInstance().updateBandSignal(currentGroup, b, envVal);
-        }
+    // Если Reference -> Анализируем вход и шлем в сеть
+    if (isReference) {
+        float maxPeak = buffer.getMagnitude(0, originalNumSamples);
+        float envValue = bandEnvelopes[0].process(maxPeak);
+        NetworkManager::getInstance().updateBandSignal(currentGroup, 0, envValue);
     }
 
-    // Если Listener -> Читаем каждую полосу из сети и готовим сглаживатели
-    for (int b = 0; b < kNumBands; ++b)
-    {
-        float targetVal = 0.0f;
-        if (!isReference) {
-            targetVal = NetworkManager::getInstance().getBandSignal(currentGroup, b);
-        }
-        smoothedNetworkBands[b].setTargetValue(targetVal);
-    }
+    // Если Listener -> Читаем из сети
+    float rawNetVal = (!isReference) ? NetworkManager::getInstance().getBandSignal(currentGroup, 0) : 0.0f;
+    smoothedNetworkSignal.setTargetValue(rawNetVal);
 
-    // --- 3. DRY COPY & SPLIT ---
+    // --- 3. DRY COPY (На обычной частоте) ---
 
     juce::AudioBuffer<float> dryBuffer;
     dryBuffer.makeCopyOf(buffer);
@@ -261,14 +265,31 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     juce::dsp::ProcessContextReplacing<float> dryContext(dryBlock);
     dryDelayLine.process(dryContext);
 
-    filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
+    // --- 4. UPSAMPLING (Взлетаем!) ---
 
-    // --- 4. PROCESS ---
-    
-    // Временный буфер для суммы Wet сигнала
-    juce::AudioBuffer<float> wetSumBuffer;
-    wetSumBuffer.setSize(numCh, numSamples);
-    wetSumBuffer.clear();
+    // Создаем AudioBlock из входного буфера
+    juce::dsp::AudioBlock<float> inputBlock(buffer);
+
+    // Апсемплинг!
+    auto upsampledBlock = oversampler->processSamplesUp(inputBlock);
+
+    int numSamplesHigh = (int)upsampledBlock.getNumSamples();
+
+    // Создаем временный буфер для суммы Wet сигнала
+    juce::AudioBuffer<float> wetSumBufferHigh;
+    wetSumBufferHigh.setSize(numCh, numSamplesHigh);
+    wetSumBufferHigh.clear();
+
+    // Создаем массив указателей для FilterBank
+    float* upChannels[2];
+    upChannels[0] = upsampledBlock.getChannelPointer(0);
+    upChannels[1] = (numCh > 1) ? upsampledBlock.getChannelPointer(1) : nullptr;
+    juce::AudioBuffer<float> upWrapper(upChannels, numCh, numSamplesHigh);
+
+    // --- 5. SPLIT (High Rate) ---
+    filterBank->splitIntoBands(upWrapper, bandBufferPtrs.data(), numSamplesHigh);
+
+    // --- 6. PROCESS LOOP (High Rate) ---
 
     // Фиксированный Tilt (меньше грязи на низах)
     const float bandDriveScale[6] = { 0.6f, 0.8f, 1.0f, 1.0f, 1.1f, 1.2f };
@@ -279,14 +300,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     auto* finalL = buffer.getWritePointer(0);
     auto* finalR = (numCh > 1) ? buffer.getWritePointer(1) : nullptr;
 
-    // === PREPARE ONE-POLE FILTER COEFFICIENT FOR SMOOTH ===
-    // Вычисляем коэффициент сглаживания (экспоненциальный фильтр)
-    float smoothCoeff = 0.0f;
-    if (pSmooth > 0.0f) {
-        smoothCoeff = std::exp(-1.0f / (std::max(1.0f, pSmooth) * 0.001f * (float)getSampleRate()));
-    }
-
-    for (int i = 0; i < numSamples; ++i)
+    for (int i = 0; i < numSamplesHigh; ++i)
     {
         // === NETWORK CONTROL PROCESSING (The Holy Trinity) ===
         float depth = smoothedNetDepth.getNextValue();
@@ -411,7 +425,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     
     // Очистка
     for (int i = numCh; i < getTotalNumOutputChannels(); ++i)
-        buffer.clear(i, 0, numSamples);
+        buffer.clear(i, 0, originalNumSamples);
 }
 // === Сохранение состояния ===
 
