@@ -140,8 +140,12 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     // === 3. ОБРАБОТКА (WET) ===
 
-    // Сначала измерим RMS входа (для авто-гейна)
-    float inRms = buffer.getRMSLevel(0, 0, numSamples); // RMS левого канала для примера
+    // Измерим RMS входа для каждого канала (для авто-гейна)
+    std::vector<float> inputRmsLevels(getTotalNumInputChannels());
+    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+    {
+        inputRmsLevels[ch] = buffer.getRMSLevel(ch, 0, numSamples);
+    }
 
     // 3.1 Split
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
@@ -203,22 +207,25 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     // === 4. AUTO-GAIN (RMS MATCHING) ===
 
-    // Измеряем RMS того, что получилось
-    float outRms = buffer.getRMSLevel(0, 0, numSamples);
+    // Измеряем RMS для каждого канала после сатурации и применяем компенсацию
+    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+    {
+        float outRms = buffer.getRMSLevel(ch, 0, numSamples);
+        float inRms = inputRmsLevels[ch];
 
-    // Защита от деления на ноль
-    if (outRms < 0.0001f) outRms = 0.0001f;
-    if (inRms < 0.0001f) inRms = outRms; // Если тишина на входе, не бустим шум
+        // Защита от деления на ноль
+        if (outRms < 0.0001f) outRms = 0.0001f;
+        if (inRms < 0.0001f) inRms = outRms; // Если тишина на входе, не бустим шум
 
-    // Вычисляем коэффициент компенсации
-    // Плавно (через фильтр), чтобы громкость не скакала
-    float targetComp = inRms / outRms;
+        // Вычисляем коэффициент компенсации для этого канала
+        float targetComp = inRms / outRms;
 
-    // Ограничиваем компенсацию, чтобы не было взрыва (макс +12dБ, мин -24дБ)
-    targetComp = juce::jlimit(0.1f, 4.0f, targetComp);
+        // Ограничиваем компенсацию, чтобы не было взрыва (макс +12dБ, мин -24dБ)
+        targetComp = juce::jlimit(0.1f, 4.0f, targetComp);
 
-    // Применяем компенсацию к Wet сигналу
-    buffer.applyGain(targetComp);
+        // Применяем компенсацию только к этому каналу
+        juce::FloatVectorOperations::multiply(buffer.getWritePointer(ch), targetComp, numSamples);
+    }
 
     // --- 5. Sum ---
     buffer.clear();

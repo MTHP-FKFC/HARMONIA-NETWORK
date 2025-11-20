@@ -71,10 +71,6 @@ private:
     // Линия задержки для Dry-сигнала (компенсация FIR-фильтров)
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> dryDelayLine;
 
-    // Измерители RMS для авто-гейна
-    juce::LinearSmoothedValue<float> inputRms { 0.0f };
-    juce::LinearSmoothedValue<float> wetRms { 0.0f };
-
     // Плавный микс (Dry/Wet)
     juce::LinearSmoothedValue<float> smoothedMix { 0.0f };
 
