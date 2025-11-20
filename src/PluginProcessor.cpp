@@ -2,38 +2,6 @@
 #include "PluginEditor.h"
 #include "dsp/Waveshaper.h"
 
-// Простой однополюсный HPF для детекции (фильтрует только математику, не звук)
-static float getWeightedRMS(const juce::AudioBuffer<float>& buffer)
-{
-    const int numSamples = buffer.getNumSamples();
-    const int numCh = buffer.getNumChannels();
-    double sumSquares = 0.0;
-
-    // Коэффициент фильтра (примерно 100Hz при 44.1k)
-    // y[n] = x[n] - x[n-1] + 0.9 * y[n-1]
-    // Мы не будем хранить состояние фильтра между блоками для простоты (это RMS, усреднится),
-    // либо можно просто грубо вычесть сэмплы (дифференциатор - это тоже HPF).
-    // Для скорости сделаем дифференциатор: Energy = (x[i] - x[i-1])^2
-    // Это убирает постоянную составляющую и давит низ.
-
-    for (int ch = 0; ch < numCh; ++ch)
-    {
-        const float* data = buffer.getReadPointer(ch);
-        float prev = data[0]; // грубое приближение
-        for (int i = 1; i < numSamples; ++i)
-        {
-            float current = data[i];
-            // Простой HPF (дифференциатор): убирает Саб-бас из уравнения громкости
-            float filtered = current - prev;
-
-            sumSquares += (filtered * filtered);
-            prev = current;
-        }
-    }
-
-    // Компенсируем потерю энергии от фильтрации (примерно x2) и усредняем
-    return (float)std::sqrt(sumSquares / (numSamples * numCh));
-}
 
 CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -179,9 +147,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     if (isReference) {
         // Гейт: если бочка тише -40dB, шлем ноль.
-        float currentInputLevel = autoGain.getCurrentInputLevel();
-        float gatedLevel = currentInputLevel;
-        if (currentInputLevel < 0.01f) gatedLevel = 0.0f;
+        float maxPeak = buffer.getMagnitude(0, numSamples);
+        float gatedLevel = maxPeak;
+        if (maxPeak < 0.01f) gatedLevel = 0.0f;
 
         NetworkManager::getInstance().updateGroupSignal(currentGroup, gatedLevel);
     }
@@ -250,11 +218,6 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             }
         }
 
-        // Определяем Spectral Tilt для драйва
-        // 0 (Sub): 0.7x (Чище)
-        // 1-2 (Low/Mid): 1.0x
-        // 3-5 (High): 1.2x (Ярче)
-        static const float bandDriveScale[6] = { 0.7f, 0.9f, 1.0f, 1.0f, 1.1f, 1.2f };
 
         // В. Сатурация полос
         float wetSampleL = 0.0f;
@@ -272,17 +235,14 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
                 shaperMix = std::max(blendVal, ghostAmount);
             }
 
-            // Применяем Tilt к драйву этой полосы
-            float tiltDrive = effectiveDrive * bandDriveScale[band];
+            // Left
+            float xL = bandBuffers[band].getSample(0, i);
+            wetSampleL += shapers[band].processSample(xL, effectiveDrive, type, shaperMix);
 
-            for (int ch = 0; ch < numCh; ++ch)
-            {
-                float x = bandBuffers[band].getSample(ch, i);
-                // Используем tiltDrive вместо effectiveDrive
-                float processed = shapers[band].processSample(x, tiltDrive, type, shaperMix);
-
-                if (ch == 0) wetSampleL += processed;
-                else         wetSampleR += processed;
+            // Right
+            if (numCh > 1) {
+                float xR = bandBuffers[band].getSample(1, i);
+                wetSampleR += shapers[band].processSample(xR, effectiveDrive, type, shaperMix);
             }
         }
 
