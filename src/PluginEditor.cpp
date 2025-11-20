@@ -317,16 +317,14 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(juce::Rectangle<int> are
     // auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5, 10);
     // interactionMeter.setBounds(meterArea);
 
-    // Ручки: 3 штуки треугольником или в ряд
-    // Сделаем треугольник для разнообразия (Sens сверху, Depth/Smooth снизу)
+    // Ручки: все 3 в один ряд (Sens, Depth, Smooth)
     auto knobArea = area.reduced(5, 0);
 
-    auto topKnobRow = knobArea.removeFromTop(knobArea.getHeight() / 2);
-    netSensSlider.setBounds(topKnobRow.withSizeKeepingCentre(150, 150)); // 2.5x bigger
-
-    // Нижний ряд (Depth, Smooth) - grid размещение
     juce::FlexBox netFlex;
-    netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Лучший grid spacing
+    netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Равномерное распределение
+
+    // Все три ручки в одном ряду
+    netFlex.items.add(juce::FlexItem(netSensSlider).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150));
     netFlex.items.add(juce::FlexItem(netDepthSlider).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150));
     netFlex.items.add(juce::FlexItem(netSmoothSlider).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150));
 
