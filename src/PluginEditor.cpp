@@ -153,18 +153,17 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     deltaAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.getAPVTS(), "delta", deltaButton);
 
     // === NEW VISUAL SYSTEM v2.0 ===
-    // TEST: Enable CosmicDust + NeuralLink
+    // FIXED: Components now start timers only after being added to tree
     addAndMakeVisible(cosmicDust);
     cosmicDust.toBack(); // Фон всегда сзади
 
-    addAndMakeVisible(neuralLink); // NeuralLink уже инициализирован с apvts
+    addAndMakeVisible(neuralLink);
+    neuralLink.setAPVTS(audioProcessor.getAPVTS());
+
     addAndMakeVisible(shaperScope);
 
-    // Инициализируем APVTS для визуальных компонентов
-    // neuralLink.setAPVTS(audioProcessor.getAPVTS());
-
-    // Запускаем таймер для анимаций (20 FPS для визуализаторов)
-    startTimerHz(20);
+    // Timer для редактора (если нужен отдельный)
+    // startTimerHz(20);
 
     // Базовый размер
     setSize (900, 650);
@@ -235,16 +234,17 @@ void CoheraSaturatorAudioProcessorEditor::paint (juce::Graphics& g)
 // Timer callback для обновления живых визуализаторов
 void CoheraSaturatorAudioProcessorEditor::timerCallback()
 {
-    // TEST: Enable only CosmicDust updates
+    // Безопасность: проверяем видимость
     if (!isVisible()) return;
 
+    // Обновляем энергию для визуализаторов
     float inputRMS = audioProcessor.getInputRMS();
     float outputRMS = audioProcessor.getOutputRMS();
 
     cosmicDust.setEnergyLevel(outputRMS);
     neuralLink.setEnergyLevel(inputRMS);
 
-    // FULL FUNCTIONALITY: Enable TransferFunctionDisplay with all parameters
+    // TransferFunctionDisplay - безопасный доступ к параметрам
     auto& apvts = audioProcessor.getAPVTS();
     if (auto* driveParam = apvts.getRawParameterValue("drive_master"))
     {

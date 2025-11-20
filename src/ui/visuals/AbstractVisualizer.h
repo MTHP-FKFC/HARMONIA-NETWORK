@@ -4,14 +4,28 @@
 class AbstractVisualizer : public juce::Component, private juce::Timer
 {
 public:
-    AbstractVisualizer(int fps = 60)
+    AbstractVisualizer(int fps = 60) : targetFPS(fps)
     {
-        startTimerHz(fps);
+        // НЕ запускаем таймер в конструкторе - только после добавления в дерево
+        // startTimerHz(fps);
     }
 
     ~AbstractVisualizer() override
     {
         stopTimer();
+    }
+
+    void parentHierarchyChanged() override
+    {
+        // Запускаем таймер только когда компонент добавлен в дерево
+        if (getParentComponent() != nullptr && !isTimerRunning())
+        {
+            startTimerHz(targetFPS);
+        }
+        else if (getParentComponent() == nullptr)
+        {
+            stopTimer();
+        }
     }
 
     // Метод для передачи внешней энергии (RMS, Transients) в визуализатор
@@ -29,6 +43,10 @@ public:
 protected:
     void timerCallback() override
     {
+        // Безопасность: проверяем, что компонент видим и имеет размер
+        if (!isVisible() || getWidth() <= 0 || getHeight() <= 0)
+            return;
+
         updateTime();
         updatePhysics();
         repaint();
@@ -39,4 +57,5 @@ protected:
 
     float currentEnergy = 0.0f; // 0.0 .. 1.0
     float time = 0.0f;          // Глобальное время для анимаций
+    int targetFPS = 60;         // Целевой FPS для таймера
 };

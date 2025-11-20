@@ -57,8 +57,9 @@ protected:
 
     void paint(juce::Graphics& g) override
     {
-        // Рисуем только если компонент виден
-        if (!isVisible() || getWidth() == 0) return;
+        // Рисуем только если компонент виден и имеет размер
+        if (!isVisible() || getWidth() <= 0 || getHeight() <= 0 || particles.empty())
+            return;
 
         for (const auto& p : particles)
         {
