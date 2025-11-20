@@ -63,6 +63,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
             "Bit Crush"     // 3: Digital
         }, 0));
 
+    // === EMPHASIS FILTERS (Tone Shaping) ===
+
+    // Tighten (Pre HPF): 10 Hz (выкл) ... 1000 Hz
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "tone_tighten", "Tighten (Pre HPF)",
+        juce::NormalisableRange<float>(10.0f, 1000.0f, 1.0f, 0.5f), 10.0f));
+
+    // Smooth (Post LPF): 22000 Hz (выкл) ... 2000 Hz
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "tone_smooth", "Smooth (Post LPF)",
+        juce::NormalisableRange<float>(2000.0f, 22000.0f, 1.0f, 0.5f), 22000.0f));
+
     // Dynamics Preservation
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "dynamics", "Dynamics Preservation",
@@ -134,6 +146,28 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     // Dry сигнал не идет в оверсемплер, он ждет снаружи
     dryDelayLine.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 2 });
     dryDelayLine.setDelay(totalLatency);
+
+    // === EMPHASIS FILTERS SETUP ===
+    // Настраиваем фильтры (работают на ВЫСОКОЙ частоте)
+    juce::dsp::ProcessSpec highSpec;
+    highSpec.sampleRate = osSampleRate;
+    highSpec.maximumBlockSize = (juce::uint32)osBlockSize;
+    highSpec.numChannels = 1; // Обрабатываем каналы по отдельности
+
+    for (int ch = 0; ch < 2; ++ch) {
+        preFilters[ch].prepare(highSpec);
+        preFilters[ch].setType(juce::dsp::StateVariableTPTFilterType::highpass);
+
+        postFilters[ch].prepare(highSpec);
+        postFilters[ch].setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+    }
+
+    // Сглаживатели частот (на High Rate)
+    smoothedTightenFreq.reset(osSampleRate, 0.05);
+    smoothedTightenFreq.setCurrentAndTargetValue(10.0f);
+
+    smoothedSmoothFreq.reset(osSampleRate, 0.05);
+    smoothedSmoothFreq.setCurrentAndTargetValue(22000.0f);
 
     // 4. Буферы полос (увеличенного размера)
     bandBufferPtrs.resize(kNumBands);
@@ -217,6 +251,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Читаем параметр Dynamics
     float dynParam = *apvts.getRawParameterValue("dynamics");
 
+    // === EMPHASIS FILTERS ===
+    float tightenParam = *apvts.getRawParameterValue("tone_tighten");
+    float smoothParam  = *apvts.getRawParameterValue("tone_smooth");
+
     // === NETWORK CONTROL (The Holy Trinity) ===
     float pDepth = *apvts.getRawParameterValue("net_depth");
     float pSmooth = *apvts.getRawParameterValue("net_smooth");
@@ -228,6 +266,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     smoothedMix.setTargetValue(mixParam / 100.0f);
     smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
     smoothedDynamics.setTargetValue(dynParam / 100.0f);
+
+    // Filter frequency smoothing
+    smoothedTightenFreq.setTargetValue(tightenParam);
+    smoothedSmoothFreq.setTargetValue(smoothParam);
 
     // Network Control сглаживание
     smoothedNetDepth.setTargetValue(pDepth / 100.0f);
@@ -285,6 +327,19 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     upChannels[0] = upsampledBlock.getChannelPointer(0);
     upChannels[1] = (numCh > 1) ? upsampledBlock.getChannelPointer(1) : nullptr;
     juce::AudioBuffer<float> upWrapper(upChannels, numCh, numSamplesHigh);
+
+    // === PRE-FILTERING (TIGHTEN) ===
+    // Фильтруем сигнал ПЕРЕД сплитом (убираем грязь на низах)
+    for (int i = 0; i < numSamplesHigh; ++i)
+    {
+        float cutoff = smoothedTightenFreq.getNextValue();
+
+        for (int ch = 0; ch < numCh; ++ch) {
+            preFilters[ch].setCutoffFrequency(cutoff);
+            float* data = upsampledBlock.getChannelPointer(ch);
+            data[i] = preFilters[ch].processSample(0, data[i]);
+        }
+    }
 
     // --- 5. SPLIT (High Rate) ---
     filterBank->splitIntoBands(upWrapper, bandBufferPtrs.data(), numSamplesHigh);
@@ -385,6 +440,22 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
             wetSampleL += procL * predComp;
             if (numCh > 1) wetSampleR += procR * predComp;
+        }
+
+        // === POST-FILTERING (SMOOTH) ===
+        // Фильтруем сумму полос перед финальным миксом
+        {
+            float cutoff = smoothedSmoothFreq.getNextValue();
+
+            // Фильтруем левый канал
+            postFilters[0].setCutoffFrequency(cutoff);
+            wetSampleL = postFilters[0].processSample(0, wetSampleL);
+
+            // Фильтруем правый канал
+            if (numCh > 1) {
+                postFilters[1].setCutoffFrequency(cutoff);
+                wetSampleR = postFilters[1].processSample(0, wetSampleR);
+            }
         }
 
         // === PSYCHOACOUSTIC AUTO-GAIN ===

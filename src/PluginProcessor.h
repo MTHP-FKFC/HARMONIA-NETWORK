@@ -77,6 +77,15 @@ private:
     // Линия задержки для Dry-сигнала (компенсация FIR-фильтров + оверсемплинг)
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> dryDelayLine;
 
+    // === EMPHASIS FILTERS (Tone Shaping) ===
+    // TPT фильтры для Pre/Post EQ ([0] = Left, [1] = Right)
+    std::array<juce::dsp::StateVariableTPTFilter<float>, 2> preFilters;  // Tighten (HPF)
+    std::array<juce::dsp::StateVariableTPTFilter<float>, 2> postFilters; // Smooth (LPF)
+
+    // Сглаживатели для частот фильтров
+    juce::SmoothedValue<float> smoothedTightenFreq;
+    juce::SmoothedValue<float> smoothedSmoothFreq;
+
     // Плавный микс (Dry/Wet)
     juce::LinearSmoothedValue<float> smoothedMix { 0.0f };
 
