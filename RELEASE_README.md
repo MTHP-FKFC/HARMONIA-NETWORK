@@ -34,12 +34,19 @@ Cohera_Saturator_artefacts/Release/VST3/Cohera Saturator.vst3
 - **High-Quality Processing** (4x oversampling, DC blocking)
 - **Complete Automation** (all parameters exposed)
 
-### 🧙‍♂️ Cyber-Mysticism UI
+### 🧙‍♂️ Cyber-Mysticism UI v2.0 - Living Interface
 - **🌀 Reactor Knob**: Drive knob pulses and glows based on input RMS level
 - **🔮 Sacred Geometry**: Golden Fibonacci spiral subtly visible in spectrum background
 - **🌫️ Cinematic Lighting**: Radial vignette creates depth and professional equipment feel
 - **✨ Dynamic Focus**: UI sections respond to mouse hover with enhanced brightness
 - **🎨 Cyberpunk Design**: Neon orange/cyan palette, glass effects, animated elements
+
+### 🏛️ Advanced Architecture v2.0
+- **AbstractVisualizer**: Unified base class for all animated components
+- **CosmicDust**: 80-particle system with parallax and energy response
+- **NeuralLink**: DNA-style animated cable with harmonic waves
+- **TransferFunctionDisplay**: Real-time mathematical curve visualization
+- **OOP Design**: Dependency injection, timer management, clean separation
 
 ## 🎹 Supported DAWs
 
