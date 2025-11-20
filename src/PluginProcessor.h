@@ -13,8 +13,7 @@
 #include "CoheraTypes.h"
 #include "parameters/ParameterSet.h"
 #include "parameters/ParameterManager.h"
-#include "engine/SaturationEngine.h"
-#include "engine/FilterBankEngine.h"
+#include "engine/ProcessingEngine.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
 // #include "dsp/TransientSplitter.h" // TEMPORARILY COMMENTED
@@ -190,10 +189,10 @@ private:
     // Для экономии CPU в режиме Low Quality
     bool isHighQuality = true; // true = 4x oversampling, false = direct processing
 
-    // === TEST REFACTORING ===
-    // Temporary test members for refactoring
-    Cohera::ParameterManager* testParameterManager = nullptr;
-    Cohera::FilterBankEngine testFilterBankEngine;
+    // === NEW ARCHITECTURE ===
+    // Новая модульная архитектура
+    Cohera::ParameterManager paramManager;
+    Cohera::ProcessingEngine processingEngine;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;
