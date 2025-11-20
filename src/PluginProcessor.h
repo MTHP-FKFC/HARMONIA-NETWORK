@@ -69,7 +69,14 @@ private:
     // Сглаживание параметров (чтобы звук не "хрустел" при вращении ручки)
     juce::SmoothedValue<float> smoothedDrive;
     juce::SmoothedValue<float> smoothedOutput;
-    juce::LinearSmoothedValue<float> smoothedNetworkSignal; // <-- ADD THIS
+    juce::SmoothedValue<float> smoothedMix;
+    juce::LinearSmoothedValue<float> smoothedNetworkSignal;
+
+    // Для выравнивания Dry сигнала с Wet (фильтрованным)
+    juce::dsp::DelayLine<float> dryDelayLine;
+
+    // Для умного авто-гейна
+    EnvelopeFollower outputEnvelope;
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)
