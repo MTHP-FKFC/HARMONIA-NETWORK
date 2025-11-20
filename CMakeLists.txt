@@ -34,6 +34,7 @@ target_sources(Cohera_Saturator PRIVATE
     # DSP Module
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h
     src/dsp/Waveshaper.h
+    src/dsp/MathSaturator.h
     src/dsp/Envelope.h
     src/dsp/DynamicsRestorer.h       # <-- NEW
     src/dsp/InteractionEngine.h      # <-- NEW

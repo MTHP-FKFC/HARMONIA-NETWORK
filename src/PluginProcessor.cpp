@@ -144,6 +144,18 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "entropy", "Harmonic Entropy",
         juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f));
 
+    // === DIVINE MATH MODE ===
+    // Алгоритм на базе фундаментальных констант Вселенной
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "math_mode", "Algo (Divine)",
+        juce::StringArray{
+            "Golden Ratio (Harmony)",
+            "Euler Tube (Warmth)",
+            "Pi Fold (Width)",
+            "Fibonacci (Grit)",
+            "Super Ellipse (Punch)"
+        }, 0));
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -377,6 +389,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // === HARMONIC ENTROPY ===
     float entropyParam = *apvts.getRawParameterValue("entropy");
 
+    // === DIVINE MATH MODE ===
+    int mathModeIdx = *apvts.getRawParameterValue("math_mode");
+    MathMode currentMathMode = static_cast<MathMode>(mathModeIdx);
+
     // === EMPHASIS FILTERS ===
     float tightenParam = *apvts.getRawParameterValue("tone_tighten");
     float smoothParam  = *apvts.getRawParameterValue("tone_smooth");
@@ -556,9 +572,6 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
-        // Читаем выбор пользователя (базовый тип сатурации)
-        int userSatTypeIdx = *apvts.getRawParameterValue("sat_type");
-        SaturationType userType = static_cast<SaturationType>(userSatTypeIdx + 1); // +1 т.к. Clean=0 мы не дали в UI
 
         for (int band = 0; band < kNumBands; ++band)
         {
@@ -592,9 +605,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             auto splitL = splitters[band][0].process(inputL);
             auto splitR = splitters[band][1].process(inputR);
 
-            // 2. PROCESS BODY (Всегда жирный, как выбрал пользователь)
-            float processedBodyL = Waveshaper::process(splitL.body, heatDrive, userType);
-            float processedBodyR = Waveshaper::process(splitR.body, heatDrive, userType);
+            // 2. PROCESS BODY (Всегда жирный, как выбрала Математика Вселенной)
+            float processedBodyL = mathShapers[band].processSample(splitL.body, heatDrive, currentMathMode);
+            float processedBodyR = mathShapers[band].processSample(splitR.body, heatDrive, currentMathMode);
 
             // 3. PROCESS TRANSIENT (Зависит от Punch)
             float processedTransL = 0.0f;
@@ -605,23 +618,23 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
                 // === HARD PUNCH (Positive) ===
                 // Атака становится жесткой и агрессивной
                 float transDrive = heatDrive * (1.0f + punchVal * 2.0f); // До 3x драйва на атаку
-                processedTransL = Waveshaper::process(splitL.trans, transDrive, SaturationType::HardClip);
-                processedTransR = Waveshaper::process(splitR.trans, transDrive, SaturationType::HardClip);
+                processedTransL = mathShapers[band].processSample(splitL.trans, transDrive, currentMathMode);
+                processedTransR = mathShapers[band].processSample(splitR.trans, transDrive, currentMathMode);
             }
             else if (punchVal < -0.01f)
             {
                 // === CLEAN PUNCH (Negative) ===
                 // Атака остается чистой (сохраняет динамику)
                 float transDrive = heatDrive * (1.0f - std::abs(punchVal) * 0.8f); // Снижаем драйв
-                processedTransL = Waveshaper::process(splitL.trans, transDrive, SaturationType::Clean);
-                processedTransR = Waveshaper::process(splitR.trans, transDrive, SaturationType::Clean);
+                processedTransL = mathShapers[band].processSample(splitL.trans, transDrive, MathMode::EulerTube); // Clean - используем Euler для мягкости
+                processedTransR = mathShapers[band].processSample(splitR.trans, transDrive, MathMode::EulerTube);
             }
             else
             {
                 // === NEUTRAL (Punch = 0) ===
                 // Атака обрабатывается так же, как тело
-                processedTransL = Waveshaper::process(splitL.trans, heatDrive, userType);
-                processedTransR = Waveshaper::process(splitR.trans, heatDrive, userType);
+                processedTransL = mathShapers[band].processSample(splitL.trans, heatDrive, currentMathMode);
+                processedTransR = mathShapers[band].processSample(splitR.trans, heatDrive, currentMathMode);
             }
 
             // 4. SUM: Склеиваем Transient и Body обратно
@@ -634,7 +647,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
             // 6. Predictive Compensation для Split & Crush
             float predComp = 1.0f / std::sqrt(std::max(1.0f, heatDrive));
-            if (userType == SaturationType::Rectifier)
+            if (currentMathMode == MathMode::PiFold)
                 predComp *= 1.2f;
 
             wetSampleL += combinedL * predComp;

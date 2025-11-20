@@ -5,6 +5,7 @@
 #include <juce_dsp/juce_dsp.h>
 #include "dsp/FilterBank.h"
 #include "dsp/Waveshaper.h"
+#include "dsp/MathSaturator.h"
 #include "dsp/Envelope.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
@@ -72,9 +73,9 @@ private:
     std::array<juce::AudioBuffer<float>, kNumBands> bandBuffers;
     std::vector<juce::AudioBuffer<float>*> bandBufferPtrs;
 
-    // === DSP: Saturation ===
-    // Один шейпер на каждую полосу (если захотим хранить состояние, например DC-фильтр)
-    std::array<Waveshaper, kNumBands> shapers;
+    // === DSP: Divine Math Saturation ===
+    // Математические сатураторы с фундаментальными константами Вселенной
+    std::array<MathSaturator, kNumBands> mathShapers;
 
     // === ПРОФЕССИОНАЛЬНЫЙ ГЕЙН-СТЕЙДЖИНГ ===
 
