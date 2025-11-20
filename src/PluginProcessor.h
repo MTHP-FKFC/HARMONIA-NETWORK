@@ -8,6 +8,12 @@
 #include "dsp/MathSaturator.h"
 #include "dsp/DCBlocker.h"
 #include "dsp/Envelope.h"
+
+// Test includes
+#include "CoheraTypes.h"
+#include "parameters/ParameterSet.h"
+#include "parameters/ParameterManager.h"
+#include "engine/SaturationEngine.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
 #include "dsp/TransientSplitter.h"
@@ -179,6 +185,11 @@ private:
     // === QUALITY MODE ===
     // Для экономии CPU в режиме Low Quality
     bool isHighQuality = true; // true = 4x oversampling, false = direct processing
+
+    // === TEST REFACTORING ===
+    // Temporary test members for refactoring
+    Cohera::ParameterManager* testParameterManager = nullptr;
+    Cohera::SaturationEngine testSaturationEngine;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;

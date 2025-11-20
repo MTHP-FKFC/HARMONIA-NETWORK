@@ -30,6 +30,14 @@ target_sources(Cohera_Saturator PRIVATE
     src/Main.cpp
     src/PluginProcessor.cpp src/PluginProcessor.h
     src/PluginEditor.cpp    src/PluginEditor.h
+    src/CoheraTypes.h
+
+    # Parameters
+    src/parameters/ParameterSet.h
+    src/parameters/ParameterManager.h
+
+    # Engine
+    src/engine/SaturationEngine.h
 
     # DSP Module
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h

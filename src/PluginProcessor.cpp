@@ -1,5 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+
+using namespace Cohera;
 #include "dsp/Waveshaper.h"
 #include "dsp/InteractionEngine.h"
 #include "dsp/MSMatrix.h"
@@ -16,6 +18,9 @@ CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 {
     // Инициализируем кроссовер
     filterBank = std::make_unique<PlaybackFilterBank>();
+
+    // === TEST REFACTORING ===
+    testParameterManager = std::make_unique<Cohera::ParameterManager>(apvts).release();
 }
 
 CoheraSaturatorAudioProcessor::~CoheraSaturatorAudioProcessor()
@@ -351,6 +356,13 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     for (int i = 0; i < kNumBands; ++i) {
         gainReduction[i] = 1.0f; // Начально без изменений
     }
+
+    // === TEST REFACTORING ===
+    juce::dsp::ProcessSpec spec;
+    spec.sampleRate = sampleRate;
+    spec.maximumBlockSize = samplesPerBlock;
+    spec.numChannels = 2;
+    testSaturationEngine.prepare(spec);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()

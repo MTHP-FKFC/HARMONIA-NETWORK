@@ -3,15 +3,9 @@
 #include <cmath>
 #include <algorithm>
 #include "../JuceHeader.h"
+#include "../CoheraTypes.h"
 
-enum class MathMode
-{
-    GoldenRatio, // Phi
-    EulerTube,   // e
-    PiFold,      // Pi
-    Fibonacci,   // Fractal
-    SuperEllipse // Lamé
-};
+using namespace Cohera;
 
 class MathSaturator
 {
