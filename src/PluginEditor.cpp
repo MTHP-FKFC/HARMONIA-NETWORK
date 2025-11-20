@@ -319,9 +319,9 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(juce::Rectangle<int> are
     auto topKnobRow = knobArea.removeFromTop(knobArea.getHeight() / 2);
     netSensSlider.setBounds(topKnobRow.withSizeKeepingCentre(topKnobRow.getHeight(), topKnobRow.getHeight()));
 
-    // Нижний ряд (Depth, Smooth)
+    // Нижний ряд (Depth, Smooth) - grid размещение
     juce::FlexBox netFlex;
-    netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
+    netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Лучший grid spacing
     netFlex.items.add(juce::FlexItem(netDepthSlider).withFlex(1.0f));
     netFlex.items.add(juce::FlexItem(netSmoothSlider).withFlex(1.0f));
 
@@ -339,12 +339,13 @@ void CoheraSaturatorAudioProcessorEditor::layoutFooter(juce::Rectangle<int> area
     auto rightSection = area; // Оставшееся
 
     // === 1. MOJO RACK (Left) ===
-    // 5 ручек в ряд: Heat, Drift, Variance, Entropy, Noise
+    // 5 ручек в grid: Heat, Drift, Variance, Entropy, Noise
     juce::FlexBox mojoFlex;
-    mojoFlex.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
+    mojoFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Лучший grid
 
     juce::Slider* mojoKnobs[] = { &heatSlider, &driftSlider, &varianceSlider, &entropySlider, &noiseSlider };
 
+    // Mojo ручки в grid размещении
     for (auto* k : mojoKnobs) {
         mojoFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMargin(juce::FlexItem::Margin(0, 2, 0, 2)));
     }
@@ -359,10 +360,11 @@ void CoheraSaturatorAudioProcessorEditor::layoutFooter(juce::Rectangle<int> area
     deltaButton.setBounds(mixSlider.getRight() - 10, mixSlider.getY(), btnSize, btnSize);
 
     // === 3. OUTPUT SECTION (Right) ===
-    // Focus и Output рядом
+    // Focus и Output в grid
     juce::FlexBox outFlex;
-    outFlex.justifyContent = juce::FlexBox::JustifyContent::flexEnd;
+    outFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Лучший grid
 
+    // Output ручки в grid размещении
     outFlex.items.add(juce::FlexItem(focusSlider).withFlex(1.0f).withMargin(5));
     outFlex.items.add(juce::FlexItem(outputSlider).withFlex(1.0f).withMargin(5));
 
