@@ -6,6 +6,7 @@
 #include "dsp/FilterBank.h"
 #include "dsp/Waveshaper.h"
 #include "dsp/Envelope.h"
+#include "dsp/DynamicsRestorer.h"
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -80,6 +81,12 @@ private:
     juce::LinearSmoothedValue<float> smoothedNetworkSignal;
     juce::SmoothedValue<float> smoothedCompensation;
     juce::SmoothedValue<float> smoothedSatBlend;
+
+    // Восстановители динамики (один на полосу и канал)
+    std::array<std::array<DynamicsRestorer, 2>, kNumBands> dynamicsRestorers;
+
+    // Параметр "Dynamics" (насколько мы возвращаем атаку)
+    juce::SmoothedValue<float> smoothedDynamics;
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)

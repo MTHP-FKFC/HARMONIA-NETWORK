@@ -35,6 +35,7 @@ target_sources(Cohera_Saturator PRIVATE
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h
     src/dsp/Waveshaper.h
     src/dsp/Envelope.h
+    src/dsp/DynamicsRestorer.h       # <-- NEW
     src/dsp/SidechainNormalizer.h    # <-- NEW
     src/dsp/AutoGainStage.h          # <-- NEW
     src/FIR/fir_coeffs_multi_sr.h

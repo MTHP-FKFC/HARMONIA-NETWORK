@@ -45,6 +45,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "mode", "Interaction Mode",
         juce::StringArray{"Inverse Grime", "Ghost Harmonics"}, 0));
 
+    // Dynamics Preservation
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "dynamics", "Dynamics Preservation",
+        juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 50.0f));
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -84,12 +89,21 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     smoothedMix.reset(sampleRate, 0.05);
     smoothedSatBlend.reset(sampleRate, 0.05);
     smoothedCompensation.reset(sampleRate, 0.1);
+    smoothedDynamics.reset(sampleRate, 0.05);
+
+    // Инициализация Dynamics Restorers
+    for (int b = 0; b < kNumBands; ++b) {
+        for (int ch = 0; ch < 2; ++ch) {
+            dynamicsRestorers[b][ch].prepare(sampleRate);
+        }
+    }
 
     smoothedDrive.setCurrentAndTargetValue(1.0f);
     smoothedOutput.setCurrentAndTargetValue(1.0f);
     smoothedMix.setCurrentAndTargetValue(1.0f); // По дефолту Wet, чтобы слышать эффект
     smoothedSatBlend.setCurrentAndTargetValue(0.0f);
     smoothedCompensation.setCurrentAndTargetValue(1.0f);
+    smoothedDynamics.setCurrentAndTargetValue(0.5f);
 
     smoothedNetworkSignal.reset(sampleRate, 0.02);
 
@@ -139,11 +153,15 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         driveInputGain = 1.0f + (boost * 9.0f); 
     }
 
+    // Читаем параметр Dynamics
+    float dynParam = *apvts.getRawParameterValue("dynamics");
+
     // Сглаживаем параметры
     smoothedDrive.setTargetValue(driveInputGain);
     smoothedSatBlend.setTargetValue(cleanToSatMix); // Используем эту переменную для кроссфейда Clean/Sat
     smoothedMix.setTargetValue(mixParam / 100.0f);
     smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
+    smoothedDynamics.setTargetValue(dynParam / 100.0f);
 
     // --- 2. СЕТЬ (Пока заглушка для стабильности звука) ---
 
@@ -193,6 +211,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float blend = smoothedSatBlend.getNextValue();
         float mix = smoothedMix.getNextValue();
         float outG = smoothedOutput.getNextValue();
+        float dynAmount = smoothedDynamics.getNextValue();
 
         // Компенсация драйва: чем больше навалили на вход, тем тише делаем выход
         // (чтобы громкость не менялась при вращении ручки)
@@ -204,40 +223,26 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         for (int band = 0; band < kNumBands; ++band)
         {
             float bDrive = drv * bandDriveScale[band];
-            
+
             // Left
             float rawL = bandBuffers[band].getSample(0, i);
-            // Если blend < 1.0, мы подмешиваем чистый сигнал к сатурированному
-            // Blend=0 -> Tanh не работает, звук чистый
+            // Сатурируем
             float satL = std::tanh(rawL * bDrive);
-            float resL = rawL + blend * (satL - rawL);
-            sumL += resL;
+            // === DYNAMICS RESTORATION ===
+            // Сравниваем чистый rawL и грязный satL -> выравниваем satL
+            float restoredL = dynamicsRestorers[band][0].process(rawL, satL, dynAmount);
+            sumL += restoredL;
 
             // Right
             if (dryR) {
                 float rawR = bandBuffers[band].getSample(1, i);
                 float satR = std::tanh(rawR * bDrive);
-                float resR = rawR + blend * (satR - rawR);
-                sumR += resR;
+                float restoredR = dynamicsRestorers[band][1].process(rawR, satR, dynAmount);
+                sumR += restoredR;
             }
         }
 
-        // Применяем все компенсации к Wet-сумме
-        // 1. baseSumCompensation - гасит прирост от сложения полос
-        // 2. driveComp - гасит прирост от ручки Drive
-        // 3. (1.0/0.35) * (1-blend) - хак: если мы в чистом режиме (blend=0), 
-        //    мы должны ОТМЕНИТЬ baseSumCompensation, иначе чистый звук будет тихим.
-        
-        float totalWetComp = baseSumCompensation * driveComp;
-        
-        // Восстановление громкости на малых значениях Drive (когда blend < 1)
-        // Чтобы на 0% Drive громкость была равна входной
-        if (blend < 1.0f) {
-            totalWetComp = totalWetComp * blend + 1.0f * (1.0f - blend);
-        }
-
-        sumL *= totalWetComp;
-        sumR *= totalWetComp;
+        // DynamicsRestorer уже вернул уровень к оригиналу, компенсация не нужна
 
         // MIX (Linear)
         float outL_val = dryL[i] * (1.0f - mix) + sumL * mix;
@@ -281,3 +286,4 @@ juce::AudioProcessorEditor* CoheraSaturatorAudioProcessor::createEditor()
 {
     return new CoheraSaturatorAudioProcessorEditor(*this);
 }
+
