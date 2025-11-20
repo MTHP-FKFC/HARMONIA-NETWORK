@@ -66,17 +66,22 @@ private:
     // Один шейпер на каждую полосу (если захотим хранить состояние, например DC-фильтр)
     std::array<Waveshaper, kNumBands> shapers;
 
+    // === ПРОФЕССИОНАЛЬНЫЙ ГЕЙН-СТЕЙДЖИНГ ===
+
+    // Линия задержки для Dry-сигнала (компенсация FIR-фильтров)
+    juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> dryDelayLine;
+
+    // Измерители RMS для авто-гейна
+    juce::LinearSmoothedValue<float> inputRms { 0.0f };
+    juce::LinearSmoothedValue<float> wetRms { 0.0f };
+
+    // Плавный микс (Dry/Wet)
+    juce::LinearSmoothedValue<float> smoothedMix { 0.0f };
+
     // Сглаживание параметров (чтобы звук не "хрустел" при вращении ручки)
     juce::SmoothedValue<float> smoothedDrive;
     juce::SmoothedValue<float> smoothedOutput;
-    juce::SmoothedValue<float> smoothedMix;
     juce::LinearSmoothedValue<float> smoothedNetworkSignal;
-
-    // Для выравнивания Dry сигнала с Wet (фильтрованным)
-    juce::dsp::DelayLine<float> dryDelayLine;
-
-    // Для умного авто-гейна
-    EnvelopeFollower outputEnvelope;
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)
