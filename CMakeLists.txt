@@ -15,8 +15,8 @@ juce_add_plugin(Cohera_Saturator
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
-    # Форматы
-    FORMATS VST3 Standalone
+    # Форматы - только Standalone пока
+    FORMATS Standalone
     # Название продукта
     PRODUCT_NAME "Cohera Saturator"
     plugin_name "Cohera Saturator"
