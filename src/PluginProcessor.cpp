@@ -71,19 +71,27 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
         bandBufferPtrs[i] = &bandBuffers[i];
     }
 
-    // 4. Сглаживание
-    smoothedDrive.reset(sampleRate, 0.05);  // 50ms
+    // 4. Сглаживание параметров
+    smoothedDrive.reset(sampleRate, 0.05);
     smoothedOutput.reset(sampleRate, 0.05);
     smoothedMix.reset(sampleRate, 0.05);
 
-    smoothedDrive.setCurrentAndTargetValue(0.0f);
+    smoothedDrive.setCurrentAndTargetValue(1.0f);
     smoothedOutput.setCurrentAndTargetValue(1.0f);
-    smoothedMix.setCurrentAndTargetValue(1.0f);
+    smoothedMix.setCurrentAndTargetValue(1.0f); // По дефолту Wet, чтобы слышать эффект
 
-    // Сглаживание сети
     smoothedNetworkSignal.reset(sampleRate, 0.02);
 
-    envelope.reset(sampleRate);
+    // 5. НОВОЕ: Настройка детекторов уровня для Авто-Гейна
+    // Ставим медленный релиз (300мс), чтобы громкость не "пампила"
+    inputLevelFollower.reset(sampleRate);
+    outputLevelFollower.reset(sampleRate);
+
+    // Сглаживание самой компенсации (медленное, 100мс), чтобы не было резких скачков
+    smoothedCompensation.reset(sampleRate, 0.1);
+    smoothedCompensation.setCurrentAndTargetValue(1.0f);
+
+    envelope.reset(sampleRate); // Для сети
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -95,107 +103,92 @@ void CoheraSaturatorAudioProcessor::releaseResources()
 void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
-    const int totalNumInputChannels  = getTotalNumInputChannels();
     const int numSamples = buffer.getNumSamples();
+    const int totalNumInputChannels = getTotalNumInputChannels(); // Важно для стерео!
 
-    // --- 1. Подготовка параметров ---
+    // --- 1. Параметры ---
 
-    float driveParam = *apvts.getRawParameterValue("drive_master"); // 0..100
-    float mixParam   = *apvts.getRawParameterValue("mix");          // 0..100
+    float driveParam = *apvts.getRawParameterValue("drive_master");
+    float mixParam   = *apvts.getRawParameterValue("mix");
     float outDb      = *apvts.getRawParameterValue("output_gain");
 
-    // Маппинг Drive: 0 -> 0.0 (bypass), 100 -> 16.0 (+24dB dirt)
-    float targetDriveRatio = (driveParam / 100.0f) * 16.0f;
-    // Маппинг Mix: 0..100 -> 0..1
+    // Маппинг Drive: 0% -> 1.0 (чисто), 100% -> 16.0 (+24dB жир)
+    float targetDrive = 1.0f + (driveParam * 0.15f);
     float targetMix = mixParam / 100.0f;
 
-    smoothedDrive.setTargetValue(targetDriveRatio);
+    smoothedDrive.setTargetValue(targetDrive);
     smoothedMix.setTargetValue(targetMix);
     smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
 
-    // Сетевые дела (оставляем как есть, это работает)
+    // Сеть
     currentGroup = (int)*apvts.getRawParameterValue("group_id");
-    isReference  = (*apvts.getRawParameterValue("role") > 0.5f);
+    isReference = (*apvts.getRawParameterValue("role") > 0.5f);
 
-    if (isReference) {
-        float maxPeak = buffer.getMagnitude(0, numSamples);
-        float envValue = envelope.process(maxPeak);
-        NetworkManager::getInstance().updateGroupSignal(currentGroup, envValue);
+    // --- 2. АНАЛИЗ ВХОДА (Стерео RMS) ---
+
+    // ФИКС КАНАЛОВ: Считаем энергию по ВСЕМ каналам сразу
+    float inEnergy = 0.0f;
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+    {
+        // RMS или Peak - для автогейна лучше RMS, но быстрый
+        inEnergy += buffer.getMagnitude(ch, 0, numSamples);
     }
+    inEnergy /= (float)totalNumInputChannels; // Среднее по каналам
 
+    // Обновляем инерционный детектор входа
+    float currentInputLevel = inputLevelFollower.process(inEnergy);
+
+    // Отправка в сеть (если референс)
+    if (isReference) {
+        NetworkManager::getInstance().updateGroupSignal(currentGroup, currentInputLevel);
+    }
     float targetNetValue = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
     smoothedNetworkSignal.setTargetValue(targetNetValue);
 
-    // === 2. СОЗДАЕМ DRY КОПИЮ ===
-    // Копируем ЧИСТЫЙ вход (без headroom), чтобы Dry был оригинальным уровнем
+    // --- 3. КОПИЯ DRY (для параллельной обработки) ---
     juce::AudioBuffer<float> dryBuffer;
     dryBuffer.makeCopyOf(buffer);
 
-    // Применяем headroom ТОЛЬКО к Wet пути (buffer)
-    buffer.applyGain(0.5f); // -6dB headroom
-
-    // Прогоняем Dry через задержку, равную задержке фильтров
+    // Задержка Dry для фазовой когерентности
     juce::dsp::AudioBlock<float> dryBlock(dryBuffer);
     juce::dsp::ProcessContextReplacing<float> dryContext(dryBlock);
     dryDelayLine.process(dryContext);
 
-    // === 3. ОБРАБОТКА (WET) ===
+    // --- 4. ОБРАБОТКА WET (Сатурация) ---
 
-    // Измерим RMS входа для каждого канала (для авто-гейна)
-    std::vector<float> inputRmsLevels(getTotalNumInputChannels());
-    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
-    {
-        inputRmsLevels[ch] = buffer.getRMSLevel(ch, 0, numSamples);
-    }
-
-    // 3.1 Split
+    // 4.1 Разделение
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
 
-    // 3.2 Saturate
+    // 4.2 Сатурация
     float currentDrive = smoothedDrive.getNextValue(); smoothedDrive.skip(numSamples-1);
     float netVal = smoothedNetworkSignal.getNextValue(); smoothedNetworkSignal.skip(numSamples-1);
 
-    // Network Modulation (Inverse Grime logic)
+    // Inverse Grime (Ducking)
     float dynamicMod = 1.0f;
     if (!isReference && netVal > 0.0f) {
-        dynamicMod = 1.0f - (netVal * 0.5f); // Ducking 50%
+        dynamicMod = 1.0f - (netVal * 0.5f);
         if (dynamicMod < 0.0f) dynamicMod = 0.0f;
     }
-
     float effectiveDrive = currentDrive * dynamicMod;
 
-    // Авто-гейн на основе физики (приблизительный, но быстрый)
-    // Tanh "съедает" энергию. Мы компенсируем её.
-    float makeUp = 1.0f;
-    if (effectiveDrive > 1.0f) makeUp = std::sqrt(effectiveDrive); // Возвращаем энергию
-
-    // Bypass сатурации при очень низком Drive
-    bool bypassSaturation = (effectiveDrive < 0.01f);
-
-        for (int band = 0; band < kNumBands; ++band)
+    for (int band = 0; band < kNumBands; ++band)
+    {
+        for (int ch = 0; ch < totalNumInputChannels; ++ch)
         {
-            for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+            float* data = bandBuffers[band].getWritePointer(ch);
+            for (int i = 0; i < numSamples; ++i)
             {
-                float* data = bandBuffers[band].getWritePointer(ch);
-
-                // Применяем только сатурацию без per-band compensation
-                if (!bypassSaturation)
-                {
-                    for (int i = 0; i < numSamples; ++i)
-                    {
-                        float x = data[i];
-                        x *= effectiveDrive;
-                        x = std::tanh(x);
-                        x *= makeUp; // Global makeup only
-                        data[i] = x;
-                    }
-                }
+                // Сатурация
+                float x = data[i];
+                x *= effectiveDrive;
+                data[i] = std::tanh(x);
             }
         }
+    }
 
-    // 3.3 Sum (Сборка Wet сигнала)
+    // 4.3 Сборка Wet
     buffer.clear();
-    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
         auto* out = buffer.getWritePointer(ch);
         for (int band = 0; band < kNumBands; ++band) {
@@ -203,80 +196,72 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
     }
 
-    // 3.4 Final Level Compensation
-    // Для моно сигналов (типа kick) делаем одинаковую компенсацию для обоих каналов
-    float avgInputRms = 0.0f;
-    float avgWetRms = 0.0f;
+    // --- 5. ИНЕРЦИОННЫЙ AUTO-GAIN (ФИКС СТРАТОСФЕРЫ) ---
 
-    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+    // 5.1 Измеряем уровень "Грязного" сигнала (тоже стерео-среднее)
+    float wetEnergy = 0.0f;
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
-        avgInputRms += inputRmsLevels[ch];
-        avgWetRms += buffer.getRMSLevel(ch, 0, numSamples);
+        wetEnergy += buffer.getMagnitude(ch, 0, numSamples);
     }
-    avgInputRms /= getTotalNumInputChannels();
-    avgWetRms /= getTotalNumInputChannels();
+    wetEnergy /= (float)totalNumInputChannels;
 
-    // Применяем одинаковую компенсацию ко всем каналам
-    if (avgWetRms > 0.0001f && avgInputRms > 0.0001f)
+    // 5.2 Обновляем детектор выхода
+    float currentWetLevel = outputLevelFollower.process(wetEnergy);
+
+    // 5.3 Вычисляем целевую компенсацию
+    // Target = InputLevel / WetLevel
+    // ФИКС: Добавляем порог тишины (0.001), чтобы не делить на ноль и не разгонять шум
+    float targetComp = 1.0f;
+
+    if (currentWetLevel > 0.001f && currentInputLevel > 0.001f)
     {
-        float globalComp = avgInputRms / avgWetRms;
-        globalComp = juce::jlimit(0.7f, 1.4f, globalComp); // Мягкий диапазон
-
-        for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
-        {
-            juce::FloatVectorOperations::multiply(buffer.getWritePointer(ch), globalComp, numSamples);
-        }
+        targetComp = currentInputLevel / currentWetLevel;
     }
 
-    // === 4.5. DRY SIGNAL COMPENSATION ===
-    // Применяем небольшую RMS компенсацию к Dry сигналу для consistency между каналами
-    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
-    {
-        float dryRms = dryBuffer.getRMSLevel(ch, 0, numSamples);
-        float inRms = inputRmsLevels[ch];
+    // ФИКС: Ограничиваем компенсацию разумными пределами
+    // Не даем усиливать больше чем на +12dB (x4) и давить сильнее -24dB (x0.06)
+    targetComp = juce::jlimit(0.06f, 4.0f, targetComp);
 
-        if (dryRms > 0.0001f && inRms > 0.0001f)
-        {
-            // Для Dry сигнала делаем небольшую нормализацию уровней каналов
-            // Не полную компенсацию, чтобы сохранить оригинальную динамику
-            float dryComp = inRms / dryRms;
-            dryComp = juce::jlimit(0.7f, 1.4f, dryComp); // Ограничиваем диапазон для Dry
-            juce::FloatVectorOperations::multiply(dryBuffer.getWritePointer(ch), dryComp, numSamples);
-        }
-    }
+    // 5.4 Сглаживаем компенсацию
+    smoothedCompensation.setTargetValue(targetComp);
 
-    // Skip pre-mix normalization - let per-band compensation handle levels
+    // Применяем сглаженную компенсацию (посэмплово или поблочно)
+    // Здесь для экономии применим поблочно (ramp), так как smoothedCompensation обновляется медленно
+    smoothedCompensation.applyGain(buffer, numSamples);
 
-    // === 5. MIX & OUTPUT ===
+    // --- 6. МИКС И ВЫХОД ---
 
     float currentMix = smoothedMix.getNextValue(); smoothedMix.skip(numSamples-1);
     float currentOutGain = smoothedOutput.getNextValue(); smoothedOutput.skip(numSamples-1);
 
-        for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+    for (int ch = 0; ch < totalNumInputChannels; ++ch)
+    {
+        auto* wetData = buffer.getWritePointer(ch);
+        const auto* dryData = dryBuffer.getReadPointer(ch);
+
+        for (int i = 0; i < numSamples; ++i)
         {
-            auto* outData = buffer.getWritePointer(ch);
-            const auto* dryData = dryBuffer.getReadPointer(ch);
+            // Dry/Wet
+            // Важно: Wet уже скомпенсирован по уровню к Dry!
+            float wet = wetData[i];
+            float dry = dryData[i];
 
-            for (int i = 0; i < numSamples; ++i)
-            {
-                // Dry/Wet Mix
-                // Читаем из обоих буферов, записываем в выходной
-                float wetSample = outData[i];  // buffer содержит Wet
-                float drySample = dryData[i]; // dryBuffer содержит Dry
+            // Equal Power Crossfade (опционально, здесь линейный для прозрачности фазы)
+            // Линейный микс: Dry * (1-Mix) + Wet * Mix
+            float mixed = dry * (1.0f - currentMix) + wet * currentMix;
 
-                float mixed = drySample * (1.0f - currentMix) + wetSample * currentMix;
+            // Output Gain
+            mixed *= currentOutGain;
 
-                // Output Gain
-                mixed *= currentOutGain;
+            // Soft Clip на мастере (чтобы не клиповало в DAW)
+            if (mixed > 1.0f) mixed = std::tanh(mixed);
+            else if (mixed < -1.0f) mixed = std::tanh(mixed);
 
-                // Final Safety Limiter
-                if (mixed > 1.0f) mixed = 1.0f;
-                else if (mixed < -1.0f) mixed = -1.0f;
-
-                outData[i] = mixed;
-            }
+            wetData[i] = mixed;
         }
     }
+}
 
 // === Сохранение состояния ===
 

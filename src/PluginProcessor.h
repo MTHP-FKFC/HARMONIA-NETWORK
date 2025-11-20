@@ -79,6 +79,14 @@ private:
     juce::SmoothedValue<float> smoothedOutput;
     juce::LinearSmoothedValue<float> smoothedNetworkSignal;
 
+    // Для профессионального авто-гейна нам нужны детекторы с памятью (Envelope Followers)
+    // Один для входа (эталон), один для выхода (грязь)
+    EnvelopeFollower inputLevelFollower;
+    EnvelopeFollower outputLevelFollower;
+
+    // Сглаживатель самого коэффициента компенсации, чтобы он не дергался
+    juce::LinearSmoothedValue<float> smoothedCompensation;
+
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)
 
