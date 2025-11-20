@@ -81,10 +81,12 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     smoothedDrive.reset(sampleRate, 0.05);
     smoothedOutput.reset(sampleRate, 0.05);
     smoothedMix.reset(sampleRate, 0.05);
+    smoothedSatBlend.reset(sampleRate, 0.05);
 
     smoothedDrive.setCurrentAndTargetValue(1.0f);
     smoothedOutput.setCurrentAndTargetValue(1.0f);
     smoothedMix.setCurrentAndTargetValue(1.0f); // По дефолту Wet, чтобы слышать эффект
+    smoothedSatBlend.setCurrentAndTargetValue(0.0f);
 
     smoothedNetworkSignal.reset(sampleRate, 0.02);
 
@@ -108,17 +110,29 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Гарантируем, что работаем минимум со стерео, если хост дает моно - дублируем логику
     const int numCh = juce::jmin(buffer.getNumChannels(), 2);
 
-    // --- 1. ПАРАМЕТРЫ ---
+    // --- 1. УМНЫЙ МАППИНГ ПАРАМЕТРОВ ---
 
-    float driveParam = *apvts.getRawParameterValue("drive_master");
-    float mixParam   = *apvts.getRawParameterValue("mix");
+    float driveParam = *apvts.getRawParameterValue("drive_master"); // 0..100
+    float mixParam   = *apvts.getRawParameterValue("mix");          // 0..100
     float outDb      = *apvts.getRawParameterValue("output_gain");
 
-    float targetDrive = 1.0f + (driveParam * 0.15f);
-    float targetMix = mixParam / 100.0f; // 0..1
+    // === FIX: SMART DRIVE CURVE ===
+    // Разделяем ручку Drive на две составляющие:
+    // 1. Saturation Mix (Blend): На первых 15% хода ручки мы просто подмешиваем эффект.
+    //    На 0% -> Сигнал чистый (bypass внутри полосы).
+    //    На 15% -> Сигнал полностью проходит через tanh(x * 1.0).
+    float targetSatBlend = juce::jlimit(0.0f, 1.0f, driveParam / 15.0f);
 
+    // 2. Saturation Boost (Gain): Начинает расти только после 15%.
+    //    Превращаем оставшиеся 85% хода в усиление до +24dB (x16).
+    float driveRest = juce::jmax(0.0f, driveParam - 15.0f);
+    // driveRest (0..85) -> (1.0 .. 16.0)
+    float targetDrive = 1.0f + (driveRest * 0.18f);
+
+    // Таргеты для сглаживателей
     smoothedDrive.setTargetValue(targetDrive);
-    smoothedMix.setTargetValue(targetMix);
+    smoothedSatBlend.setTargetValue(targetSatBlend);
+    smoothedMix.setTargetValue(mixParam / 100.0f);
     smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
 
     // --- 2. ANALYZE INPUT & NETWORK ---
@@ -182,8 +196,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float controlSignal = scNormalizer.process(rawNetSample);
 
         // Б. Рассчитываем параметры для этого сэмпла
-        float driveVal = smoothedDrive.getNextValue();
-        float compVal  = autoGain.getNextValue();
+        float driveVal  = smoothedDrive.getNextValue();
+        float blendVal  = smoothedSatBlend.getNextValue(); // <-- НОВОЕ: Степень сатурации (0=Clean, 1=Full)
+        float compVal   = autoGain.getNextValue();
 
         // Логика режимов теперь читается легко:
         float effectiveDrive = driveVal;
@@ -206,22 +221,21 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         for (int band = 0; band < kNumBands; ++band)
         {
+            // Определяем тип сатурации
+            SaturationType type = SaturationType::WarmTube;
+            float shaperMix = blendVal; // Базовый микс из ручки Drive
+
+            if (ghostAmount > 0.01f && band <= 1) { // Ghost Logic
+                type = SaturationType::Rectifier;
+                // В режиме Ghost мы форсируем микс в 100%, если идет удар
+                shaperMix = std::max(blendVal, ghostAmount);
+            }
+
             for (int ch = 0; ch < numCh; ++ch)
             {
                 float x = bandBuffers[band].getSample(ch, i);
-                float drivenX = x * effectiveDrive;
-                float processed = 0.0f;
-
-                if (modeIndex == 1 && !isReference && band <= 2)
-                {
-                    float cleanTube = std::tanh(drivenX);
-                    float fold = std::sin(drivenX * 1.5f);
-                    processed = cleanTube * (1.0f - ghostAmount) + fold * ghostAmount;
-                }
-                else
-                {
-                    processed = std::tanh(drivenX);
-                }
+                // ВАЖНО: передаем shaperMix в processSample
+                float processed = shapers[band].processSample(x, effectiveDrive, type, shaperMix);
 
                 if (ch == 0) wetSampleL += processed;
                 else         wetSampleR += processed;
@@ -229,8 +243,12 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
 
         // Г. Применение автогейна к сэмплу (ДО микширования)
-        wetSampleL *= compVal;
-        if (outR) wetSampleR *= compVal;
+        // Если blendVal близок к 0 (мы в чистом режиме), то компенсация не нужна (она может испортить звук).
+        // Плавно вводим компенсацию вместе с сатурацией.
+        float effectiveComp = 1.0f + (compVal - 1.0f) * blendVal;
+
+        wetSampleL *= effectiveComp;
+        if (outR) wetSampleR *= effectiveComp;
 
         // Д. Mix & Output
         float mixVal = smoothedMix.getNextValue();

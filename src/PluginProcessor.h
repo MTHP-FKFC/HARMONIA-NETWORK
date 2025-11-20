@@ -80,6 +80,7 @@ private:
     juce::SmoothedValue<float> smoothedDrive;
     juce::SmoothedValue<float> smoothedOutput;
     juce::LinearSmoothedValue<float> smoothedNetworkSignal;
+    juce::SmoothedValue<float> smoothedSatBlend;
 
     // Заменяем россыпь переменных на объекты с единой ответственностью
     SidechainNormalizer scNormalizer;
