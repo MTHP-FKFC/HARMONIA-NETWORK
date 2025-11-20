@@ -36,19 +36,30 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     // Algorithm Selector
     addAndMakeVisible(mathModeSelector);
     mathModeSelector.addItemList(juce::StringArray{
-        "Golden Ratio (Harmony)",
-        "Euler Tube (Warmth)",
-        "Pi Fold (Width)",
-        "Fibonacci (Grit)",
-        "Super Ellipse (Punch)"
+        // === DIVINE SERIES ===
+        "Golden Ratio",
+        "Euler Tube",
+        "Pi Fold",
+        "Fibonacci",
+        "Super Ellipse",
+        // === CLASSIC SERIES ===
+        "Analog Tape",
+        "Vintage Console",
+        "Diode Class A",
+        "Tube Driver",
+        "Digital Fuzz",
+        "Bit Decimator",
+        "Rectifier"
     }, 1);
     mathModeSelector.setSelectedId(1);
     mathModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "math_mode", mathModeSelector);
 
-    // Sat Type Selector
-    addAndMakeVisible(satTypeSelector);
-    satTypeSelector.addItemList({"Warm Tube", "Asymmetric", "Hard Clip", "Bit Crush"}, 1);
-    satTypeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "sat_type", satTypeSelector);
+    // Cascade Button
+    addAndMakeVisible(cascadeButton);
+    cascadeButton.setButtonText("CASCADE");
+    cascadeButton.setClickingTogglesState(true);
+    cascadeButton.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange.withAlpha(0.6f));
+    cascadeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.getAPVTS(), "cascade", cascadeButton);
 
     // Drive Big Knob
     addAndMakeVisible(driveSlider);
@@ -250,7 +261,7 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> 
 
     mathModeSelector.setBounds(selRect.removeFromTop(selHeight)); // Algo
     selRect.removeFromTop(gap);
-    satTypeSelector.setBounds(selRect.removeFromTop(selHeight));  // Sat Type
+    cascadeButton.setBounds(selRect.removeFromTop(selHeight));  // Cascade Button
 
     // Нижняя половина: 4 ручки тона в ряд (Tighten, Punch, Dyn, Smooth)
     // Используем FlexBox для идеального распределения

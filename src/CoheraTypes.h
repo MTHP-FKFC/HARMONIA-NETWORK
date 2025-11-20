@@ -7,12 +7,22 @@ namespace Cohera {
 
 // --- Enums ---
 
-enum class MathMode {
-    GoldenRatio, // 0
-    EulerTube,   // 1
-    PiFold,      // 2
-    Fibonacci,   // 3
-    SuperEllipse // 4
+enum class SaturationMode {
+    // === DIVINE SERIES (Математическая красота) ===
+    GoldenRatio,    // φ (Phi) - Гармоничный
+    EulerTube,      // e - Теплый, органичный
+    PiFold,         // π - Металлический фолдбэк
+    Fibonacci,      // Фрактальный грит
+    SuperEllipse,   // Идеальный панч
+
+    // === CLASSIC SERIES (Студийная классика) ===
+    AnalogTape,     // Лента (Hysteresis emulation via ATAN)
+    VintageConsole, // Транзистор (Cubic distortion)
+    DiodeClassA,    // Резкий срез (Asymmetric Exp)
+    TubeDriver,     // Гитарный перегруз (Asymmetric Tanh)
+    DigitalFuzz,    // Жесткая цифра
+    BitDecimator,   // Понижение битности
+    Rectifier       // Октавер/Глитч
 };
 
 enum class NetworkMode {

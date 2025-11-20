@@ -82,7 +82,7 @@ public:
             // Параметры: Drive на 50%
             Cohera::ParameterSet params;
             params.drive = 50.0f;
-            params.mathMode = Cohera::MathMode::GoldenRatio;
+            params.saturationMode = Cohera::SaturationMode::GoldenRatio;
 
             engine.process(block, params);
 

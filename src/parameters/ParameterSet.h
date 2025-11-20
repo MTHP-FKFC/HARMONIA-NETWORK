@@ -12,8 +12,9 @@ struct ParameterSet
     float outputGain = 1.0f;   // Linear gain
 
     // === Mode & Quality ===
-    mutable MathMode mathMode = MathMode::GoldenRatio;
+    mutable SaturationMode saturationMode = SaturationMode::GoldenRatio;
     mutable QualityMode qualityMode = QualityMode::Pro;
+    bool cascade = false; // Output stage limiter
 
     // === Tone Shaping ===
     float preFilterFreq = 10.0f;

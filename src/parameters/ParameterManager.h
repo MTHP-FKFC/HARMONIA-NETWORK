@@ -22,6 +22,21 @@ public:
         pTighten    = apvts.getRawParameterValue("tone_tighten");
         pSmooth     = apvts.getRawParameterValue("tone_smooth");
         pPunch      = apvts.getRawParameterValue("punch");
+        pDynamics   = apvts.getRawParameterValue("dynamics");
+        pNetDepth   = apvts.getRawParameterValue("net_depth");
+        pNetSmooth  = apvts.getRawParameterValue("net_smooth");
+        pNetSens    = apvts.getRawParameterValue("net_sens");
+        pHeat       = apvts.getRawParameterValue("heat");
+        pDrift      = apvts.getRawParameterValue("analog_drift");
+        pVariance   = apvts.getRawParameterValue("variance");
+        pEntropy    = apvts.getRawParameterValue("entropy");
+        pNoise      = apvts.getRawParameterValue("noise");
+        pFocus      = apvts.getRawParameterValue("focus");
+        pGroup      = apvts.getRawParameterValue("group_id");
+        pRole       = apvts.getRawParameterValue("role");
+        pNetMode    = apvts.getRawParameterValue("mode");
+        pSatType    = apvts.getRawParameterValue("sat_type");
+        pCascade    = apvts.getRawParameterValue("cascade");
         // ... добавьте остальные по аналогии
     }
 
@@ -35,15 +50,28 @@ public:
         params.mix = pMix->load() / 100.0f;
         params.outputGain = juce::Decibels::decibelsToGain(pOutput->load());
 
-        params.mathMode = static_cast<MathMode>((int)pMode->load());
+        params.saturationMode = static_cast<SaturationMode>((int)pMode->load());
         params.qualityMode = static_cast<QualityMode>((int)pQuality->load());
+        params.cascade = pCascade->load() > 0.5f;
 
         params.preFilterFreq = pTighten->load();
         params.postFilterFreq = pSmooth->load();
         params.punch = pPunch->load() / 100.0f;
+        params.dynamics = pDynamics->load() / 100.0f;
 
-        // TODO: Добавить чтение остальных параметров (Network, Analog, etc.)
-        // Пока оставим дефолтные из struct ParameterSet
+        params.netDepth = pNetDepth->load() / 100.0f;
+        params.netSmooth = pNetSmooth->load() / 100.0f;
+        params.netSens = pNetSens->load() / 100.0f;
+
+        params.globalHeat = pHeat->load() / 100.0f;
+        params.analogDrift = pDrift->load() / 100.0f;
+        params.variance = pVariance->load() / 100.0f;
+        params.entropy = pEntropy->load() / 100.0f;
+        params.noise = pNoise->load() / 100.0f;
+
+        params.groupId = (int)pGroup->load();
+        params.netRole = static_cast<NetworkRole>((int)pRole->load());
+        params.netMode = static_cast<NetworkMode>((int)pNetMode->load());
 
         return params;
     }
@@ -60,6 +88,21 @@ private:
     std::atomic<float>* pTighten = nullptr;
     std::atomic<float>* pSmooth = nullptr;
     std::atomic<float>* pPunch = nullptr;
+    std::atomic<float>* pDynamics = nullptr;
+    std::atomic<float>* pNetDepth = nullptr;
+    std::atomic<float>* pNetSmooth = nullptr;
+    std::atomic<float>* pNetSens = nullptr;
+    std::atomic<float>* pHeat = nullptr;
+    std::atomic<float>* pDrift = nullptr;
+    std::atomic<float>* pVariance = nullptr;
+    std::atomic<float>* pEntropy = nullptr;
+    std::atomic<float>* pNoise = nullptr;
+    std::atomic<float>* pFocus = nullptr;
+    std::atomic<float>* pGroup = nullptr;
+    std::atomic<float>* pRole = nullptr;
+    std::atomic<float>* pNetMode = nullptr;
+    std::atomic<float>* pSatType = nullptr;
+    std::atomic<float>* pCascade = nullptr;
 };
 
 } // namespace Cohera

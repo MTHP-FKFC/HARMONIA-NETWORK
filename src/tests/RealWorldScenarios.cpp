@@ -29,7 +29,7 @@ public:
         // 2. Настройки: Агрессивный драйв на низах
         Cohera::ParameterSet params;
         params.drive = 60.0f; // +12dB approx
-        params.mathMode = Cohera::MathMode::EulerTube; // Tube style
+        params.saturationMode = Cohera::SaturationMode::EulerTube; // Tube style
         params.preFilterFreq = 30.0f; // Cut ultra-lows
         params.mix = 1.0f;
 

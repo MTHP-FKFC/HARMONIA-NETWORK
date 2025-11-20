@@ -61,9 +61,22 @@ public:
                 float* data = block.getChannelPointer(ch);
                 float input = data[i];
 
-                // Вызов вашего MathSaturator
-                // Обратите внимание: мы передаем чистый MathMode из params
-                float saturated = mathSaturator.processSample(input, currentDrive, params.mathMode);
+                // 1. Основной алгоритм (из Мега-Списка)
+                float saturated = mathSaturator.processSample(input, currentDrive, params.saturationMode);
+
+                // 2. CASCADE STAGE (Output Transformer)
+                // Если кнопка нажата -> прогоняем через мягкий клиппер.
+                // Это "склеивает" звук и позволяет разгонять драйв еще сильнее без цифрового клиппинга.
+                if (params.cascade)
+                {
+                    // Soft Clip (простой полином)
+                    if (saturated > 1.0f) saturated = 1.0f;
+                    else if (saturated < -1.0f) saturated = -1.0f;
+                    else saturated = saturated * (1.5f - 0.5f * saturated * saturated);
+
+                    // Компенсация уровня, так как клиппер съедает пики
+                    saturated *= 1.1f;
+                }
 
                 // Dry/Wet blend внутри модуля сатурации (логика "Чистого нуля")
                 // Если Blend < 1.0, миксуем (input) и (saturated)

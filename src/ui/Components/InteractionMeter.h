@@ -36,12 +36,6 @@ public:
         juce::Colour barColor = CoheraUI::kCyanNeon;
 
         if (apvts != nullptr) {
-            // Берем среднюю модуляцию по всем полосам для простоты (или макс)
-            int group = (int)*apvts->getRawParameterValue("group_id");
-            // Эмуляция чтения: в реальности нужно брать из NetworkController'а
-            // Пока берем Band 0 как пример
-            modulation = NetworkManager::getInstance().getBandSignal(group, 0);
-
             // Логика цвета (Зависит от режима)
             int mode = (int)*apvts->getRawParameterValue("mode");
             bool isReduction = (mode == 0); // Unmasking = Reduction (вниз)

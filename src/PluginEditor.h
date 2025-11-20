@@ -37,7 +37,8 @@ private:
     ControlGroup netGroup { "NETWORK INTELLIGENCE", CoheraUI::kCyanNeon };
 
     // Controls
-    juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector;
+    juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector, qualitySelector;
+    juce::TextButton cascadeButton;
 
     // Saturation Knobs
     juce::Slider driveSlider;
@@ -51,14 +52,14 @@ private:
     juce::Slider heatSlider, driftSlider, varianceSlider, entropySlider, noiseSlider; // Mojo ручки
 
     // Buttons & Selectors
-    juce::ComboBox qualitySelector, satTypeSelector;
+    juce::ComboBox satTypeSelector;
     juce::TextButton deltaButton;
 
     // Attachments
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment, qualityAttachment, satTypeAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> driveAttachment, dynamicsAttachment, outputAttachment, focusAttachment;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> heatAttachment, driftAttachment, varianceAttachment, entropyAttachment, noiseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> deltaAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> deltaAttachment, cascadeAttachment;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
 
     std::unique_ptr<CoheraUI::CoheraLookAndFeel> lookAndFeel;

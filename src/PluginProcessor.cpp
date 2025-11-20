@@ -77,7 +77,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
             "Sympathetic"         // 4: Реф частоты -> Мы резонируем
         }, 0));
 
-    // Тип сатурации (базовый выбор пользователя)
+    // Тип сатурации (базовый выбор пользователя) - оставлено для совместимости
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "sat_type", "Saturation Type",
         juce::StringArray{
@@ -86,6 +86,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
             "Hard Clip",    // 2: Brickwall
             "Bit Crush"     // 3: Digital
         }, 0));
+
+    // === CASCADE (Output Stage) ===
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "cascade", "Cascade (Output Limiter)", false));
 
     // === EMPHASIS FILTERS (Tone Shaping) ===
 
@@ -164,16 +168,25 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "entropy", "Harmonic Entropy",
         juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f));
 
-    // === DIVINE MATH MODE ===
-    // Алгоритм на базе фундаментальных констант Вселенной
+    // === UNIFIED SATURATION MODE ===
+    // Алгоритм на базе фундаментальных констант Вселенной + классика
     layout.add(std::make_unique<juce::AudioParameterChoice>(
-        "math_mode", "Algo (Divine)",
+        "math_mode", "Algorithm",
         juce::StringArray{
-            "Golden Ratio (Harmony)",
-            "Euler Tube (Warmth)",
-            "Pi Fold (Width)",
-            "Fibonacci (Grit)",
-            "Super Ellipse (Punch)"
+            // === DIVINE SERIES ===
+            "Golden Ratio",
+            "Euler Tube",
+            "Pi Fold",
+            "Fibonacci",
+            "Super Ellipse",
+            // === CLASSIC SERIES ===
+            "Analog Tape",
+            "Vintage Console",
+            "Diode Class A",
+            "Tube Driver",
+            "Digital Fuzz",
+            "Bit Decimator",
+            "Rectifier"
         }, 0));
 
     // === QUALITY MODE ===

@@ -57,7 +57,7 @@ public:
                 if (isNeutral)
                 {
                     // 1. Просто Сатурация (экономим CPU на сплите)
-                    data[i] = mathSaturator.processSample(input, baseDrive, params.mathMode);
+                    data[i] = mathSaturator.processSample(input, baseDrive, params.saturationMode);
                 }
                 else
                 {
@@ -65,7 +65,7 @@ public:
                     auto split = splitters[ch].process(input);
 
                     // Body: всегда основной алгоритм
-                    float processedBody = mathSaturator.processSample(split.body, baseDrive, params.mathMode);
+                    float processedBody = mathSaturator.processSample(split.body, baseDrive, params.saturationMode);
 
                     // Transient: зависит от знака Punch
                     float processedTrans = 0.0f;
@@ -73,13 +73,13 @@ public:
                     if (punchVal > 0.0f) // Dirty Attack
                     {
                         float transDrive = baseDrive * (1.0f + punchVal * 2.0f);
-                        processedTrans = mathSaturator.processSample(split.trans, transDrive, params.mathMode);
+                        processedTrans = mathSaturator.processSample(split.trans, transDrive, params.saturationMode);
                     }
                     else // Clean Attack
                     {
                         float transDrive = baseDrive * (1.0f - std::abs(punchVal) * 0.8f);
                         // Для чистоты используем EulerTube (или Clean, если нужно совсем прозрачно)
-                        processedTrans = mathSaturator.processSample(split.trans, transDrive, MathMode::EulerTube);
+                        processedTrans = mathSaturator.processSample(split.trans, transDrive, SaturationMode::EulerTube);
                     }
 
                     // Сумма
