@@ -187,11 +187,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             {
                 float* data = bandBuffers[band].getWritePointer(ch);
 
-                // Per-band RMS compensation
-                float bandInRms = bandInputRms[band][ch];
-                float bandComp = 1.0f;
-
-                // Сначала применяем сатурацию и измеряем результат
+                // Сначала применяем сатурацию без compensation
                 if (!bypassSaturation)
                 {
                     for (int i = 0; i < numSamples; ++i)
@@ -202,22 +198,22 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
                         x *= makeUp; // Global makeup
                         data[i] = x;
                     }
-
-                    // Теперь измеряем RMS после сатурации для этой полосы
-                    float bandOutRms = bandBuffers[band].getRMSLevel(ch, 0, numSamples);
-
-                    // Компенсация для поддержания уровня полосы
-                    if (bandOutRms > 0.0001f && bandInRms > 0.0001f)
-                    {
-                        bandComp = bandInRms / bandOutRms;
-                        bandComp = juce::jlimit(0.1f, 4.0f, bandComp);
-                    }
                 }
 
-                // Применяем per-band compensation
-                if (bandComp != 1.0f)
+                // Per-band RMS compensation (применяется к каждому каналу индивидуально)
+                if (!bypassSaturation)
                 {
-                    juce::FloatVectorOperations::multiply(data, bandComp, numSamples);
+                    float bandInRms = bandInputRms[band][ch];
+                    float bandOutRms = bandBuffers[band].getRMSLevel(ch, 0, numSamples);
+
+                    if (bandOutRms > 0.0001f && bandInRms > 0.0001f)
+                    {
+                        float bandComp = bandInRms / bandOutRms;
+                        bandComp = juce::jlimit(0.1f, 4.0f, bandComp);
+
+                        // Применяем compensation только к этому каналу
+                        juce::FloatVectorOperations::multiply(data, bandComp, numSamples);
+                    }
                 }
             }
         }
