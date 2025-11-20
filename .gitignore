@@ -1,0 +1,32 @@
+# Build directories
+build/
+cmake-build-*/
+Builds/
+bin/
+lib/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+Thumbs.db
+
+# JUCE specific
+JuceLibraryCode/
+*.jucer
+
+# Executables
+*.exe
+*.app
+*.dylib
+*.so
+*.dll
+
+# Temporary files
+*.tmp
+*.log

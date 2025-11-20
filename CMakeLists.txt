@@ -1,0 +1,65 @@
+cmake_minimum_required(VERSION 3.15)
+
+project(Cohera_Saturator VERSION 0.0.1)
+
+# 1. Подключаем JUCE (предполагаем, что он лежит рядом или установлен глобально)
+# Если используешь подмодуль git: add_subdirectory(JUCE)
+add_subdirectory(/Users/macos/JUCE JUCE)
+
+# 2. Создаем цель плагина
+juce_add_plugin(Cohera_Saturator
+    COMPANY_NAME "CoheraAudio"
+    BUNDLE_ID "com.coheraaudio.coherasaturator"
+    IS_SYNTH FALSE
+    NEEDS_MIDI_INPUT FALSE
+    NEEDS_MIDI_OUTPUT FALSE
+    IS_MIDI_EFFECT FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS TRUE
+    # Форматы
+    FORMATS Standalone
+    # Название продукта
+    PRODUCT_NAME "Cohera Saturator"
+    plugin_name "Cohera Saturator"
+)
+
+# 3. Подключаем исходники (Явно, чтобы контролировать структуру)
+target_sources(Cohera_Saturator PRIVATE
+    src/Main.cpp
+    src/PluginProcessor.cpp src/PluginProcessor.h
+    src/PluginEditor.cpp    src/PluginEditor.h
+
+    # DSP Module
+    src/dsp/FilterBank.cpp  src/dsp/FilterBank.h
+    src/FIR/fir_coeffs_multi_sr.h
+    src/FIR/fir_minphase_128.h
+    src/CoheraTypes.h
+    src/analyzer/AnalyzerPipelineConfig.h
+    # src/dsp/Waveshaper.cpp (добавим позже)
+
+    # Network Module
+    # src/network/NetworkManager.cpp (добавим позже)
+
+    # UI Module
+    # src/ui/LookAndFeel.cpp (добавим позже)
+)
+
+# 4. Настройки компиляции (Максимальная строгость для чистоты!)
+target_compile_features(Cohera_Saturator PRIVATE cxx_std_20)
+
+target_compile_options(Cohera_Saturator PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/W4> # Windows warning level 4
+    $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic> # Linux/Mac warnings
+)
+
+# 5. Линковка с модулями JUCE
+target_link_libraries(Cohera_Saturator PRIVATE
+    juce::juce_audio_utils
+    juce::juce_audio_processors
+    juce::juce_dsp
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_graphics
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+)
