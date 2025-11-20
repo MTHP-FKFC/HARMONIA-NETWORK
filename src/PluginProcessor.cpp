@@ -68,6 +68,23 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "dynamics", "Dynamics Preservation",
         juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 50.0f));
 
+    // === NETWORK CONTROL (The Holy Trinity) ===
+
+    // 1. Depth: Насколько сильно мы реагируем (0% = игнорируем сеть, 100% = полный морфинг)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "net_depth", "Interaction Depth",
+        juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 100.0f)); // Default 100%
+
+    // 2. Smooth: Время реакции (0ms = мгновенная, 200ms = ленивая)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "net_smooth", "Reaction Smooth",
+        juce::NormalisableRange<float>(0.0f, 200.0f, 1.0f), 10.0f));  // Default 10ms
+
+    // 3. Sensitivity: Чувствительность (0% = не реагируем, 200% = гипер-чувствительный)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "net_sens", "Sensitivity",
+        juce::NormalisableRange<float>(0.0f, 200.0f, 1.0f), 100.0f)); // Default 100%
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -129,6 +146,15 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
         smoothedNetworkBands[i].setCurrentAndTargetValue(0.0f);
     }
 
+    // === Network Control (The Holy Trinity) ===
+    smoothedNetDepth.reset(sampleRate, 0.05);
+    smoothedNetDepth.setCurrentAndTargetValue(1.0f); // 100% depth
+
+    smoothedNetSens.reset(sampleRate, 0.05);
+    smoothedNetSens.setCurrentAndTargetValue(1.0f); // 100% sensitivity
+
+    netSmoothState = 0.0f; // Reset One-Pole filter state
+
     // SOFT START:
     // Начинаем с тишины (0.0)
     // Поднимаемся до полной громкости (1.0) за 200 мс.
@@ -175,12 +201,21 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Читаем параметр Dynamics
     float dynParam = *apvts.getRawParameterValue("dynamics");
 
+    // === NETWORK CONTROL (The Holy Trinity) ===
+    float pDepth = *apvts.getRawParameterValue("net_depth");
+    float pSmooth = *apvts.getRawParameterValue("net_smooth");
+    float pSens  = *apvts.getRawParameterValue("net_sens");
+
     // Сглаживаем параметры
     smoothedDrive.setTargetValue(targetDrive);
     smoothedSatBlend.setTargetValue(targetSatBlend);
     smoothedMix.setTargetValue(mixParam / 100.0f);
     smoothedOutput.setTargetValue(juce::Decibels::decibelsToGain(outDb));
     smoothedDynamics.setTargetValue(dynParam / 100.0f);
+
+    // Network Control сглаживание
+    smoothedNetDepth.setTargetValue(pDepth / 100.0f);
+    smoothedNetSens.setTargetValue(pSens / 100.0f);
 
     // --- 2. СЕТЕВАЯ ЛОГИКА (Per-Band) ---
 
@@ -244,8 +279,19 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     auto* finalL = buffer.getWritePointer(0);
     auto* finalR = (numCh > 1) ? buffer.getWritePointer(1) : nullptr;
 
+    // === PREPARE ONE-POLE FILTER COEFFICIENT FOR SMOOTH ===
+    // Вычисляем коэффициент сглаживания (экспоненциальный фильтр)
+    float smoothCoeff = 0.0f;
+    if (pSmooth > 0.0f) {
+        smoothCoeff = std::exp(-1.0f / (std::max(1.0f, pSmooth) * 0.001f * (float)getSampleRate()));
+    }
+
     for (int i = 0; i < numSamples; ++i)
     {
+        // === NETWORK CONTROL PROCESSING (The Holy Trinity) ===
+        float depth = smoothedNetDepth.getNextValue();
+        float sens  = smoothedNetSens.getNextValue();
+
         // Базовые параметры
         float baseDrive = smoothedDrive.getNextValue();
         float blendVal  = smoothedSatBlend.getNextValue();
@@ -261,10 +307,28 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         for (int band = 0; band < kNumBands; ++band)
         {
-            // 1. Получаем сигнал сети для этой полосы
+            // 1. Получаем "сырой" сигнал сети для этой полосы
             float bandNetVal = smoothedNetworkBands[band].getNextValue();
-            float controlSignal = bandNetVal;
-            if (controlSignal < 0.02f) controlSignal = 0.0f;
+
+            // 2. SENSITIVITY: Усиливает входящий сигнал ДО нормализации
+            float rawNetSignal = bandNetVal * sens;
+
+            // 3. NORMALIZATION: Простой гейт (замена SidechainNormalizer)
+            float normalizedSignal = rawNetSignal;
+            if (normalizedSignal < 0.05f) normalizedSignal = 0.0f; // Умный гейт
+
+            // 4. SMOOTH: One-Pole фильтр для инерции
+            if (pSmooth > 0.0f) {
+                netSmoothState = normalizedSignal * (1.0f - smoothCoeff) + netSmoothState * smoothCoeff;
+            } else {
+                netSmoothState = normalizedSignal; // Без сглаживания
+            }
+
+            // 5. DEPTH: Масштабируем итоговый контрольный сигнал
+            float controlSignal = netSmoothState * depth;
+
+            // 6. CLAMP: Защита от выхода за границы
+            controlSignal = juce::jlimit(0.0f, 1.0f, controlSignal);
 
             // 2. Получаем конфигурацию для этой полосы
             auto config = InteractionEngine::getConfiguration(modeIndex, band, userType);

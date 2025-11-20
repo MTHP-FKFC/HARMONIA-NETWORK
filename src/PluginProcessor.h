@@ -102,6 +102,11 @@ private:
     // Сглаживатели для приема данных из сети (чтобы модуляция была плавной)
     std::array<juce::LinearSmoothedValue<float>, kNumBands> smoothedNetworkBands;
 
+    // === NETWORK CONTROL (The Holy Trinity) ===
+    juce::SmoothedValue<float> smoothedNetDepth;
+    juce::SmoothedValue<float> smoothedNetSens;
+    float netSmoothState = 0.0f; // Состояние One-Pole фильтра для Smooth
+
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;
     bool isReference = false;
