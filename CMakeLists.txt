@@ -38,6 +38,9 @@ target_sources(Cohera_Saturator PRIVATE
 
     # Engine
     src/engine/SaturationEngine.h
+    src/engine/TransientEngine.h
+    src/engine/AnalogModelingEngine.h
+    src/engine/BandProcessingEngine.h
 
     # DSP Module
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h

@@ -16,7 +16,7 @@
 #include "engine/SaturationEngine.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
-#include "dsp/TransientSplitter.h"
+// #include "dsp/TransientSplitter.h" // TEMPORARILY COMMENTED
 #include "dsp/VoltageRegulator.h"
 #include "dsp/ThermalModel.h"
 #include "dsp/StereoVariance.h"
@@ -150,7 +150,7 @@ private:
 
     // === PUNCH (Transient Control) ===
     // Сплиттеры транзиентов ([Band][Channel], разделяют сигнал на атаку и тело)
-    std::array<std::array<TransientSplitter, 2>, kNumBands> splitters;
+    // std::array<std::array<TransientSplitter, 2>, kNumBands> splitters; // TEMPORARILY COMMENTED
     juce::SmoothedValue<float> smoothedPunch;
 
     // === ANALOG MODELING ===
@@ -189,7 +189,7 @@ private:
     // === TEST REFACTORING ===
     // Temporary test members for refactoring
     Cohera::ParameterManager* testParameterManager = nullptr;
-    Cohera::SaturationEngine testSaturationEngine;
+    Cohera::BandProcessingEngine testBandEngine;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;

@@ -303,9 +303,9 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     // === PUNCH INITIALIZATION ===
     // Инициализируем на ВЫСОКОЙ частоте (работаем внутри оверсемплинга)
-    for(auto& bandSplitters : splitters)
-        for(auto& splitter : bandSplitters)
-            splitter.prepare(osSampleRate);
+    // for(auto& bandSplitters : splitters)
+    //     for(auto& splitter : bandSplitters)
+    //         splitter.prepare(osSampleRate); // TEMPORARILY COMMENTED
 
     smoothedPunch.reset(osSampleRate, 0.05);
     smoothedPunch.setCurrentAndTargetValue(0.0f);
@@ -362,7 +362,7 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     spec.sampleRate = sampleRate;
     spec.maximumBlockSize = samplesPerBlock;
     spec.numChannels = 2;
-    testSaturationEngine.prepare(spec);
+    testBandEngine.prepare(spec);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -633,47 +633,12 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             float heatDrive = baseDrive * (1.0f + heatVal * 0.5f); // До +50% драйва в пике микса
 
             // === SPLIT & CRUSH (PUNCH) ===
+            // TEMPORARILY DISABLED FOR COMPILATION TEST
             // Физическое разделение сигнала на Transient и Body
 
-            // 1. SPLIT: Разделяем сигнал на Transient и Body
-            auto splitL = splitters[band][0].process(inputL);
-            auto splitR = splitters[band][1].process(inputR);
-
-            // 2. PROCESS BODY (Всегда жирный, как выбрала Математика Вселенной)
-            float processedBodyL = mathShapers[band].processSample(splitL.body, heatDrive, currentMathMode);
-            float processedBodyR = mathShapers[band].processSample(splitR.body, heatDrive, currentMathMode);
-
-            // 3. PROCESS TRANSIENT (Зависит от Punch)
-            float processedTransL = 0.0f;
-            float processedTransR = 0.0f;
-
-            if (punchVal > 0.01f)
-            {
-                // === HARD PUNCH (Positive) ===
-                // Атака становится жесткой и агрессивной
-                float transDrive = heatDrive * (1.0f + punchVal * 2.0f); // До 3x драйва на атаку
-                processedTransL = mathShapers[band].processSample(splitL.trans, transDrive, currentMathMode);
-                processedTransR = mathShapers[band].processSample(splitR.trans, transDrive, currentMathMode);
-            }
-            else if (punchVal < -0.01f)
-            {
-                // === CLEAN PUNCH (Negative) ===
-                // Атака остается чистой (сохраняет динамику)
-                float transDrive = heatDrive * (1.0f - std::abs(punchVal) * 0.8f); // Снижаем драйв
-                processedTransL = mathShapers[band].processSample(splitL.trans, transDrive, MathMode::EulerTube); // Clean - используем Euler для мягкости
-                processedTransR = mathShapers[band].processSample(splitR.trans, transDrive, MathMode::EulerTube);
-            }
-            else
-            {
-                // === NEUTRAL (Punch = 0) ===
-                // Атака обрабатывается так же, как тело
-                processedTransL = mathShapers[band].processSample(splitL.trans, heatDrive, currentMathMode);
-                processedTransR = mathShapers[band].processSample(splitR.trans, heatDrive, currentMathMode);
-            }
-
-            // 4. SUM: Склеиваем Transient и Body обратно
-            float combinedL = processedBodyL + processedTransL;
-            float combinedR = processedBodyR + processedTransR;
+            // SIMPLE PROCESSING WITHOUT SPLIT
+            float combinedL = mathShapers[band].processSample(inputL, heatDrive, currentMathMode);
+            float combinedR = mathShapers[band].processSample(inputR, heatDrive, currentMathMode);
 
             // 5. Применяем Stereo Variance к результату
             combinedL *= drift.driveMultL;
