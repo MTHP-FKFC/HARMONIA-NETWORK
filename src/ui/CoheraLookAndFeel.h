@@ -32,9 +32,11 @@ namespace CoheraUI {
                               float sliderPos, const float rotaryStartAngle,
                               const float rotaryEndAngle, juce::Slider& slider) override
         {
-            auto bounds = juce::Rectangle<float>(x, y, width, height).reduced(2.0f);
-            auto center = bounds.getCentre();
-            float radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f;
+            // Расширяем bounds вниз для лейбла, но сохраняем оригинальную высоту для ручки
+            auto fullBounds = juce::Rectangle<float>(x, y, width, height);
+            auto knobBounds = fullBounds.reduced(2.0f);
+            auto center = knobBounds.getCentre();
+            float radius = juce::jmin(knobBounds.getWidth(), knobBounds.getHeight()) / 2.0f;
 
             // --- 1. ЦВЕТОВАЯ ЛОГИКА ---
             juce::Colour mainColor = kOrangeNeon; // Default Saturation
@@ -103,13 +105,14 @@ namespace CoheraUI {
             // ✍️ ТИПОГРАФИКА "DESIGNER 20 YEARS EXP"
             // ====================================================================
 
-            // 1. НАЗВАНИЕ ПАРАМЕТРА (СНИЗУ) - рисуем ЗА ПРЕДЕЛАМИ компонента
-            g.setFont(juce::Font("Verdana", 11.0f, juce::Font::bold));
-            g.setColour(kTextDim);
+            // 1. НАЗВАНИЕ ПАРАМЕТРА (СНИЗУ) - рисуем ВНУТРИ полной области компонента
+            g.setFont(juce::Font("Verdana", 14.0f, juce::Font::bold));
+            g.setColour(kTextBright);
 
-            // Рисуем лейбл НИЖЕ компонента слайдера (за его пределами)
+            // Рисуем лейбл в нижней части полной области компонента
             int labelHeight = 18;
-            juce::Rectangle<int> nameRect(x - 2, y + height + 2, width + 4, labelHeight);
+            juce::Rectangle<int> nameRect(fullBounds.getX() - 2, fullBounds.getBottom() - labelHeight - 3,
+                                         fullBounds.getWidth() + 4, labelHeight);
 
             juce::String name = slider.getName().toUpperCase();
             if (name.contains("TONE_")) name = name.replace("TONE_", "");
