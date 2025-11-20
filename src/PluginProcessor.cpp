@@ -202,7 +202,21 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
     }
 
-    // Wet signal is now ready in buffer
+    // 3.4 Final Per-Channel Level Compensation
+    // Компенсируем разницу уровней между каналами после сатурации
+    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
+    {
+        float wetRms = buffer.getRMSLevel(ch, 0, numSamples);
+        float inRms = inputRmsLevels[ch];
+
+        if (wetRms > 0.0001f && inRms > 0.0001f)
+        {
+            // Компенсируем уровень канала, чтобы он соответствовал входному
+            float channelComp = inRms / wetRms;
+            channelComp = juce::jlimit(0.5f, 2.0f, channelComp); // Ограничиваем диапазон
+            juce::FloatVectorOperations::multiply(buffer.getWritePointer(ch), channelComp, numSamples);
+        }
+    }
 
     // === 4.5. DRY SIGNAL COMPENSATION ===
     // Применяем небольшую RMS компенсацию к Dry сигналу для consistency между каналами
