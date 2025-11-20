@@ -140,7 +140,11 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float currentInputLevel = inputLevelFollower.process(inEnergy);
 
     if (isReference) {
-        NetworkManager::getInstance().updateGroupSignal(currentGroup, currentInputLevel);
+        // Гейт: если бочка тише -40dB, шлем ноль.
+        float gatedLevel = currentInputLevel;
+        if (currentInputLevel < 0.01f) gatedLevel = 0.0f;
+
+        NetworkManager::getInstance().updateGroupSignal(currentGroup, gatedLevel);
     }
     float targetNetValue = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
     smoothedNetworkSignal.setTargetValue(targetNetValue);
@@ -196,8 +200,12 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float outGain  = smoothedOutput.getNextValue();
         float compVal  = smoothedCompensation.getNextValue();
 
-        // Убираем шум: если сигнал сети слабый (< 5%), считаем его нулем
-        if (netVal < 0.05f) netVal = 0.0f;
+        // === FIX: EXPANDER (ОБОСТРИТЕЛЬ) ===
+        // Возводим в куб. Это убивает слабые сигналы (хвосты, шум)
+        // и выделяет только самые громкие пики удара.
+        // Было вялое "уууу", станет резкое "ТЫЩ!".
+        float sharpNetVal = netVal * netVal * netVal;
+        if (sharpNetVal < 0.01f) sharpNetVal = 0.0f;
 
         // 2. Определяем Смесь (Morph)
         // ghostAmount: 0.0 (обычный режим) -> 1.0 (полный эффект при ударе)
@@ -208,23 +216,21 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         if (!isReference)
         {
-            if (modeIndex == 0) // MODE: INVERSE GRIME (Duck)
+            if (modeIndex == 0) // INVERSE GRIME
             {
-                // Просто дакинг драйва
-                if (netVal > 0.0f) {
-                    float duck = 1.0f - (netVal * 0.8f); // 80% ducking
+                if (sharpNetVal > 0.0f) {
+                    float duck = 1.0f - (sharpNetVal * 0.8f);
                     effectiveDrive *= std::max(0.0f, duck);
                 }
             }
-            else if (modeIndex == 1) // MODE: GHOST HARMONICS (Morph)
+            else if (modeIndex == 1) // GHOST HARMONICS
             {
-                // Мы перетекаем в "Злой" режим пропорционально удару бочки.
-                // netVal (0..1) -> ghostAmount (0..1)
-                ghostAmount = netVal;
+                // Морфинг теперь управляется ОСТРЫМ сигналом
+                ghostAmount = sharpNetVal;
 
-                // Бустим драйв в момент удара, чтобы Foldback "зарычал"
+                // Еще сильнее разгоняем драйв на пике
                 if (ghostAmount > 0.0f) {
-                    effectiveDrive *= (1.0f + ghostAmount * 1.0f); // До x2 драйва на ударе
+                    effectiveDrive *= (1.0f + ghostAmount * 2.0f); // x3 Drive на пике!
                 }
             }
         }

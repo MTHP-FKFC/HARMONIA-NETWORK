@@ -8,9 +8,11 @@ class EnvelopeFollower
 public:
     void reset(double sampleRate)
     {
-        // Настраиваем время релиза (спада).
-        // 50 мс - очень быстро для резкой реакции на удар бочки
-        releaseCoeff = std::exp(-1.0f / (0.05f * (float)sampleRate));
+        // Агрессивный сброс.
+        // Коэффициент умножения на каждый блок.
+        // Чем меньше число, тем быстрее падает уровень.
+        // 0.90 означает потерю 10% громкости на каждом шаге, если нет нового пика.
+        decayFactor = 0.90f;
         currentValue = 0.0f;
     }
 
@@ -18,15 +20,18 @@ public:
     {
         float absIn = std::abs(input);
 
-        // Instant Attack (Мгновенная атака)
-        // Если входящий сигнал громче текущего - прыгаем вверх сразу.
-        // Exponential Release (Плавный спад)
-        // Если тише - плавно опускаемся.
+        // Логика Peak Hold с распадом:
+        // 1. Сначала уменьшаем текущее значение (Decay)
+        currentValue *= decayFactor;
 
+        // 2. Если новый вход громче - мгновенно прыгаем вверх (Attack = 0ms)
         if (absIn > currentValue)
+        {
             currentValue = absIn;
-        else
-            currentValue = currentValue * releaseCoeff + absIn * (1.0f - releaseCoeff);
+        }
+
+        // Защита от денормалов (очень малых чисел)
+        if (currentValue < 0.0001f) currentValue = 0.0f;
 
         return currentValue;
     }
@@ -35,5 +40,5 @@ public:
 
 private:
     float currentValue = 0.0f;
-    float releaseCoeff = 0.0f;
+    float decayFactor = 0.9f;
 };
