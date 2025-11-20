@@ -297,15 +297,20 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> 
 // --- ХЕЛПЕР: Раскладка Сети ---
 void CoheraSaturatorAudioProcessorEditor::layoutNetwork(juce::Rectangle<int> area)
 {
-    // 1. HEADER: Interaction Mode (Duck, Ghost...)
-    auto headerArea = area.removeFromTop(40);
-    netModeSelector.setBounds(headerArea.withSizeKeepingCentre(headerArea.getWidth() - 20, 24));
+    // 1. HEADER: Оба селектора в одну строку (режим + краска сатурации)
+    auto headerArea = area.removeFromTop(35); // Немного меньше высоты
 
-    // 2. SUB-HEADER: Reaction Type (Новый селектор!)
-    // Размещаем его под режимом, чтобы было логично: "Режим Ghost" -> "Тип Rectify"
-    auto subHeader = area.removeFromTop(30);
+    // FlexBox для двух селекторов в ряд
+    juce::FlexBox headerFlex;
+    headerFlex.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
 
-    netSatSelector.setBounds(subHeader.withSizeKeepingCentre(120, 20)); // Чуть меньше основного
+    // Левый селектор: Interaction Mode
+    headerFlex.items.add(juce::FlexItem(netModeSelector).withFlex(1.0f).withMaxHeight(24));
+
+    // Правый селектор: Reaction Type (краска сатурации)
+    headerFlex.items.add(juce::FlexItem(netSatSelector).withFlex(1.0f).withMaxHeight(24));
+
+    headerFlex.performLayout(headerArea.reduced(5, 5)); // Небольшой отступ
 
     // Оставшееся делим: Слева ручки, Справа Метр
     // Метр занимает 15% ширины справа - temporarily disabled
