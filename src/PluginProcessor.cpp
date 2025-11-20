@@ -1,6 +1,8 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+#include <juce_core/juce_core.h>
+
 using namespace Cohera;
 #include "dsp/Waveshaper.h"
 #include "dsp/InteractionEngine.h"
@@ -17,8 +19,13 @@ CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
        apvts(*this, nullptr, "PARAMETERS", createParameterLayout()),
        paramManager(apvts)
 {
-    // Инициализируем кроссовер
-    filterBank = std::make_unique<PlaybackFilterBank>();
+    // Запуск интеграционных тестов в Debug режиме
+#if JUCE_DEBUG
+    juce::UnitTestRunner runner;
+    runner.setPassesAreLogged(true); // Включаем вывод успешных тестов
+    runner.runAllTests();
+    juce::Logger::outputDebugString("=== Integration Tests Complete ===");
+#endif
 
     // Новая архитектура инициализирована в конструкторе
 }

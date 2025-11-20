@@ -48,6 +48,10 @@ target_sources(Cohera_Saturator PRIVATE
     # Network
     src/network/NetworkController.h
 
+    # Tests
+    src/tests/TestHelpers.h
+    src/tests/EngineIntegrationTests.cpp
+
     # DSP Module
     src/dsp/FilterBank.cpp  src/dsp/FilterBank.h
     src/dsp/Waveshaper.h
