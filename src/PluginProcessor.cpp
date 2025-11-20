@@ -61,8 +61,7 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     setLatencySamples(latency);
 
     // 2. Инициализируем Dry Delay Line (чтобы фаза совпадала)
-    dryDelayLine.prepare({sampleRate, (juce::uint32)samplesPerBlock, 2}); // Stereo
-    dryDelayLine.setMaximumDelayInSamples(2048); // С запасом
+    dryDelayLine.prepare({sampleRate, (juce::uint32)samplesPerBlock, (juce::uint32)getTotalNumInputChannels()});
     dryDelayLine.setDelay((float)latency); // Выравниваем Dry под Wet
 
     // 3. Буферы (как было)
@@ -168,33 +167,33 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Bypass сатурации при очень низком Drive
     bool bypassSaturation = (effectiveDrive < 0.01f);
 
-    for (int band = 0; band < kNumBands; ++band)
-    {
-        for (int ch = 0; ch < 2; ++ch)
+        for (int band = 0; band < kNumBands; ++band)
         {
-            float* data = bandBuffers[band].getWritePointer(ch);
-            for (int i = 0; i < numSamples; ++i)
+            for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
             {
-                float x = data[i];
-
-                if (!bypassSaturation)
+                float* data = bandBuffers[band].getWritePointer(ch);
+                for (int i = 0; i < numSamples; ++i)
                 {
-                    // Saturation
-                    x *= effectiveDrive;
-                    x = std::tanh(x);
+                    float x = data[i];
 
-                    // Makeup Gain (возвращаем громкость после компрессии tanh)
-                    x *= makeUp;
+                    if (!bypassSaturation)
+                    {
+                        // Saturation
+                        x *= effectiveDrive;
+                        x = std::tanh(x);
+
+                        // Makeup Gain (возвращаем громкость после компрессии tanh)
+                        x *= makeUp;
+                    }
+
+                    data[i] = x;
                 }
-
-                data[i] = x;
             }
         }
-    }
 
     // 3.3 Sum (Сборка Wet сигнала)
     buffer.clear();
-    for (int ch = 0; ch < 2; ++ch)
+    for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
     {
         auto* out = buffer.getWritePointer(ch);
         for (int band = 0; band < kNumBands; ++band) {
@@ -237,7 +236,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float currentMix = smoothedMix.getNextValue(); smoothedMix.skip(numSamples-1);
         float currentOutGain = smoothedOutput.getNextValue(); smoothedOutput.skip(numSamples-1);
 
-        for (int ch = 0; ch < 2; ++ch)
+        for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
         {
             auto* wetData = buffer.getWritePointer(ch);
             const auto* dryData = dryBuffer.getReadPointer(ch);
