@@ -53,6 +53,7 @@ target_sources(Cohera_Saturator PRIVATE
     src/tests/TestAudioGenerator.h
     src/tests/EngineIntegrationTests.cpp
     src/tests/RealWorldScenarios.cpp
+    src/tests/IndustryStandardTests.cpp
     src/tests/TestRunner.cpp
 
     # DSP Module
@@ -189,5 +190,60 @@ target_link_libraries(SimpleDSPTest PRIVATE
 )
 
 set_target_properties(SimpleDSPTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
+
+# Industry Standard Test Runner
+add_executable(IndustryStandardTest
+    src/tests/IndustryStandardTestRunner.cpp
+    src/tests/TestHelpers.h
+    src/PluginProcessor.cpp src/PluginProcessor.h
+    src/PluginEditor.cpp src/PluginEditor.h
+    src/CoheraTypes.h
+    src/parameters/ParameterSet.h
+    src/parameters/ParameterManager.h
+    src/engine/SaturationEngine.h
+    src/engine/TransientEngine.h
+    src/engine/AnalogModelingEngine.h
+    src/engine/BandProcessingEngine.h
+    src/engine/FilterBankEngine.h
+    src/engine/MixEngine.h
+    src/engine/ProcessingEngine.h
+    src/dsp/FilterBank.cpp src/dsp/FilterBank.h
+    src/dsp/MathSaturator.h
+    src/dsp/DCBlocker.h
+    src/dsp/Envelope.h
+    src/dsp/TransientSplitter.h
+    src/dsp/ThermalModel.h
+    src/dsp/HarmonicEntropy.h
+    src/dsp/StereoVariance.h
+    src/dsp/MSMatrix.h
+    src/FIR/fir_coeffs_multi_sr.h
+    src/FIR/fir_minphase_128.h
+    src/network/NetworkManager.h
+    src/ui/SimpleFFT.h
+    src/ui/Components/SpectrumVisor.h
+    src/ui/Components/TopBar.h
+    src/ui/Components/SaturationCore.h
+    src/ui/Components/NetworkBrain.h
+    src/ui/CoheraLookAndFeel.h
+    src/analyzer/AnalyzerPipelineConfig.h
+)
+
+target_include_directories(IndustryStandardTest PRIVATE src)
+
+target_link_libraries(IndustryStandardTest PRIVATE
+    juce::juce_audio_utils
+    juce::juce_audio_processors
+    juce::juce_dsp
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_graphics
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+)
+
+set_target_properties(IndustryStandardTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )

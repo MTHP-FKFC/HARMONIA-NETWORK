@@ -67,6 +67,9 @@ public:
     // Getter for APVTS
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
 
+    // Getter for ValueTreeState (for tests)
+    juce::AudioProcessorValueTreeState* getValueTreeState() { return &apvts; }
+
     // Getter for Analyzer
     SimpleFFT& getAnalyzer() { return analyzer; }
 

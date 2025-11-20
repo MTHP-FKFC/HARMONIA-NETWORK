@@ -13,6 +13,7 @@ using namespace Cohera;
 #include "tests/TestAudioGenerator.h"
 #include "tests/EngineIntegrationTests.cpp"
 #include "tests/RealWorldScenarios.cpp"
+#include "tests/IndustryStandardTests.cpp"
 
 
 CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
@@ -193,6 +194,7 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     // Новая архитектура - просто делегируем
     juce::dsp::ProcessSpec spec { sampleRate, (uint32)samplesPerBlock, 2 };
     processingEngine.prepare(spec);
+    analyzer.prepare();
 
     setLatencySamples((int)processingEngine.getLatency());
 }
