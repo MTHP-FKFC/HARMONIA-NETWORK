@@ -40,10 +40,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "output_gain", "Output",
         juce::NormalisableRange<float>(-12.0f, 12.0f, 0.1f), 0.0f));
 
-    // Режим работы: 0 = Inverse Grime, 1 = Ghost Harmonics
+    // Режим работы: 3 режима взаимодействия
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "mode", "Interaction Mode",
-        juce::StringArray{"Inverse Grime", "Ghost Harmonics"}, 0));
+        juce::StringArray{
+            "Unmasking (Duck)",   // 0: Реф громкий -> Мы чище
+            "Ghost (Follow)",     // 1: Реф громкий -> Мы злее
+            "Gated (Reverse)"     // 2: Реф тихий -> Мы злее
+        }, 0));
 
     // Dynamics Preservation
     layout.add(std::make_unique<juce::AudioParameterFloat>(
@@ -106,8 +110,8 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
         // Настраиваем детекторы (быстрые)
         bandEnvelopes[i].reset(sampleRate);
 
-        // Настраиваем сглаживатели приема (10-20мс)
-        smoothedNetworkBands[i].reset(sampleRate, 0.01);
+        // Настраиваем сглаживатели приема (20ms - достаточно быстро для транзиентов, но без треска)
+        smoothedNetworkBands[i].reset(sampleRate, 0.02f);
         smoothedNetworkBands[i].setCurrentAndTargetValue(0.0f);
     }
 
@@ -242,11 +246,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             // 1. Получаем сигнал сети для ЭТОЙ полосы
             float bandNetVal = smoothedNetworkBands[band].getNextValue();
 
-            // "Умный" нормалайзер/гейт для этой полосы
-            // (Можно использовать scNormalizer, но он один. Пока сделаем простую логику)
+            // Гейт шума, чтобы не триггерилось на тишину
             float controlSignal = bandNetVal;
-            // Простой гейт шума
-            if (controlSignal < 0.05f) controlSignal = 0.0f;
+            if (controlSignal < 0.02f) controlSignal = 0.0f;
 
             // 2. ЛОГИКА ВЗАИМОДЕЙСТВИЯ (Per-Band!)
             float effectiveBandDrive = baseDrive * bandDriveScale[band];
@@ -255,28 +257,33 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
             if (!isReference)
             {
-                if (modeIndex == 0) // MODE: SPECTRAL UNMASKING (ex-Inverse Grime)
+                if (modeIndex == 0) // MODE: UNMASKING (Ducking)
                 {
-                    // Если в ЭТОЙ полосе референс громкий -> МЫ в этой полосе становимся тише/чище.
-                    // А в других полосах остаемся жирными!
-                    // Это и есть Spectral Burn-Through.
+                    // Реф громкий -> Мы тише/чище
                     if (controlSignal > 0.0f) {
-                        float duck = 1.0f - (controlSignal * 0.8f); // Depth
+                        float duck = 1.0f - (controlSignal * 0.8f);
                         effectiveBandDrive *= duck;
                     }
                 }
-                else if (modeIndex == 1) // MODE: GHOST HARMONICS
+                else if (modeIndex == 1) // MODE: GHOST (Direct Follower)
                 {
-                    // Ghost только на низах, как и раньше
-                    if (band <= 1 && controlSignal > 0.0f) {
+                    // Реф громкий -> Мы злее/ярче
+                    if (band <= 2 && controlSignal > 0.0f) { // Только низы
                         type = SaturationType::Rectifier;
                         shaperMix = std::max(blendVal, controlSignal);
                         effectiveBandDrive *= (1.0f + controlSignal * 2.0f);
                     }
-                    // А вот на верхах можно сделать что-то другое!
-                    // Например, если бочка бьет, верха становятся "Ярче" (Exciter)
-                    if (band >= 3 && controlSignal > 0.0f) {
-                         effectiveBandDrive *= (1.0f + controlSignal * 0.5f);
+                }
+                else if (modeIndex == 2) // MODE: GATED (Reverse)
+                {
+                    // Реф тихий -> Мы злее
+                    // Реф громкий -> Мы чище
+                    float reverseSignal = 1.0f - controlSignal;
+
+                    if (band <= 2 && reverseSignal > 0.0f) {
+                        type = SaturationType::Rectifier;
+                        shaperMix = std::max(blendVal, reverseSignal);
+                        effectiveBandDrive *= (1.0f + reverseSignal * 1.5f);
                     }
                 }
             }
