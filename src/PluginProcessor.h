@@ -22,6 +22,7 @@
 #include "dsp/StereoVariance.h"
 #include "dsp/NoiseBreather.h"
 #include "dsp/DeltaMonitor.h"
+#include "ui/SimpleFFT.h"
 #include "dsp/StereoFocus.h"
 #include "dsp/HarmonicEntropy.h"
 #include "network/NetworkManager.h"
@@ -65,6 +66,9 @@ public:
 
     // Getter for APVTS
     juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
+
+    // Getter for Analyzer
+    SimpleFFT& getAnalyzer() { return analyzer; }
 
 private:
     // === 1. Параметры (State) ===
@@ -184,6 +188,9 @@ private:
     // === GAIN REDUCTION METER ===
     // Для визуализации взаимодействия (Network, Ducking, Ghost)
     std::array<float, kNumBands> gainReduction; // 1.0 = no change, <1.0 = ducked, >1.0 = boosted
+
+    // === SPECTRUM ANALYZER ===
+    SimpleFFT analyzer;
 
     // === QUALITY MODE ===
     // Для экономии CPU в режиме Low Quality

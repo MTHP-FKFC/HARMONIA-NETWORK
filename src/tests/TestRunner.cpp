@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include "EngineIntegrationTests.cpp" // Include the test implementations
+#include "RealWorldScenarios.cpp" // Include real-world scenario tests
 
 int main(int argc, char* argv[])
 {

@@ -8,6 +8,12 @@ using namespace Cohera;
 #include "dsp/InteractionEngine.h"
 #include "dsp/MSMatrix.h"
 
+// Include test files for in-plugin testing
+#include "tests/TestHelpers.h"
+#include "tests/TestAudioGenerator.h"
+#include "tests/EngineIntegrationTests.cpp"
+#include "tests/RealWorldScenarios.cpp"
+
 
 CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -214,6 +220,13 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     // Обрабатываем через ProcessingEngine
     processingEngine.processBlockWithDry(buffer, dryBuffer, params);
+
+    // Кормим анализатор выходным сигналом
+    for (int i = 0; i < originalNumSamples; ++i)
+    {
+        float monoOut = (buffer.getSample(0, i) + (numCh > 1 ? buffer.getSample(1, i) : buffer.getSample(0, i))) * 0.5f;
+        analyzer.pushSample(monoOut);
+    }
 }
 
 // === Сохранение состояния ===

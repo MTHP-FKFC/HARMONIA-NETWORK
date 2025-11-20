@@ -4,7 +4,8 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(CoheraS
     : AudioProcessorEditor(&p), audioProcessor(p),
       saturationCore(p.getAPVTS()),
       networkBrain(p.getAPVTS()),
-      topBar(p.getAPVTS())
+      topBar(p.getAPVTS()),
+      spectrumVisor(p.getAnalyzer())
 {
     setLookAndFeel(&lnf);
 

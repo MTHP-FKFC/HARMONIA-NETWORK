@@ -50,7 +50,9 @@ target_sources(Cohera_Saturator PRIVATE
 
     # Tests
     src/tests/TestHelpers.h
+    src/tests/TestAudioGenerator.h
     src/tests/EngineIntegrationTests.cpp
+    src/tests/RealWorldScenarios.cpp
     src/tests/TestRunner.cpp
 
     # DSP Module
@@ -112,46 +114,80 @@ target_link_libraries(Cohera_Saturator PRIVATE
     juce::juce_events
 )
 
-# Create separate test executable (закомментировано, пока нет .cpp файлов)
-# add_executable(Cohera_Tests
-#     src/tests/TestRunner.cpp
-#     src/dsp/FilterBank.cpp
-#     # src/dsp/Waveshaper.cpp (добавим позже)
-#     # src/dsp/InteractionEngine.cpp (добавим позже)
-#     src/dsp/MSMatrix.cpp
-#     src/dsp/Envelope.cpp
-#     src/dsp/DynamicsRestorer.cpp
-#     src/dsp/PsychoAcousticGain.cpp
-#     src/dsp/VoltageRegulator.cpp
-#     src/dsp/ThermalModel.cpp
-#     src/dsp/StereoVariance.cpp
-#     src/dsp/NoiseBreather.cpp
-#     src/dsp/DeltaMonitor.cpp
-#     src/dsp/StereoFocus.cpp
-#     src/dsp/HarmonicEntropy.cpp
-#     src/dsp/TransientDetector.cpp
-#     src/dsp/TransientSplitter.cpp
-#     src/dsp/AutoGainStage.cpp
-#     src/dsp/SidechainNormalizer.cpp
-#     src/network/NetworkManager.cpp
-#     src/parameters/ParameterSet.cpp
-#     src/parameters/ParameterManager.cpp
-#     src/engine/SaturationEngine.cpp
-#     src/engine/BandProcessingEngine.cpp
-#     src/engine/AnalogModelingEngine.cpp
-# )
+# Create lightweight test executable (only DSP logic, no UI)
+add_executable(Cohera_Tests
+    src/tests/TestRunner.cpp
+    src/tests/TestHelpers.h
+    src/tests/TestAudioGenerator.h
+    src/tests/EngineIntegrationTests.cpp
+    src/tests/RealWorldScenarios.cpp
 
-# target_include_directories(Cohera_Tests PRIVATE src)
+    # Core DSP modules (no UI dependencies)
+    src/dsp/FilterBank.cpp
+    src/dsp/FilterBank.h
+    src/dsp/MathSaturator.h
+    src/dsp/DCBlocker.h
+    src/dsp/Envelope.h
+    src/dsp/TransientSplitter.h
+    src/dsp/ThermalModel.h
+    src/dsp/HarmonicEntropy.h
+    src/dsp/StereoVariance.h
+    src/dsp/MSMatrix.h
 
-# target_link_libraries(Cohera_Tests PRIVATE
-#     juce::juce_recommended_config_flags
-#     juce::juce_recommended_warning_flags
-#     juce::juce_core
-#     juce::juce_audio_basics
-#     juce::juce_audio_processors
-#     juce::juce_dsp
-# )
+    # FIR coefficients
+    src/FIR/fir_coeffs_multi_sr.h
+    src/FIR/fir_minphase_128.h
 
-# set_target_properties(Cohera_Tests PROPERTIES
-#     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Cohera_Saturator_artefacts/Tests"
-# )
+    # Network and parameters
+    src/network/NetworkManager.h
+    src/parameters/ParameterSet.h
+    src/parameters/ParameterManager.h
+
+    # Engines
+    src/engine/SaturationEngine.h
+    src/engine/TransientEngine.h
+    src/engine/AnalogModelingEngine.h
+    src/engine/BandProcessingEngine.h
+    src/engine/FilterBankEngine.h
+    src/engine/MixEngine.h
+    src/engine/ProcessingEngine.h
+
+    # Type definitions
+    src/CoheraTypes.h
+)
+
+target_include_directories(Cohera_Tests PRIVATE src)
+
+target_link_libraries(Cohera_Tests PRIVATE
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags
+    juce::juce_core
+    juce::juce_audio_basics
+    juce::juce_audio_processors
+    juce::juce_dsp
+)
+
+set_target_properties(Cohera_Tests PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Cohera_Saturator_artefacts/Tests"
+)
+
+# Simple standalone test runner (no complex dependencies)
+add_executable(SimpleDSPTest
+    src/tests/SimpleTestRunner.cpp
+    src/tests/TestAudioGenerator.h
+    src/dsp/MathSaturator.h
+    src/dsp/DCBlocker.h
+    src/CoheraTypes.h
+)
+
+target_include_directories(SimpleDSPTest PRIVATE src)
+
+target_link_libraries(SimpleDSPTest PRIVATE
+    juce::juce_core
+    juce::juce_audio_basics
+    juce::juce_gui_basics
+)
+
+set_target_properties(SimpleDSPTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
