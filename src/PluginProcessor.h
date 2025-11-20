@@ -120,6 +120,10 @@ private:
     juce::SmoothedValue<float> smoothedNetSens;
     float netSmoothState = 0.0f; // Состояние One-Pole фильтра для Smooth
 
+    // === GLOBAL HEAT ===
+    int myInstanceIndex = -1; // ID слота в сети
+    juce::LinearSmoothedValue<float> smoothedGlobalHeat;
+
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;
     bool isReference = false;

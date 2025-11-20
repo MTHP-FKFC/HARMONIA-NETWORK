@@ -20,6 +20,10 @@ CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 
 CoheraSaturatorAudioProcessor::~CoheraSaturatorAudioProcessor()
 {
+    // Гарантируем освобождение слота при удалении плагина
+    if (myInstanceIndex != -1) {
+        NetworkManager::getInstance().unregisterInstance(myInstanceIndex);
+    }
 }
 
 // Настройка параметров (пока заглушки)
@@ -96,6 +100,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "net_sens", "Sensitivity",
         juce::NormalisableRange<float>(0.0f, 200.0f, 1.0f), 100.0f)); // Default 100%
+
+    // === GLOBAL HEAT ===
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "heat_amount", "Global Heat",
+        juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f)); // Default 0% (выкл)
 
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
@@ -221,11 +230,26 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     // 8. Сброс состояния One-Pole фильтра
     netSmoothState = 0.0f;
+
+    // 9. Регистрация в сети для Global Heat
+    if (myInstanceIndex == -1) {
+        myInstanceIndex = NetworkManager::getInstance().registerInstance();
+    }
+
+    // Настройка сглаживателя Global Heat (тепловая инерция 200мс)
+    smoothedGlobalHeat.reset(sampleRate, 0.2f);
+    smoothedGlobalHeat.setCurrentAndTargetValue(0.0f);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
 {
-    // Освобождаем ресурсы, если нужно (unique_ptr сделает это сам)
+    // Освобождаем слот в сети
+    if (myInstanceIndex != -1) {
+        NetworkManager::getInstance().unregisterInstance(myInstanceIndex);
+        myInstanceIndex = -1;
+    }
+
+    // Освобождаем ресурсы фильтров
     filterBank->reset();
 }
 
@@ -250,6 +274,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     // Читаем параметр Dynamics
     float dynParam = *apvts.getRawParameterValue("dynamics");
+
+    // === GLOBAL HEAT ===
+    float heatParam = *apvts.getRawParameterValue("heat_amount");
 
     // === EMPHASIS FILTERS ===
     float tightenParam = *apvts.getRawParameterValue("tone_tighten");
@@ -298,6 +325,32 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Если Listener -> Читаем из сети
     float rawNetVal = (!isReference) ? NetworkManager::getInstance().getBandSignal(currentGroup, 0) : 0.0f;
     smoothedNetworkSignal.setTargetValue(rawNetVal);
+
+    // --- GLOBAL HEAT LOGIC ---
+
+    // 1. Измеряем свою энергию (RMS входа)
+    float myRMS = 0.0f;
+    for(int ch = 0; ch < numCh; ++ch) myRMS += buffer.getRMSLevel(ch, 0, originalNumSamples);
+    myRMS /= (float)numCh;
+
+    // 2. Отправляем в сеть
+    if (myInstanceIndex != -1) {
+        NetworkManager::getInstance().updateInstanceEnergy(myInstanceIndex, myRMS);
+    }
+
+    // 3. Читаем общую температуру
+    float globalEnergy = NetworkManager::getInstance().getGlobalHeat();
+
+    // Вычитаем себя из общей суммы (чтобы не фидбечить на самого себя)
+    float otherEnergy = std::max(0.0f, globalEnergy - myRMS);
+
+    // Масштабируем (эмпирически): допустим 5 треков = 2.5, нормируем к 0..1
+    float heatTarget = std::min(1.0f, otherEnergy / 5.0f);
+
+    // Применяем ручку Amount
+    heatTarget *= (heatParam / 100.0f);
+
+    smoothedGlobalHeat.setTargetValue(heatTarget);
 
     // --- 3. DRY COPY (На обычной частоте) ---
 
@@ -367,6 +420,13 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float mixVal    = smoothedMix.getNextValue();
         float outG      = smoothedOutput.getNextValue();
 
+        // === GLOBAL HEAT APPLICATION ===
+        // Получаем текущую "температуру" микса
+        float heatVal = smoothedGlobalHeat.getNextValue();
+
+        // Применяем bias (аналоговый дрейф) - добавляет асимметрию
+        float dcBias = heatVal * 0.1f; // До 0.1 (легкое смещение)
+
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
@@ -414,22 +474,25 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
                 MSMatrix::encode(xL, xR, mid, side);
             }
 
-            // 4. Обработка через InteractionEngine
+            // 4. Применяем Global Heat к драйву
+            float heatDrive = baseDrive * (1.0f + heatVal * 0.5f); // До +50% драйва в пике микса
+
+            // 5. Обработка через InteractionEngine
             float procL = 0.0f, procR = 0.0f;
 
             if (useMS)
             {
                 // M/S: Mid через A, Side через B
-                float pMid = InteractionEngine::processMorph(mid, baseDrive * bandDriveScale[band], controlSignal, config);
-                float pSide = InteractionEngine::processMorph(side, baseDrive * bandDriveScale[band], controlSignal, config);
+                float pMid = InteractionEngine::processMorph(mid + dcBias, heatDrive * bandDriveScale[band], controlSignal, config);
+                float pSide = InteractionEngine::processMorph(side + dcBias, heatDrive * bandDriveScale[band], controlSignal, config);
                 MSMatrix::decode(pMid, pSide, procL, procR);
             }
             else
             {
                 // Обычная L/R обработка
-                procL = InteractionEngine::processMorph(xL, baseDrive * bandDriveScale[band], controlSignal, config);
+                procL = InteractionEngine::processMorph(xL + dcBias, heatDrive * bandDriveScale[band], controlSignal, config);
                 if (numCh > 1)
-                    procR = InteractionEngine::processMorph(xR, baseDrive * bandDriveScale[band], controlSignal, config);
+                    procR = InteractionEngine::processMorph(xR + dcBias, heatDrive * bandDriveScale[band], controlSignal, config);
             }
 
             // 5. Predictive Gain
