@@ -13,6 +13,8 @@
 #include "dsp/ThermalModel.h"
 #include "dsp/StereoVariance.h"
 #include "dsp/NoiseBreather.h"
+#include "dsp/DeltaMonitor.h"
+#include "dsp/StereoFocus.h"
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -148,6 +150,11 @@ private:
     // Сглаживатели для новых параметров
     juce::SmoothedValue<float> smoothedVariance;
     juce::SmoothedValue<float> smoothedNoise;
+
+    // === PROFESSIONAL TOOLS ===
+    DeltaMonitor deltaMonitor;  // Delta monitoring
+    StereoFocus stereoFocus;    // M/S focus control
+    juce::SmoothedValue<float> smoothedFocus; // Focus parameter smoothing
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;

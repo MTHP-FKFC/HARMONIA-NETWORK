@@ -128,6 +128,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "noise", "Noise Floor",
         juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f));
 
+    // === PROFESSIONAL TOOLS ===
+    // Focus: -100 (Mid Only) ... 0 (Stereo) ... +100 (Side Only)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "focus", "Stereo Focus",
+        juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f), 0.0f));
+
+    // Delta: Переключатель (On/Off)
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "delta", "Delta Listen", false));
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -289,6 +299,10 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     smoothedNoise.reset(sampleRate, 0.05);
     smoothedVariance.setCurrentAndTargetValue(0.0f);
     smoothedNoise.setCurrentAndTargetValue(0.0f);
+
+    // === PROFESSIONAL TOOLS ===
+    smoothedFocus.reset(sampleRate, 0.05);
+    smoothedFocus.setCurrentAndTargetValue(0.0f);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -338,6 +352,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float varianceParam = *apvts.getRawParameterValue("variance");
     float noiseParam = *apvts.getRawParameterValue("noise");
 
+    // === PROFESSIONAL TOOLS ===
+    float focusParam = *apvts.getRawParameterValue("focus");
+    bool deltaMode = *apvts.getRawParameterValue("delta") > 0.5f;
+
     // === EMPHASIS FILTERS ===
     float tightenParam = *apvts.getRawParameterValue("tone_tighten");
     float smoothParam  = *apvts.getRawParameterValue("tone_smooth");
@@ -367,6 +385,10 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Mojo parameter smoothing
     smoothedVariance.setTargetValue(varianceParam / 100.0f);
     smoothedNoise.setTargetValue(noiseParam / 100.0f);
+
+    // Professional tools
+    smoothedFocus.setTargetValue(focusParam);
+    deltaMonitor.setActive(deltaMode);
 
     // Network Control сглаживание
     smoothedNetDepth.setTargetValue(pDepth / 100.0f);
@@ -516,6 +538,11 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         // Применяем bias (аналоговый дрейф) - добавляет асимметрию
         float dcBias = heatVal * 0.1f; // До 0.1 (легкое смещение)
 
+        // === STEREO FOCUS ===
+        float focusVal = smoothedFocus.getNextValue();
+        auto msScalers = stereoFocus.getDriveScalars(focusVal);
+        bool processInMS = (std::abs(focusVal) > 1.0f);
+
         // === PUNCH (TRANSIENT CONTROL) ===
         // Детекция транзиентов на входном сигнале
         float inL = upsampledBlock.getChannelPointer(0)[i];
@@ -618,19 +645,32 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             float finalDriveL = punchDriveL * drift.driveMultL;
             float finalDriveR = punchDriveR * drift.driveMultR;
 
-            // 5. Обработка через InteractionEngine
+            // 7. Обработка через InteractionEngine
             float procL = 0.0f, procR = 0.0f;
 
-            if (useMS)
+            if (processInMS && numCh > 1)
             {
-                // M/S: Mid через A, Side через B
-                float pMid = InteractionEngine::processMorph(mid + dcBias, finalDriveL * bandDriveScale[band], controlSignal, config);
-                float pSide = InteractionEngine::processMorph(side + dcBias, finalDriveR * bandDriveScale[band], controlSignal, config);
-                MSMatrix::decode(pMid, pSide, procL, procR);
+                // === STEREO FOCUS: M/S обработка ===
+                float xL = bandBuffers[band].getSample(0, i);
+                float xR = bandBuffers[band].getSample(1, i);
+
+                // M/S кодирование
+                float mid, side;
+                StereoFocus::encode(xL, xR, mid, side);
+
+                // Сатурация Mid и Side с разными драйвами
+                float midDrive = finalDriveL * bandDriveScale[band] * msScalers.midScale;
+                float sideDrive = finalDriveR * bandDriveScale[band] * msScalers.sideScale;
+
+                float satMid = Waveshaper::process(mid + dcBias, midDrive, userType);
+                float satSide = Waveshaper::process(side + dcBias, sideDrive, userType);
+
+                // M/S декодирование
+                StereoFocus::decode(satMid, satSide, procL, procR);
             }
             else
             {
-                // Обычная L/R обработка
+                // Обычная L/R обработка (как было раньше)
                 procL = InteractionEngine::processMorph(inputL + dcBias, finalDriveL * bandDriveScale[band], controlSignal, config);
                 if (numCh > 1)
                     procR = InteractionEngine::processMorph(inputR + dcBias, finalDriveR * bandDriveScale[band], controlSignal, config);
@@ -700,13 +740,18 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         // Soft Clip (Мастеринг-качество)
         // Используем tanh для пиков > 1.0, чтобы не было цифры
         if (std::abs(outL_val) > 1.0f) outL_val = std::tanh(outL_val);
-        finalL[i] = outL_val;
 
         if (finalR) {
             float outR_val = dryR_s * (1.0f - mixVal) + wetSampleR * mixVal;
             outR_val *= outG;
             if (std::abs(outR_val) > 1.0f) outR_val = std::tanh(outR_val);
-            finalR[i] = outR_val;
+
+            // === DELTA MONITORING ===
+            finalL[i] = deltaMonitor.process(dryL_s, 0.0f, outL_val);
+            finalR[i] = deltaMonitor.process(dryR_s, 0.0f, outR_val);
+        } else {
+            // === DELTA MONITORING ===
+            finalL[i] = deltaMonitor.process(dryL_s, 0.0f, outL_val);
         }
 
         // === SOFT START FADE ===
