@@ -77,16 +77,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
             "Sympathetic"         // 4: Реф частоты -> Мы резонируем
         }, 0));
 
-    // Тип сатурации (базовый выбор пользователя) - оставлено для совместимости
-    layout.add(std::make_unique<juce::AudioParameterChoice>(
-        "sat_type", "Saturation Type",
-        juce::StringArray{
-            "Warm Tube",    // 0: Tanh
-            "Asymmetric",   // 1: Even Harmonics
-            "Hard Clip",    // 2: Brickwall
-            "Bit Crush"     // 3: Digital
-        }, 0));
-
     // === CASCADE (Output Stage) ===
     layout.add(std::make_unique<juce::AudioParameterBool>(
         "cascade", "Cascade (Output Limiter)", false));

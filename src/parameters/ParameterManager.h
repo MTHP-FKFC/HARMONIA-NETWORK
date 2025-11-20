@@ -35,7 +35,6 @@ public:
         pGroup      = apvts.getRawParameterValue("group_id");
         pRole       = apvts.getRawParameterValue("role");
         pNetMode    = apvts.getRawParameterValue("mode");
-        pSatType    = apvts.getRawParameterValue("sat_type");
         pCascade    = apvts.getRawParameterValue("cascade");
         // ... добавьте остальные по аналогии
     }
@@ -101,7 +100,6 @@ private:
     std::atomic<float>* pGroup = nullptr;
     std::atomic<float>* pRole = nullptr;
     std::atomic<float>* pNetMode = nullptr;
-    std::atomic<float>* pSatType = nullptr;
     std::atomic<float>* pCascade = nullptr;
 };
 
