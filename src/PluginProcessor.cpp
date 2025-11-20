@@ -105,6 +105,16 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float currentOut = smoothedOutput.getNextValue();
     smoothedOutput.skip(numSamples - 1);
 
+    // === НОВАЯ ЛОГИКА КОМПЕНСАЦИИ ===
+    // Если мы наваливаем драйв, мы хотим компенсировать выходную громкость.
+    // Используем корень квадратный: это сохраняет энергию, но убирает пики.
+    // Если Drive = 4.0, мы умножим выход на 0.5.
+    float compensation = 1.0f;
+    if (currentDrive > 1.0f)
+    {
+        compensation = 1.0f / std::sqrt(currentDrive);
+    }
+
     // Очистка мусора
     for (auto i = totalNumInputChannels; i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, numSamples);
@@ -139,7 +149,7 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         }
     }
 
-    // --- 4. DSP: Sum ---
+    // --- 4. DSP: Sum & Apply Compensation ---
     buffer.clear();
 
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
@@ -152,13 +162,17 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             juce::FloatVectorOperations::add(outData, bandData, numSamples);
         }
 
-        // Output Gain
-        juce::FloatVectorOperations::multiply(outData, currentOut, numSamples);
+        // ПРИМЕНЯЕМ КОМПЕНСАЦИЮ + OUTPUT GAIN
+        // Сначала компенсируем перегруз от драйва, потом применяем ручку Output
+        float finalGain = currentOut * compensation;
 
-        // FIX: Safety Hard Clipper на выходе, чтобы не улетать в +100dB
+        juce::FloatVectorOperations::multiply(outData, finalGain, numSamples);
+
+        // Safety Limiter (мягкий клиппер вместо жесткого clamp)
         for (int i=0; i<numSamples; ++i)
         {
-            outData[i] = std::clamp(outData[i], -2.0f, 2.0f);
+            // Мягкий клиппер на выходе: tanh как мастер-лимитер
+            outData[i] = std::tanh(outData[i]);
         }
     }
 }
