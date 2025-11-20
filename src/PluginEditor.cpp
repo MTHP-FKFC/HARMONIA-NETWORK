@@ -66,7 +66,7 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     driveSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     driveSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     driveSlider.setColour(juce::Slider::thumbColourId, CoheraUI::kOrangeNeon);
-    driveSlider.setName("drive"); // Для правильного выбора цвета в drawRotarySlider
+    driveSlider.setName("DRIVE"); // Для правильного выбора цвета в drawRotarySlider
     driveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "drive_master", driveSlider);
 
     // Dynamics Attachment
@@ -86,9 +86,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     noiseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.getAPVTS(), "noise", noiseSlider);
 
     // Tone Knobs
-    setupKnob(tightenSlider, "tone_tighten", CoheraUI::kOrangeNeon);
-    setupKnob(punchSlider, "punch", CoheraUI::kOrangeNeon);
-    setupKnob(smoothSlider, "tone_smooth", CoheraUI::kOrangeNeon);
+    setupKnob(tightenSlider, "tone_tighten", "TIGHTEN", CoheraUI::kOrangeNeon);
+    setupKnob(punchSlider, "punch", "PUNCH", CoheraUI::kOrangeNeon);
+    setupKnob(smoothSlider, "tone_smooth", "SMOOTH", CoheraUI::kOrangeNeon);
 
     // --- NETWORK BRAIN (Right) ---
     addAndMakeVisible(netGroup);
@@ -106,32 +106,32 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor (Cohera
     netModeAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.getAPVTS(), "mode", netModeSelector);
 
     // Network Knobs
-    setupKnob(netSensSlider, "net_sens", CoheraUI::kCyanNeon);
-    setupKnob(netDepthSlider, "net_depth", CoheraUI::kCyanNeon);
-    setupKnob(netSmoothSlider, "net_smooth", CoheraUI::kCyanNeon);
+    setupKnob(netSensSlider, "net_sens", "SENS", CoheraUI::kCyanNeon);
+    setupKnob(netDepthSlider, "net_depth", "DEPTH", CoheraUI::kCyanNeon);
+    setupKnob(netSmoothSlider, "net_smooth", "RELEASE", CoheraUI::kCyanNeon);
 
     // Dynamics Knob
-    setupKnob(dynamicsSlider, "dynamics", CoheraUI::kOrangeNeon);
+    setupKnob(dynamicsSlider, "dynamics", "DYNAMICS", CoheraUI::kOrangeNeon);
 
     // Output Knob
-    setupKnob(outputSlider, "output_gain", CoheraUI::kTextBright);
+    setupKnob(outputSlider, "output_gain", "OUTPUT", CoheraUI::kTextBright);
 
     // Focus Knob
-    setupKnob(focusSlider, "focus", CoheraUI::kTextBright);
+    setupKnob(focusSlider, "focus", "FOCUS", CoheraUI::kTextBright);
 
     // Mojo Knobs
-    setupKnob(heatSlider, "heat", CoheraUI::kOrangeNeon);
-    setupKnob(driftSlider, "drift", CoheraUI::kCyanNeon);
-    setupKnob(varianceSlider, "variance", CoheraUI::kOrangeNeon);
-    setupKnob(entropySlider, "entropy", CoheraUI::kOrangeNeon);
-    setupKnob(noiseSlider, "noise", CoheraUI::kRedNeon);
+    setupKnob(heatSlider, "heat", "HEAT", CoheraUI::kOrangeNeon);
+    setupKnob(driftSlider, "drift", "DRIFT", CoheraUI::kCyanNeon);
+    setupKnob(varianceSlider, "variance", "VAR", CoheraUI::kOrangeNeon);
+    setupKnob(entropySlider, "entropy", "ENTROPY", CoheraUI::kOrangeNeon);
+    setupKnob(noiseSlider, "noise", "NOISE", CoheraUI::kRedNeon);
 
     // Interaction Meter - temporarily disabled
     // interactionMeter.setAPVTS(p.getAPVTS());
     // addAndMakeVisible(interactionMeter);
 
     // --- BOTTOM MIX ---
-    setupKnob(mixSlider, "mix", CoheraUI::kTextBright);
+    setupKnob(mixSlider, "mix", "MIX", CoheraUI::kTextBright);
 
     // Delta Button
     addAndMakeVisible(deltaButton);
@@ -153,12 +153,15 @@ CoheraSaturatorAudioProcessorEditor::~CoheraSaturatorAudioProcessorEditor()
 }
 
 // Хелпер для быстрой настройки ручек
-void CoheraSaturatorAudioProcessorEditor::setupKnob(juce::Slider& s, juce::String paramId, juce::Colour c)
+void CoheraSaturatorAudioProcessorEditor::setupKnob(juce::Slider& s, juce::String paramId, juce::String displayName, juce::Colour c)
 {
     addAndMakeVisible(s);
     s.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     s.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     s.setColour(juce::Slider::thumbColourId, c);
+
+    // ВАЖНО: Устанавливаем имя для отображения
+    s.setName(displayName);
 
     // Храним аттачменты в векторе, чтобы не создавать кучу named variables
     sliderAttachments.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.getAPVTS(), paramId, s));
@@ -211,7 +214,7 @@ void CoheraSaturatorAudioProcessorEditor::resized()
     // ==============================================================================
     // 🦶 FOOTER (18% высоты) - Снизу вверх
     // ==============================================================================
-    auto footerHeight = static_cast<int>(getHeight() * 0.18f);
+    auto footerHeight = static_cast<int>(getHeight() * 0.20f); // Увеличено для больших Mojo ручек
     auto footerArea = area.removeFromBottom(footerHeight);
     layoutFooter(footerArea);
 

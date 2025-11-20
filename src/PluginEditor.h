@@ -17,7 +17,7 @@ public:
     void resized() override;
 
 private:
-    void setupKnob(juce::Slider& s, juce::String paramId, juce::Colour c);
+    void setupKnob(juce::Slider& s, juce::String paramId, juce::String displayName, juce::Colour c);
 
     // Layout helpers
     void layoutSaturation(juce::Rectangle<int> area);
