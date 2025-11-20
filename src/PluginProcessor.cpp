@@ -23,15 +23,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    // Глобальный Drive (для примера)
+    // Диапазон от -6 dB (чисто) до +24 dB (грязь)
+    // Дефолт ставим 0.0
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("drive_master", 1), "Master Drive",
-        juce::NormalisableRange<float>(0.0f, 24.0f, 0.1f), 0.0f));
+        juce::NormalisableRange<float>(-6.0f, 24.0f, 0.1f), 0.0f));
 
-    // Output Gain
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("output_gain", 1), "Output Gain",
-        juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f), 0.0f));
+        juce::NormalisableRange<float>(-24.0f, 6.0f, 0.1f), 0.0f));
 
     return layout;
 }
@@ -62,13 +62,12 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
         bandBufferPtrs[i] = &bandBuffers[i];
     }
 
-    // Настраиваем сглаживатели
-    // Время сглаживания: 0.02 сек (20 мс) - достаточно быстро, но плавно
-    smoothedDrive.reset(sampleRate, 0.02);
-    smoothedOutput.reset(sampleRate, 0.02);
+    // 3. Сглаживание (FIXED)
+    // 100 мс сглаживания - плавно, но не вечность
+    smoothedDrive.reset(sampleRate, 0.1);
+    smoothedOutput.reset(sampleRate, 0.1);
 
-    // Начальные значения
-    smoothedDrive.setCurrentAndTargetValue(1.0f); // Drive = 1.0 (нет искажений)
+    smoothedDrive.setCurrentAndTargetValue(1.0f);
     smoothedOutput.setCurrentAndTargetValue(1.0f);
 }
 
@@ -82,62 +81,66 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 {
     juce::ScopedNoDenormals noDenormals;
     const int totalNumInputChannels  = getTotalNumInputChannels();
-    const int totalNumOutputChannels = getTotalNumOutputChannels();
     const int numSamples = buffer.getNumSamples();
 
-    // Очистка лишних каналов
-    for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
-        buffer.clear(i, 0, numSamples);
+    // --- 1. Параметры ---
 
-    // --- 1. Читаем параметры (APVTS) ---
-
-    // Получаем значение в Децибелах из слайдера (0..24 dB)
+    // Расширим диапазон вниз, чтобы можно было сделать чистый звук
+    // Если в Editor'е слайдер от 0, то считаем, что это "добавочный" гейн.
+    // Но давай пока считать так: параметр APVTS - это dB.
     float driveDb = *apvts.getRawParameterValue("drive_master");
     float outDb   = *apvts.getRawParameterValue("output_gain");
 
-    // Конвертируем dB в линейное усиление (Gain)
     float targetDrive = juce::Decibels::decibelsToGain(driveDb);
     float targetOut   = juce::Decibels::decibelsToGain(outDb);
 
-    // Обновляем сглаживатели
     smoothedDrive.setTargetValue(targetDrive);
     smoothedOutput.setTargetValue(targetOut);
 
-    // --- 2. DSP: Split (Кроссовер) ---
+    // FIX: Получаем текущее значение и "проматываем" сглаживатель на длину блока,
+    // так как мы не вызываем getNextValue() для каждого сэмпла (экономим CPU).
+    float currentDrive = smoothedDrive.getNextValue();
+    smoothedDrive.skip(numSamples - 1);
+
+    float currentOut = smoothedOutput.getNextValue();
+    smoothedOutput.skip(numSamples - 1);
+
+    // Очистка мусора
+    for (auto i = totalNumInputChannels; i < getTotalNumOutputChannels(); ++i)
+        buffer.clear(i, 0, numSamples);
+
+    // --- 2. DSP: Split ---
     filterBank->splitIntoBands(buffer, bandBufferPtrs.data(), numSamples);
 
-    // --- 3. DSP: Saturation (Сатурация полос) ---
-    // Мы обрабатываем каждую полосу отдельно!
-
-    // Для оптимизации: получим текущее значение drive один раз на блок
-    // (или можно делать smoothedDrive.getNextValue() внутри цикла для супер-плавности)
-    float currentDrive = smoothedDrive.getNextValue();
-    float currentOut   = smoothedOutput.getNextValue();
+    // --- 3. DSP: Saturation ---
+    // FIX: Если Drive очень маленький, просто пропускаем звук (Bypass сатурации)
+    // Это поможет проверить качество фильтров.
+    bool bypassSaturation = (driveDb < 0.1f);
 
     for (int band = 0; band < kNumBands; ++band)
     {
-        // Проходим по каналам (L/R)
         for (int ch = 0; ch < totalNumInputChannels; ++ch)
         {
             auto* channelData = bandBuffers[band].getWritePointer(ch);
 
-            for (int i = 0; i < numSamples; ++i)
+            if (!bypassSaturation)
             {
-                // Берем сэмпл
-                float inSample = channelData[i];
-
-                // Сатурируем!
-                // Используем WarmTube (tanh) для начала
-                float processed = shapers[band].processSample(inSample, currentDrive, SaturationType::WarmTube);
-
-                // Записываем обратно
-                channelData[i] = processed;
+                for (int i = 0; i < numSamples; ++i)
+                {
+                    // Tanh (Soft Clip)
+                    // Убрали inSample * currentDrive, чтобы не бустить громкость дико.
+                    // Tanh сам по себе ограничивает сигнал в 1.0.
+                    // Drive здесь работает как "накачка" перед Tanh.
+                    float x = channelData[i] * currentDrive;
+                    channelData[i] = std::tanh(x);
+                }
             }
+            // Если bypassSaturation == true, буфер остается нетронутым (чистый выход фильтра)
         }
     }
 
-    // --- 4. DSP: Sum (Сборка) ---
-    buffer.clear(); // Очищаем выход перед суммированием
+    // --- 4. DSP: Sum ---
+    buffer.clear();
 
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
     {
@@ -149,8 +152,14 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             juce::FloatVectorOperations::add(outData, bandData, numSamples);
         }
 
-        // Применяем Output Gain ко всему миксу
+        // Output Gain
         juce::FloatVectorOperations::multiply(outData, currentOut, numSamples);
+
+        // FIX: Safety Hard Clipper на выходе, чтобы не улетать в +100dB
+        for (int i=0; i<numSamples; ++i)
+        {
+            outData[i] = std::clamp(outData[i], -2.0f, 2.0f);
+        }
     }
 }
 
