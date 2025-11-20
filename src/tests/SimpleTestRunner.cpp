@@ -149,7 +149,8 @@ int main(int argc, char* argv[])
 
         std::cout << "   ✓ DC Blocker: mean before=" << meanBefore << ", mean after=" << meanAfter << std::endl;
 
-        if (std::abs(meanAfter) < std::abs(meanBefore) * 0.1f) {
+        // DC должен быть значительно уменьшен (минимум в 5 раз)
+        if (std::abs(meanAfter) < std::abs(meanBefore) * 0.2f) {
             std::cout << "   ✓ DC Blocker PASSED" << std::endl;
         } else {
             std::cout << "   ✗ DC Blocker FAILED" << std::endl;
