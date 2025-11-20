@@ -33,6 +33,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         juce::ParameterID("output_gain", 1), "Output Gain",
         juce::NormalisableRange<float>(-24.0f, 6.0f, 0.1f), 0.0f));
 
+    // Группа (0-7)
+    layout.add(std::make_unique<juce::AudioParameterInt>(
+        "group_id", "Group ID", 0, 7, 0));
+
+    // Роль: 0 = Listener, 1 = Reference
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
+
     return layout;
 }
 
@@ -69,6 +77,8 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     smoothedDrive.setCurrentAndTargetValue(1.0f);
     smoothedOutput.setCurrentAndTargetValue(1.0f);
+
+    envelope.reset(sampleRate);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -115,6 +125,33 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         compensation = 1.0f / std::sqrt(currentDrive);
     }
 
+    // === NETWORK ===
+    // 1. Читаем параметры сети (раз в блок - дешево)
+    currentGroup = (int)*apvts.getRawParameterValue("group_id");
+    isReference  = (*apvts.getRawParameterValue("role") > 0.5f);
+
+    // 2. Если мы Reference -> Измеряем входной сигнал и шлем в сеть
+    if (isReference)
+    {
+        // Для простоты берем RMS или Пик всего входного буфера
+        // (В будущем сделаем пополосно, пока BroadBand)
+        float maxPeak = buffer.getMagnitude(0, numSamples);
+
+        // Обрабатываем через Envelope (атака/релиз)
+        float envValue = envelope.process(maxPeak);
+
+        // ПИШЕМ В СЕТЬ
+        NetworkManager::getInstance().updateGroupSignal(currentGroup, envValue);
+    }
+
+    // 3. Если мы Listener -> Читаем из сети
+    float networkModulator = 0.0f;
+    if (!isReference)
+    {
+        // ЧИТАЕМ ИЗ СЕТИ
+        networkModulator = NetworkManager::getInstance().getGroupSignal(currentGroup);
+    }
+
     // Очистка мусора
     for (auto i = totalNumInputChannels; i < getTotalNumOutputChannels(); ++i)
         buffer.clear(i, 0, numSamples);
@@ -129,6 +166,27 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
     for (int band = 0; band < kNumBands; ++band)
     {
+        // !!! ТЕСТ СЕТИ !!!
+        // Модифицируем Drive в зависимости от сигнала сети.
+        // Если Reference громкий (networkModulator -> 1.0), мы уменьшаем Drive.
+        // Эффект "Inverse Grime" (Грязь в тишине, чистота на ударе).
+
+        float modDrive = currentDrive;
+
+        if (!isReference && networkModulator > 0.0f)
+        {
+            // Простая формула для теста:
+            // Чем громче референс, тем меньше драйва.
+            // 1.0 - networkModulator * 0.8 (глубина эффекта)
+            float ducking = 1.0f - (networkModulator * 0.8f);
+            if (ducking < 0.0f) ducking = 0.0f;
+
+            modDrive *= ducking;
+        }
+
+        // Компенсацию считаем от МОДИФИЦИРОВАННОГО драйва
+        float compensation = (modDrive > 1.0f) ? (1.0f / std::sqrt(modDrive)) : 1.0f;
+
         for (int ch = 0; ch < totalNumInputChannels; ++ch)
         {
             auto* channelData = bandBuffers[band].getWritePointer(ch);
@@ -137,19 +195,23 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             {
                 for (int i = 0; i < numSamples; ++i)
                 {
-                    // Tanh (Soft Clip)
-                    // Убрали inSample * currentDrive, чтобы не бустить громкость дико.
-                    // Tanh сам по себе ограничивает сигнал в 1.0.
-                    // Drive здесь работает как "накачка" перед Tanh.
-                    float x = channelData[i] * currentDrive;
+                    // Используем modDrive вместо currentDrive
+                    float x = channelData[i] * modDrive;
                     channelData[i] = std::tanh(x);
                 }
             }
             // Если bypassSaturation == true, буфер остается нетронутым (чистый выход фильтра)
         }
+
+        // Применяем компенсацию к полосе
+        juce::FloatVectorOperations::multiply(
+            bandBuffers[band].getWritePointer(0), compensation, numSamples);
+        if (totalNumInputChannels > 1)
+            juce::FloatVectorOperations::multiply(
+                bandBuffers[band].getWritePointer(1), compensation, numSamples);
     }
 
-    // --- 4. DSP: Sum & Apply Compensation ---
+    // --- 4. DSP: Sum ---
     buffer.clear();
 
     for (int ch = 0; ch < totalNumInputChannels; ++ch)
@@ -162,11 +224,8 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             juce::FloatVectorOperations::add(outData, bandData, numSamples);
         }
 
-        // ПРИМЕНЯЕМ КОМПЕНСАЦИЮ + OUTPUT GAIN
-        // Сначала компенсируем перегруз от драйва, потом применяем ручку Output
-        float finalGain = currentOut * compensation;
-
-        juce::FloatVectorOperations::multiply(outData, finalGain, numSamples);
+        // Output Gain
+        juce::FloatVectorOperations::multiply(outData, currentOut, numSamples);
 
         // Safety Limiter (мягкий клиппер вместо жесткого clamp)
         for (int i=0; i<numSamples; ++i)

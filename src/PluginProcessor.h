@@ -5,7 +5,8 @@
 #include <juce_dsp/juce_dsp.h>
 #include "dsp/FilterBank.h"
 #include "dsp/Waveshaper.h" // Подключаем
-// #include "network/NetworkManager.h" // Подключим позже
+#include "dsp/Envelope.h"       // <-- NEW
+#include "network/NetworkManager.h" // <-- NEW
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
 {
@@ -69,8 +70,12 @@ private:
     juce::SmoothedValue<float> smoothedDrive;
     juce::SmoothedValue<float> smoothedOutput;
 
-    // === 3. Network (Связь) ===
-    // NetworkManager* network; // Синглтон, получим ссылку позже
+    // === NETWORK ===
+    EnvelopeFollower envelope; // Измеритель громкости (для Reference)
+
+    // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
+    int currentGroup = 0;
+    bool isReference = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CoheraSaturatorAudioProcessor)
 };
