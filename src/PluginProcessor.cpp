@@ -106,6 +106,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
         "heat_amount", "Global Heat",
         juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f), 0.0f)); // Default 0% (выкл)
 
+    // === PUNCH (Transient Control) ===
+    // Punch: -100% (Dirty Attack) ... 0% (Off) ... +100% (Clean Attack)
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "punch", "Punch",
+        juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f), 0.0f));
+
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
     layout.add(std::make_unique<juce::AudioParameterChoice>("role", "Role", juce::StringArray{"Listener", "Reference"}, 0));
@@ -239,6 +245,13 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
     // Настройка сглаживателя Global Heat (тепловая инерция 200мс)
     smoothedGlobalHeat.reset(sampleRate, 0.2f);
     smoothedGlobalHeat.setCurrentAndTargetValue(0.0f);
+
+    // === PUNCH INITIALIZATION ===
+    // Инициализируем на ВЫСОКОЙ частоте (работаем внутри оверсемплинга)
+    for(auto& det : transDetectors) det.prepare(osSampleRate);
+
+    smoothedPunch.reset(osSampleRate, 0.05);
+    smoothedPunch.setCurrentAndTargetValue(0.0f);
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -278,6 +291,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // === GLOBAL HEAT ===
     float heatParam = *apvts.getRawParameterValue("heat_amount");
 
+    // === PUNCH ===
+    float punchParam = *apvts.getRawParameterValue("punch") / 100.0f; // -1.0 .. 1.0
+
     // === EMPHASIS FILTERS ===
     float tightenParam = *apvts.getRawParameterValue("tone_tighten");
     float smoothParam  = *apvts.getRawParameterValue("tone_smooth");
@@ -297,6 +313,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Filter frequency smoothing
     smoothedTightenFreq.setTargetValue(tightenParam);
     smoothedSmoothFreq.setTargetValue(smoothParam);
+
+    // Punch parameter smoothing
+    smoothedPunch.setTargetValue(punchParam);
 
     // Network Control сглаживание
     smoothedNetDepth.setTargetValue(pDepth / 100.0f);
@@ -427,6 +446,41 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         // Применяем bias (аналоговый дрейф) - добавляет асимметрию
         float dcBias = heatVal * 0.1f; // До 0.1 (легкое смещение)
 
+        // === PUNCH (TRANSIENT CONTROL) ===
+        // Детекция транзиентов на входном сигнале
+        float inL = upsampledBlock.getChannelPointer(0)[i];
+        float inR = (numCh > 1) ? upsampledBlock.getChannelPointer(1)[i] : inL;
+
+        // Сила транзиента (0..1)
+        float transL = transDetectors[0].process(inL);
+        float transR = transDetectors[1].process(inR);
+
+        // Получаем текущий punch параметр (-1..1)
+        float punchVal = smoothedPunch.getNextValue();
+
+        // Рассчитываем модификатор драйва
+        // Если punchVal > 0: Clean Attack (драйв падает на транзиенте)
+        // Если punchVal < 0: Dirty Attack (драйв растет на транзиенте)
+        float punchModL = 1.0f;
+        float punchModR = 1.0f;
+
+        if (std::abs(punchVal) > 0.01f)
+        {
+            if (punchVal > 0.0f) {
+                // Clean Attack: уменьшаем драйв до 20% в пике
+                punchModL = 1.0f - (transL * punchVal * 0.8f);
+                punchModR = 1.0f - (transR * punchVal * 0.8f);
+            } else {
+                // Dirty Attack: увеличиваем драйв до +200% в пике
+                punchModL = 1.0f - (transL * punchVal * 2.0f); // punchVal отрицательный
+                punchModR = 1.0f - (transR * punchVal * 2.0f);
+            }
+
+            // Ограничиваем снизу
+            punchModL = std::max(0.1f, punchModL);
+            punchModR = std::max(0.1f, punchModR);
+        }
+
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
@@ -477,22 +531,26 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
             // 4. Применяем Global Heat к драйву
             float heatDrive = baseDrive * (1.0f + heatVal * 0.5f); // До +50% драйва в пике микса
 
+            // 5. Применяем Punch модификатор к драйву
+            float punchDriveL = heatDrive * punchModL;
+            float punchDriveR = heatDrive * punchModR;
+
             // 5. Обработка через InteractionEngine
             float procL = 0.0f, procR = 0.0f;
 
             if (useMS)
             {
                 // M/S: Mid через A, Side через B
-                float pMid = InteractionEngine::processMorph(mid + dcBias, heatDrive * bandDriveScale[band], controlSignal, config);
-                float pSide = InteractionEngine::processMorph(side + dcBias, heatDrive * bandDriveScale[band], controlSignal, config);
+                float pMid = InteractionEngine::processMorph(mid + dcBias, punchDriveL * bandDriveScale[band], controlSignal, config);
+                float pSide = InteractionEngine::processMorph(side + dcBias, punchDriveR * bandDriveScale[band], controlSignal, config);
                 MSMatrix::decode(pMid, pSide, procL, procR);
             }
             else
             {
                 // Обычная L/R обработка
-                procL = InteractionEngine::processMorph(xL + dcBias, heatDrive * bandDriveScale[band], controlSignal, config);
+                procL = InteractionEngine::processMorph(xL + dcBias, punchDriveL * bandDriveScale[band], controlSignal, config);
                 if (numCh > 1)
-                    procR = InteractionEngine::processMorph(xR + dcBias, heatDrive * bandDriveScale[band], controlSignal, config);
+                    procR = InteractionEngine::processMorph(xR + dcBias, punchDriveR * bandDriveScale[band], controlSignal, config);
             }
 
             // 5. Predictive Gain

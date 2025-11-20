@@ -8,6 +8,7 @@
 #include "dsp/Envelope.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
+#include "dsp/TransientDetector.h"
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -123,6 +124,11 @@ private:
     // === GLOBAL HEAT ===
     int myInstanceIndex = -1; // ID слота в сети
     juce::LinearSmoothedValue<float> smoothedGlobalHeat;
+
+    // === PUNCH (Transient Control) ===
+    // Детекторы транзиентов ([0]=L, [1]=R, работают на высокой частоте)
+    std::array<TransientDetector, 2> transDetectors;
+    juce::SmoothedValue<float> smoothedPunch;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     int currentGroup = 0;
