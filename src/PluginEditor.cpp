@@ -288,7 +288,7 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(juce::Rectangle<int> 
     juce::Slider* knobs[] = { &tightenSlider, &punchSlider, &dynamicsSlider, &smoothSlider };
 
     for (auto* k : knobs) {
-        toneFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMaxWidth(63).withMaxHeight(63).withMargin(2.0f));
+        toneFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150).withMargin(2.0f));
     }
 
     toneFlex.performLayout(area.reduced(0, 5)); // Немного воздуха сверху/снизу
@@ -317,13 +317,13 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(juce::Rectangle<int> are
     auto knobArea = area.reduced(5, 0);
 
     auto topKnobRow = knobArea.removeFromTop(knobArea.getHeight() / 2);
-    netSensSlider.setBounds(topKnobRow.withSizeKeepingCentre(topKnobRow.getHeight() * 0.9f, topKnobRow.getHeight() * 0.9f));
+    netSensSlider.setBounds(topKnobRow.withSizeKeepingCentre(150, 150)); // 2.5x bigger
 
     // Нижний ряд (Depth, Smooth) - grid размещение
     juce::FlexBox netFlex;
     netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Лучший grid spacing
-    netFlex.items.add(juce::FlexItem(netDepthSlider).withFlex(1.0f).withMaxWidth(63).withMaxHeight(63));
-    netFlex.items.add(juce::FlexItem(netSmoothSlider).withFlex(1.0f).withMaxWidth(63).withMaxHeight(63));
+    netFlex.items.add(juce::FlexItem(netDepthSlider).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150));
+    netFlex.items.add(juce::FlexItem(netSmoothSlider).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150));
 
     netFlex.performLayout(knobArea);
 }
@@ -347,17 +347,13 @@ void CoheraSaturatorAudioProcessorEditor::layoutFooter(juce::Rectangle<int> area
 
     // Mojo ручки в grid размещении
     for (auto* k : mojoKnobs) {
-        mojoFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMaxWidth(63).withMaxHeight(63).withMargin(juce::FlexItem::Margin(0, 2, 0, 2)));
+        mojoFlex.items.add(juce::FlexItem(*k).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150).withMargin(juce::FlexItem::Margin(0, 2, 0, 2)));
     }
     mojoFlex.performLayout(leftSection.reduced(0, 5));
 
     // === 2. MIX CENTER ===
     // Mix Knob
-<<<<<<< HEAD
-    mixSlider.setBounds(centerSection.withSizeKeepingCentre(80, 80));
-=======
-    mixSlider.setBounds(centerSection.withSizeKeepingCentre(63, 63)); // 90% от 70
->>>>>>> 1b6d437 (🎛️ PERFECT KNOB SIZING: Drive 100%, Others 90% of Output/Focus Size)
+    mixSlider.setBounds(centerSection.withSizeKeepingCentre(150, 150)); // 2.5x bigger
 
     // Delta Button (Маленькая кнопка рядом с Mix)
     int btnSize = 20;
@@ -368,8 +364,8 @@ void CoheraSaturatorAudioProcessorEditor::layoutFooter(juce::Rectangle<int> area
     juce::FlexBox outFlex;
     outFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Лучший grid
 
-    outFlex.items.add(juce::FlexItem(focusSlider).withFlex(1.0f).withMaxWidth(63).withMaxHeight(63).withMargin(5));
-    outFlex.items.add(juce::FlexItem(outputSlider).withFlex(1.0f).withMaxWidth(63).withMaxHeight(63).withMargin(5));
+    outFlex.items.add(juce::FlexItem(focusSlider).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150).withMargin(5));
+    outFlex.items.add(juce::FlexItem(outputSlider).withFlex(1.0f).withMaxWidth(150).withMaxHeight(150).withMargin(5));
 
     outFlex.performLayout(rightSection.reduced(0, 5));
 }
