@@ -305,25 +305,26 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         for (int ch = 0; ch < getTotalNumInputChannels(); ++ch)
         {
-            auto* wetData = buffer.getWritePointer(ch);
+            auto* outData = buffer.getWritePointer(ch);
             const auto* dryData = dryBuffer.getReadPointer(ch);
 
             for (int i = 0; i < numSamples; ++i)
             {
                 // Dry/Wet Mix
-                // 0% = Чистый задержанный Dry
-                // 100% = Сатурированный RMS-согласованный Wet
-                float mixed = dryData[i] * (1.0f - currentMix) + wetData[i] * currentMix;
+                // Читаем из обоих буферов, записываем в выходной
+                float wetSample = outData[i];  // buffer содержит Wet
+                float drySample = dryData[i]; // dryBuffer содержит Dry
+
+                float mixed = drySample * (1.0f - currentMix) + wetSample * currentMix;
 
                 // Output Gain
                 mixed *= currentOutGain;
 
                 // Final Safety Limiter
-                // Жесткий потолок 0dBFS, чтобы не краснело
                 if (mixed > 1.0f) mixed = 1.0f;
                 else if (mixed < -1.0f) mixed = -1.0f;
 
-                wetData[i] = mixed;
+                outData[i] = mixed;
             }
         }
     }
