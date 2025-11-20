@@ -1,11 +1,14 @@
 #pragma once
 #include "../../JuceHeader.h"
 #include "../../ui/SimpleFFT.h"
+#include "../../network/NetworkManager.h"
 
 class SpectrumVisor : public juce::Component, private juce::Timer
 {
 public:
-    SpectrumVisor(SimpleFFT& fftToUse) : fft(fftToUse)
+    SpectrumVisor(SimpleFFT& fftToUse, juce::AudioProcessorValueTreeState& apvts)
+
+        : fft(fftToUse), apvts(apvts)
     {
         // 30 FPS достаточно для плавности
         startTimerHz(30);
@@ -79,6 +82,14 @@ public:
         // Рисуем контур
         g.setColour(juce::Colour::fromRGB(255, 200, 100));
         g.strokePath(p, juce::PathStrokeType(1.5f));
+
+        // 4. GHOST SPECTRUM (Reference) - "Линия"
+        // Рисуем только если мы Listener (чтобы видеть, под кого прогибаемся)
+        bool isRef = *apvts.getRawParameterValue("role") > 0.5f;
+        if (!isRef)
+        {
+            drawGhostCurve(g, w, h);
+        }
     }
     
     // Хелпер для сетки (Log scale mapping)
@@ -88,6 +99,52 @@ public:
         return w * (std::log10(freq / 20.0f) / std::log10(20000.0f / 20.0f));
     }
 
+    void drawGhostCurve(juce::Graphics& g, float w, float h)
+    {
+        int group = (int)*apvts.getRawParameterValue("group_id");
+        auto& net = NetworkManager::getInstance();
+
+        juce::Path ghostPath;
+        bool first = true;
+
+        // У нас 6 полос. Мы знаем их примерные центры (логарифмически).
+        // 0: Sub (~60Hz), 1: Low (~150Hz), 2: Mid (~400Hz), 3: HM (~1.5k), 4: Hi (~4k), 5: Air (~10k)
+        // Эти координаты (0.0-1.0 по X) подобраны эмпирически под Log шкалу
+        float bandXPositions[6] = { 0.15f, 0.3f, 0.45f, 0.6f, 0.75f, 0.9f };
+
+        for (int i = 0; i < 6; ++i)
+        {
+            // Получаем энергию полосы референса (0..1)
+            float energy = net.getBandSignal(group, i);
+
+            // Мапим на экран
+            float x = w * bandXPositions[i];
+            // Чуть усиливаем визуально, чтобы было видно
+            float y = h - (energy * h * 0.9f);
+
+            if (first) {
+                ghostPath.startNewSubPath(0, h); // Старт слева внизу
+                ghostPath.lineTo(x, y);
+                first = false;
+            } else {
+                // Рисуем кривые (Rounded)
+                ghostPath.lineTo(x, y);
+            }
+        }
+        ghostPath.lineTo(w, h); // Финиш справа внизу
+
+        // Рисуем "Призрака" (Мятный цвет - Network)
+        g.setColour(juce::Colour::fromRGB(0, 255, 200).withAlpha(0.4f));
+        // Пунктирная линия или просто толстая полупрозрачная
+        g.strokePath(ghostPath, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved));
+
+        // Заливка под призраком (очень слабая)
+        g.setColour(juce::Colour::fromRGB(0, 255, 200).withAlpha(0.1f));
+        ghostPath.closeSubPath();
+        g.fillPath(ghostPath);
+    }
+
 private:
     SimpleFFT& fft;
+    juce::AudioProcessorValueTreeState& apvts;
 };
