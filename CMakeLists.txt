@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(Cohera_Saturator VERSION 0.0.1)
+project(Cohera_Saturator VERSION 0.1.0)
 
 # 1. Подключаем JUCE (предполагаем, что он лежит рядом или установлен глобально)
 # Если используешь подмодуль git: add_subdirectory(JUCE)
 add_subdirectory(/Users/macos/JUCE JUCE)
+
+# Используем legacy parameter IDs чтобы избежать конфликтов VST2/VST3
+add_compile_definitions(JUCE_FORCE_USE_LEGACY_PARAM_IDS=1)
 
 # 2. Создаем цель плагина
 juce_add_plugin(Cohera_Saturator
@@ -15,8 +18,8 @@ juce_add_plugin(Cohera_Saturator
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
-    # Форматы - только Standalone пока
-    FORMATS Standalone
+    # Форматы - пробуем VST3
+    FORMATS VST3 Standalone
     # Название продукта
     PRODUCT_NAME "Cohera Saturator"
     plugin_name "Cohera Saturator"

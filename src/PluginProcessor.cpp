@@ -25,12 +25,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
 
     // Глобальный Drive (для примера)
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "drive_master", "Master Drive",
+        juce::ParameterID("drive_master", 1), "Master Drive",
         juce::NormalisableRange<float>(0.0f, 24.0f, 0.1f), 0.0f));
 
     // Output Gain
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "output_gain", "Output Gain",
+        juce::ParameterID("output_gain", 1), "Output Gain",
         juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f), 0.0f));
 
     return layout;
