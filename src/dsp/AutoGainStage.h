@@ -17,36 +17,50 @@ public:
         smoothedComp.setCurrentAndTargetValue(1.0f);
     }
 
+    // Вспомогательная функция: RMS с HPF фильтром
+    float getWeightedRMS(const juce::AudioBuffer<float>& buffer)
+    {
+        const int numSamples = buffer.getNumSamples();
+        const int numCh = buffer.getNumChannels();
+        double sumSquares = 0.0;
+
+        for (int ch = 0; ch < numCh; ++ch)
+        {
+            const float* data = buffer.getReadPointer(ch);
+            float prev = data[0];
+            for (int i = 1; i < numSamples; ++i)
+            {
+                float current = data[i];
+                float filtered = current - prev; // HPF дифференциатор
+                sumSquares += (filtered * filtered);
+                prev = current;
+            }
+        }
+
+        return (float)std::sqrt(sumSquares / (numSamples * numCh));
+    }
+
     // Шаг 1: Анализ входа (вызывать до обработки)
     void analyzeInput(const juce::AudioBuffer<float>& buffer)
     {
-        float energy = 0.0f;
-        const int numCh = buffer.getNumChannels();
-        const int numSamples = buffer.getNumSamples();
-
-        for (int ch = 0; ch < numCh; ++ch)
-            energy += buffer.getMagnitude(ch, 0, numSamples);
-
-        currentInLevel = inputFollower.process(energy / (float)numCh);
+        float energy = getWeightedRMS(buffer);
+        if (energy < 0.00001f) energy = 0.00001f;
+        currentInLevel = inputFollower.process(energy);
     }
 
     // Шаг 2: Анализ выхода и обновление компенсации (вызывать после обработки)
     void updateGainState(const juce::AudioBuffer<float>& buffer)
     {
-        float energy = 0.0f;
-        const int numCh = buffer.getNumChannels();
-        const int numSamples = buffer.getNumSamples();
-
-        for (int ch = 0; ch < numCh; ++ch)
-            energy += buffer.getMagnitude(ch, 0, numSamples);
-
-        float currentOutLevel = outputFollower.process(energy / (float)numCh);
+        float energy = getWeightedRMS(buffer);
+        if (energy < 0.00001f) energy = 0.00001f;
+        float currentOutLevel = outputFollower.process(energy);
 
         // Вычисляем цель
         float target = 1.0f;
         if (currentOutLevel > 0.001f && currentInLevel > 0.001f)
         {
-            target = currentInLevel / currentOutLevel;
+            // Добавляем небольшой буст +10% (1.1f), так как RMS матчинг часто звучит субъективно тише пикового
+            target = (currentInLevel / currentOutLevel) * 1.1f;
         }
 
         // Лимиты безопасности (+12dB / -24dB)
@@ -61,6 +75,9 @@ public:
     {
         return smoothedComp.getNextValue();
     }
+
+    // Получить текущий уровень входа (для сети)
+    float getCurrentInputLevel() const { return currentInLevel; }
 
 private:
     EnvelopeFollower inputFollower;
