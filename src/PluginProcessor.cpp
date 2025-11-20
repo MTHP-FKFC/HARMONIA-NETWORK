@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "dsp/Waveshaper.h"
 
 CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -37,6 +38,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "output_gain", "Output",
         juce::NormalisableRange<float>(-12.0f, 12.0f, 0.1f), 0.0f));
+
+    // Режим работы: 0 = Inverse Grime, 1 = Ghost Harmonics
+    layout.add(std::make_unique<juce::AudioParameterChoice>(
+        "mode", "Interaction Mode",
+        juce::StringArray{"Inverse Grime", "Ghost Harmonics"}, 0));
 
     // Group & Role
     layout.add(std::make_unique<juce::AudioParameterInt>("group_id", "Group ID", 0, 7, 0));
@@ -139,6 +145,9 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     float targetNetValue = (!isReference) ? NetworkManager::getInstance().getGroupSignal(currentGroup) : 0.0f;
     smoothedNetworkSignal.setTargetValue(targetNetValue);
 
+    // Читаем какой режим выбрал юзер
+    int modeIndex = *apvts.getRawParameterValue("mode"); // 0 или 1
+
     // --- 3. DRY КОПИЯ (для фазовой компенсации) ---
 
     juce::AudioBuffer<float> dryBuffer;
@@ -187,30 +196,78 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float outGain  = smoothedOutput.getNextValue();
         float compVal  = smoothedCompensation.getNextValue();
 
-        // 5.2 Логика Ducking (Network)
-        float dynamicMod = 1.0f;
-        if (!isReference && netVal > 0.0f) {
-            dynamicMod = 1.0f - (netVal * 0.5f);
-            if (dynamicMod < 0.0f) dynamicMod = 0.0f;
-        }
-        float effectiveDrive = driveVal * dynamicMod;
+        float effectiveDrive = driveVal;
+        SaturationType satType = SaturationType::WarmTube; // Дефолт
+        float satMix = 1.0f; // Дефолт - полностью обработанный
 
-        // 5.3 Суммирование полос (WET)
+        // === МОЗГ (Центр принятия решений) ===
+
+        if (!isReference)
+        {
+            if (modeIndex == 0) // MODE: INVERSE GRIME (Ducking)
+            {
+                // Чем громче Reference, тем МЕНЬШЕ драйва у нас.
+                // Мы становимся "чище", чтобы уступить место.
+                float dynamicMod = 1.0f;
+                if (netVal > 0.0f) {
+                    dynamicMod = 1.0f - (netVal * 0.6f); // Depth 60%
+                    if (dynamicMod < 0.0f) dynamicMod = 0.0f;
+                }
+                effectiveDrive *= dynamicMod;
+                satType = SaturationType::WarmTube;
+            }
+            else if (modeIndex == 1) // MODE: GHOST HARMONICS
+            {
+                // Чем громче Reference, тем БОЛЬШЕ мы превращаемся в Rectifier.
+                // netVal (0..1) управляет миксом между Tube и Rectifier.
+
+                // Базовый драйв не трогаем.
+                effectiveDrive = driveVal;
+
+                // Если Reference молчит -> мы обычный WarmTube
+                // Если Reference бьет -> мы плавно становимся Rectifier
+                // Но только для НИЗКИХ частот (см. ниже в цикле по полосам)
+            }
+        }
+
+        // === ОБРАБОТКА ПОЛОС ===
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
         for (int band = 0; band < kNumBands; ++band)
         {
+            // Определяем тип сатурации для конкретной полосы
+            SaturationType currentBandType = satType;
+            float currentBandMix = 1.0f;
+
+            // Спец-логика для Ghost Harmonics
+            if (!isReference && modeIndex == 1)
+            {
+                // Применяем эффект ТОЛЬКО к 1-й и 2-й полосе (Sub и Low)
+                if (band <= 1)
+                {
+                    // Если сеть активна -> подмешиваем Rectifier
+                    if (netVal > 0.1f) {
+                        currentBandType = SaturationType::Rectifier;
+                        // Сила эффекта зависит от громкости референса
+                        currentBandMix = std::min(1.0f, netVal * 1.5f);
+                    } else {
+                        currentBandType = SaturationType::WarmTube;
+                    }
+                }
+            }
+
             // Левый канал
             float xL = bandBuffers[band].getSample(0, i);
-            xL *= effectiveDrive;
-            wetSampleL += std::tanh(xL); // Суммируем сатурированную полосу
+            // Шейпер с поддержкой микса и типа
+            float processedL = shapers[band].processSample(xL, effectiveDrive, currentBandType, currentBandMix);
+            wetSampleL += processedL;
 
-            // Правый канал (если есть)
+            // Правый канал
             if (outR) {
                 float xR = bandBuffers[band].getSample(1, i);
-                xR *= effectiveDrive;
-                wetSampleR += std::tanh(xR);
+                float processedR = shapers[band].processSample(xR, effectiveDrive, currentBandType, currentBandMix);
+                wetSampleR += processedR;
             }
         }
 
