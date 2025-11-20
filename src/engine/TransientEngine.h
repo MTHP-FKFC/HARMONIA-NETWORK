@@ -4,7 +4,7 @@
 #include "../CoheraTypes.h"
 #include "../parameters/ParameterSet.h"
 #include "../dsp/MathSaturator.h"
-#include "../dsp/TransientSplitter.h"
+// #include "../dsp/TransientSplitter.h" // TEMPORARILY COMMENTED
 
 namespace Cohera {
 
@@ -14,10 +14,10 @@ public:
     void prepare(const juce::dsp::ProcessSpec& spec)
     {
         // Для каждого канала свой сплиттер
-        for (auto& s : splitters) {
-            s.prepare(spec.sampleRate);
-            s.reset();
-        }
+        // for (auto& s : splitters) {
+        //     s.prepare(spec.sampleRate);
+        //     s.reset();
+        // }
 
         // Сглаживание панча
         smoothedPunch.reset(spec.sampleRate, 0.05);
@@ -26,7 +26,7 @@ public:
 
     void reset()
     {
-        for (auto& s : splitters) s.reset();
+        // for (auto& s : splitters) s.reset();
         smoothedPunch.setCurrentAndTargetValue(0.0f);
     }
 
@@ -47,53 +47,21 @@ public:
         {
             float punchVal = smoothedPunch.getNextValue();
 
-            // Оптимизация: если Punch около 0, работаем в режиме обычной сатурации (без сплита)
-            // Это экономит CPU, пропуская TransientSplitter
-            bool isNeutral = std::abs(punchVal) < 0.01f;
-
+            // TEMPORARY: Simple processing without Split & Crush for compilation test
             for (size_t ch = 0; ch < numChannels; ++ch)
             {
                 float* data = block.getChannelPointer(ch);
                 float input = data[i];
 
-                if (isNeutral)
-                {
-                    // Классический режим: просто сатурация
-                    data[i] = mathSaturator.processSample(input, baseDrive, params.mathMode);
-                }
-                else
-                {
-                    // Режим Split & Crush
-                    auto split = splitters[ch].process(input);
-
-                    // 1. Body всегда жирное (основной алгоритм)
-                    float processedBody = mathSaturator.processSample(split.body, baseDrive, params.mathMode);
-
-                    // 2. Transient зависит от режима Punch
-                    float processedTrans = 0.0f;
-
-                    if (punchVal > 0.0f) // Positive: Dirty Attack
-                    {
-                        float transDrive = baseDrive * (1.0f + punchVal * 2.0f);
-                        processedTrans = mathSaturator.processSample(split.trans, transDrive, params.mathMode);
-                    }
-                    else // Negative: Clean Attack
-                    {
-                        float transDrive = baseDrive * (1.0f - std::abs(punchVal) * 0.8f);
-                        // Используем EulerTube для мягкости на атаках в Clean режиме
-                        processedTrans = mathSaturator.processSample(split.trans, transDrive, MathMode::EulerTube);
-                    }
-
-                    // Сумма
-                    data[i] = processedBody + processedTrans;
-                }
+                // Простая сатурация без Split & Crush
+                data[i] = mathSaturator.processSample(input, baseDrive, params.mathMode);
             }
         }
     }
 
 private:
     // Сплиттеры для стерео (макс 2 канала)
-    std::array<TransientSplitter, 2> splitters;
+    // std::array<TransientSplitter, 2> splitters; // TEMPORARILY COMMENTED
     MathSaturator mathSaturator;
 
     juce::SmoothedValue<float> smoothedPunch;

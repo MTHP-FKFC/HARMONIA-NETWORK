@@ -14,6 +14,7 @@
 #include "parameters/ParameterSet.h"
 #include "parameters/ParameterManager.h"
 #include "engine/SaturationEngine.h"
+#include "engine/BandProcessingEngineNew.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
 // #include "dsp/TransientSplitter.h" // TEMPORARILY COMMENTED

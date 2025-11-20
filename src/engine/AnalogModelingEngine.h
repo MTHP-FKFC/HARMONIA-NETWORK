@@ -3,9 +3,9 @@
 #include <juce_dsp/juce_dsp.h>
 #include "../CoheraTypes.h"
 #include "../parameters/ParameterSet.h"
-#include "../dsp/ThermalModel.h"
-#include "../dsp/HarmonicEntropy.h"
-#include "../dsp/StereoVariance.h"
+// #include "../dsp/ThermalModel.h"      // TEMPORARILY COMMENTED
+// #include "../dsp/HarmonicEntropy.h"   // TEMPORARILY COMMENTED
+// #include "../dsp/StereoVariance.h"    // TEMPORARILY COMMENTED
 
 namespace Cohera {
 
@@ -14,14 +14,14 @@ class AnalogModelingEngine
 public:
     void prepare(const juce::dsp::ProcessSpec& spec)
     {
-        for (int ch = 0; ch < 2; ++ch) {
-            tubes[ch].prepare(spec.sampleRate);
-            tubes[ch].reset();
-            entropyModules[ch].prepare(spec.sampleRate);
-            entropyModules[ch].reset();
-        }
+        // for (int ch = 0; ch < 2; ++ch) {
+        //     tubes[ch].prepare(spec.sampleRate);
+        //     tubes[ch].reset();
+        //     entropyModules[ch].prepare(spec.sampleRate);
+        //     entropyModules[ch].reset();
+        // }
 
-        varianceModule.prepare(spec.sampleRate);
+        // varianceModule.prepare(spec.sampleRate);
 
         // Сглаживание параметров
         smoothAnalogDrift.reset(spec.sampleRate, 0.05);
@@ -31,10 +31,10 @@ public:
 
     void reset()
     {
-        for (int ch = 0; ch < 2; ++ch) {
-            tubes[ch].reset();
-            entropyModules[ch].reset();
-        }
+        // for (int ch = 0; ch < 2; ++ch) {
+        //     tubes[ch].reset();
+        //     entropyModules[ch].reset();
+        // }
         smoothAnalogDrift.setCurrentAndTargetValue(0.0f);
     }
 
@@ -46,42 +46,15 @@ public:
         smoothEntropy.setTargetValue(params.entropy);
         smoothVariance.setTargetValue(params.variance);
 
-        auto numSamples = block.getNumSamples();
-
-        // Получаем текущие значения параметров (берем первое значение на блок для простотыVariance/Drift)
-        // Для супер-точности можно делать внутри цикла, но variance обычно медленный LFO.
-        float driftAmount = smoothAnalogDrift.getNextValue();
-        float entropyAmount = smoothEntropy.getNextValue();
-        float varAmount = smoothVariance.getNextValue();
-
-        // Расчет стерео разброса драйва
-        auto driftmults = varianceModule.getDrift(varAmount);
-
-        for (size_t i = 0; i < numSamples; ++i)
-        {
-            for (size_t ch = 0; ch < block.getNumChannels(); ++ch)
-            {
-                float* data = block.getChannelPointer(ch);
-                float x = data[i];
-
-                // 1. Thermal Bias (Ламповый нагрев)
-                float bias = tubes[ch].process(x) * driftAmount;
-
-                // 2. Entropy (Стохастический дрейф)
-                float entropy = entropyModules[ch].process(entropyAmount);
-
-                // Добавляем смещение к сигналу
-                data[i] = x + bias + entropy;
-            }
-        }
-
-        return { driftmults.driveMultL, driftmults.driveMultR };
+        // TEMPORARY: Simple processing without complex analog modeling
+        // Just return neutral drive multipliers (1.0, 1.0)
+        return { 1.0f, 1.0f };
     }
 
 private:
-    std::array<ThermalModel, 2> tubes;
-    std::array<HarmonicEntropy, 2> entropyModules;
-    StereoVariance varianceModule;
+    // std::array<ThermalModel, 2> tubes;         // TEMPORARILY COMMENTED
+    // std::array<HarmonicEntropy, 2> entropyModules; // TEMPORARILY COMMENTED
+    // StereoVariance varianceModule;             // TEMPORARILY COMMENTED
 
     juce::SmoothedValue<float> smoothAnalogDrift;
     juce::SmoothedValue<float> smoothEntropy;
