@@ -223,6 +223,13 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
         float wetSampleL = 0.0f;
         float wetSampleR = 0.0f;
 
+        // Определяем Spectral Tilt для драйва
+        // Сильно уменьшаем драйв на Сабе (0) и Низах (1).
+        // Это даст чистый, плотный низ, но грязную середину.
+        // Band 0 (Sub): 0.4x (Почти чисто)
+        // Band 1 (Bass): 0.7x
+        static const float bandDriveScale[6] = { 0.4f, 0.7f, 1.0f, 1.0f, 1.1f, 1.2f };
+
         for (int band = 0; band < kNumBands; ++band)
         {
             // Определяем тип сатурации
@@ -235,14 +242,17 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
                 shaperMix = std::max(blendVal, ghostAmount);
             }
 
+            // Применяем Tilt к драйву этой полосы
+            float tiltDrive = effectiveDrive * bandDriveScale[band];
+
             // Left
             float xL = bandBuffers[band].getSample(0, i);
-            wetSampleL += shapers[band].processSample(xL, effectiveDrive, type, shaperMix);
+            wetSampleL += shapers[band].processSample(xL, tiltDrive, type, shaperMix);
 
             // Right
             if (numCh > 1) {
                 float xR = bandBuffers[band].getSample(1, i);
-                wetSampleR += shapers[band].processSample(xR, effectiveDrive, type, shaperMix);
+                wetSampleR += shapers[band].processSample(xR, tiltDrive, type, shaperMix);
             }
         }
 
@@ -260,13 +270,36 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
 
         float finalL = dryL[i] * (1.0f - mixVal) + wetSampleL * mixVal;
         finalL *= outGain;
-        finalL = std::tanh(finalL);
+
+        // Safety Limiter с запасом -0.3 dB
+        float ceiling = 0.96f;
+
+        // Мягкое колено лимитера
+        if (finalL > ceiling)
+            finalL = ceiling + std::tanh(finalL - ceiling) * 0.01f;
+        else if (finalL < -ceiling)
+            finalL = -ceiling + std::tanh(finalL + ceiling) * 0.01f;
+
+        // Жесткая обрезка "на всякий случай"
+        if (finalL > 1.0f) finalL = 1.0f;
+        if (finalL < -1.0f) finalL = -1.0f;
+
         outL[i] = finalL;
 
         if (outR) {
             float finalR = dryR[i] * (1.0f - mixVal) + wetSampleR * mixVal;
             finalR *= outGain;
-            finalR = std::tanh(finalR);
+
+            // Safety Limiter с запасом -0.3 dB
+            if (finalR > ceiling)
+                finalR = ceiling + std::tanh(finalR - ceiling) * 0.01f;
+            else if (finalR < -ceiling)
+                finalR = -ceiling + std::tanh(finalR + ceiling) * 0.01f;
+
+            // Жесткая обрезка "на всякий случай"
+            if (finalR > 1.0f) finalR = 1.0f;
+            if (finalR < -1.0f) finalR = -1.0f;
+
             outR[i] = finalR;
         }
     }
