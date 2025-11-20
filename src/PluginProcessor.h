@@ -6,7 +6,6 @@
 #include "dsp/FilterBank.h"
 #include "dsp/Waveshaper.h"
 #include "dsp/Envelope.h"
-#include "dsp/SidechainNormalizer.h" // <-- NEW
 #include "network/NetworkManager.h"
 
 class CoheraSaturatorAudioProcessor : public juce::AudioProcessor
@@ -79,11 +78,7 @@ private:
     juce::SmoothedValue<float> smoothedDrive;
     juce::SmoothedValue<float> smoothedOutput;
     juce::LinearSmoothedValue<float> smoothedNetworkSignal;
-    juce::SmoothedValue<float> smoothedSatBlend;
-    juce::LinearSmoothedValue<float> smoothedCompensation;
-
-    // Заменяем россыпь переменных на объекты с единой ответственностью
-    SidechainNormalizer scNormalizer;
+    juce::SmoothedValue<float> smoothedCompensation;
 
     // === NETWORK ===
     EnvelopeFollower envelope; // Измеритель громкости (для Reference)
