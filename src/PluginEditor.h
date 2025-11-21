@@ -51,8 +51,8 @@ private:
   NetworkBrain networkBrain; // Network Intelligence Panel
 
   // Groups
-  ControlGroup satGroup{"SATURATION CORE", CoheraUI::kOrangeNeon};
-  ControlGroup netGroup{"NETWORK INTELLIGENCE", CoheraUI::kCyanNeon};
+  ControlGroup satGroup{"PROCESSING", CoheraUI::kOrangeNeon};
+  ControlGroup netGroup{"SATURATION & NETWORK", CoheraUI::kOrangeNeon};
 
   // Controls
   juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector,
