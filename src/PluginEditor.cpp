@@ -53,8 +53,8 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
 
   // --- VISOR ---
   shakerContainer.addAndMakeVisible(spectrumVisor);
-  // BioScanner временно отключен для производительности
-  // shakerContainer.addAndMakeVisible(bioScanner);
+  // BioScanner - оптимизирован и включен обратно
+  shakerContainer.addAndMakeVisible(bioScanner);
 
   // --- COSMIC NEBULA SHAPER (Transfer Function Overlay) ---
   shakerContainer.addAndMakeVisible(nebulaShaper);
@@ -348,8 +348,8 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
   // hud.setEnergyLevel(outputRMS);
   neuralLink.setEnergyLevel(inputRMS);
   glitchOverlay.setEnergyLevel(transientLevel);
-  // BioScanner временно отключен для производительности
-  // bioScanner.setEnergyLevel(outputRMS);
+  // BioScanner - оптимизирован и включен обратно
+  bioScanner.setEnergyLevel(outputRMS);
 
   // Обрабатываем FFT данные
   audioProcessor.processFFTForGUI();
@@ -417,8 +417,8 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
 
   // Visor занимает всё оставшееся место в топе
   spectrumVisor.setBounds(topSection);
-  // BioScanner временно отключен для производительности
-  // bioScanner.setBounds(spectrumVisor.getBounds());
+  // BioScanner - оптимизирован и включен обратно
+  bioScanner.setBounds(spectrumVisor.getBounds());
 
   // Cosmic Nebula Shaper - Transfer Function Overlay
   nebulaShaper.setBounds(topSection);
