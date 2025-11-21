@@ -12,6 +12,7 @@ namespace CoheraUI {
     const juce::Colour kOrangeNeon   = juce::Colour::fromFloatRGBA(1.0f, 0.6f, 0.0f, 1.0f);    // Drive Glow
     const juce::Colour kCyanNeon     = juce::Colour::fromFloatRGBA(0.0f, 0.9f, 1.0f, 1.0f);    // Net Glow
     const juce::Colour kRedNeon      = juce::Colour::fromFloatRGBA(1.0f, 0.2f, 0.3f, 1.0f);    // Mute
+    const juce::Colour kAccentGreen  = juce::Colour::fromFloatRGBA(0.2f, 1.0f, 0.4f, 1.0f);    // System Status
 
     const juce::Colour kTextBright   = juce::Colours::white.withAlpha(0.95f);
     const juce::Colour kTextDim      = juce::Colours::white.withAlpha(0.4f);

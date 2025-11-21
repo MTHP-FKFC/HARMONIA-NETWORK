@@ -16,8 +16,10 @@ fi
 echo "✓ Test 2: Compilation check"
 if [ -d "build" ]; then
     echo "  ✓ Build directory exists"
-    if [ -f "build/Cohera_Saturator_artefacts/VST3/Cohera Saturator.vst3" ]; then
+    if [ -f "build/Cohera_Saturator_artefacts/Release/VST3/Cohera Saturator.vst3/Contents/MacOS/Cohera Saturator" ]; then
         echo "  ✓ VST3 plugin built successfully"
+    elif [ -f "build/Cohera_Saturator_artefacts/VST3/Cohera Saturator.vst3/Contents/MacOS/Cohera Saturator" ]; then
+        echo "  ✓ VST3 plugin built successfully (Debug mode)"
     else
         echo "  ✗ VST3 plugin not found"
         exit 1
@@ -53,3 +55,6 @@ echo "To run full integration tests:"
 echo "1. Build in Debug mode: cmake .. && make -j4"
 echo "2. Run Standalone: ./build/Cohera_Saturator_artefacts/Standalone/Cohera\\ Saturator.app/Contents/MacOS/Cohera\\ Saturator"
 echo "3. Check console output for test results"
+echo ""
+echo "To run Basic Signal Flow Test:"
+echo "4. Run: ./build/BasicSignalFlowTest --run-tests"

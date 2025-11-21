@@ -26,7 +26,7 @@ public:
         pNetDepth   = apvts.getRawParameterValue("net_depth");
         pNetSmooth  = apvts.getRawParameterValue("net_smooth");
         pNetSens    = apvts.getRawParameterValue("net_sens");
-        pHeat       = apvts.getRawParameterValue("heat");
+        pHeat       = apvts.getRawParameterValue("heat_amount");
         pDrift      = apvts.getRawParameterValue("analog_drift");
         pVariance   = apvts.getRawParameterValue("variance");
         pEntropy    = apvts.getRawParameterValue("entropy");
@@ -68,6 +68,7 @@ public:
         params.variance = pVariance->load() / 100.0f;
         params.entropy = pEntropy->load() / 100.0f;
         params.noise = pNoise->load() / 100.0f;
+        params.focus = pFocus->load() / 100.0f;
 
         params.groupId = (int)pGroup->load();
         params.netRole = static_cast<NetworkRole>((int)pRole->load());

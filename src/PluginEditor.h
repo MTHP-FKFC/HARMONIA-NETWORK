@@ -1,79 +1,107 @@
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
 #include "PluginProcessor.h"
 #include "ui/CoheraLookAndFeel.h"
-#include "ui/SpectrumVisor.h"
-#include "ui/ControlGroup.h"
 #include "ui/Components/EnergyLink.h"
+#include "ui/ControlGroup.h"
+#include "ui/SpectrumVisor.h"
 #include "ui/components/ReactorKnob.h"
 #include "ui/visuals/CosmicDust.h"
+#include "ui/visuals/GlitchOverlay.h"
+#include "ui/visuals/HeadsUpDisplay.h"
+#include "ui/visuals/HorizonGrid.h"
 #include "ui/visuals/NeuralLink.h"
+#include "ui/visuals/TechDecor.h"
+#include "ui/visuals/TextureOverlay.h"
 #include "ui/visuals/TransferFunctionDisplay.h"
+#include "ui/visuals/ScreenShaker.h"
+#include "ui/visuals/BioScanner.h"
+#include <juce_gui_basics/juce_gui_basics.h>
 // #include "ui/Components/InteractionMeter.h"
 
-class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor, private juce::Timer
-{
+class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor,
+                                            private juce::Timer {
 public:
-    CoheraSaturatorAudioProcessorEditor (CoheraSaturatorAudioProcessor&);
-    ~CoheraSaturatorAudioProcessorEditor() override;
+  CoheraSaturatorAudioProcessorEditor(CoheraSaturatorAudioProcessor &);
+  ~CoheraSaturatorAudioProcessorEditor() override;
 
-    void paint (juce::Graphics&) override;
-    void resized() override;
-    void timerCallback() override;
+  void paint(juce::Graphics &) override;
+  void paintOverChildren(juce::Graphics &) override;
+  void resized() override;
+  void timerCallback() override;
 
 private:
-    void setupKnob(juce::Slider& s, juce::String paramId, juce::String displayName, juce::Colour c);
+  void setupKnob(juce::Slider &s, juce::String paramId,
+                 juce::String displayName, juce::Colour c);
 
-    // Layout helpers
-    void layoutSaturation(juce::Rectangle<int> area);
-    void layoutNetwork(juce::Rectangle<int> area);
-    void layoutFooter(juce::Rectangle<int> area);
+  // Layout helpers
+  void layoutSaturation(juce::Rectangle<int> area);
+  void layoutNetwork(juce::Rectangle<int> area);
+  void layoutFooter(juce::Rectangle<int> area);
 
-    CoheraSaturatorAudioProcessor& audioProcessor;
+  CoheraSaturatorAudioProcessor &audioProcessor;
 
-    static inline std::unique_ptr<CoheraUI::CoheraLookAndFeel> sharedLookAndFeel;
+  static inline std::unique_ptr<CoheraUI::CoheraLookAndFeel> sharedLookAndFeel;
 
-    // Components
-    SpectrumVisor spectrumVisor;
-    EnergyLink energyLink; // Центральный поток энергии
-    // InteractionMeter interactionMeter; // Наш новый метр - временно отключен
+  // Components
+  SpectrumVisor spectrumVisor;
+  EnergyLink energyLink; // Центральный поток энергии
+  // InteractionMeter interactionMeter; // Наш новый метр - временно отключен
 
-    // Groups
-    ControlGroup satGroup { "SATURATION CORE", CoheraUI::kOrangeNeon };
-    ControlGroup netGroup { "NETWORK INTELLIGENCE", CoheraUI::kCyanNeon };
+  // Groups
+  ControlGroup satGroup{"SATURATION CORE", CoheraUI::kOrangeNeon};
+  ControlGroup netGroup{"NETWORK INTELLIGENCE", CoheraUI::kCyanNeon};
 
-    // Controls
-    juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector, netSatSelector, qualitySelector;
-    juce::TextButton cascadeButton;
+  // Controls
+  juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector,
+      netSatSelector, qualitySelector;
+  juce::TextButton cascadeButton;
 
-    // Saturation Knobs
-    ReactorKnob driveSlider;
-    juce::Slider tightenSlider, smoothSlider, punchSlider, dynamicsSlider;
+  // Saturation Knobs
+  ReactorKnob driveSlider;
+  juce::Slider tightenSlider, smoothSlider, punchSlider, dynamicsSlider;
 
-    // Network Knobs
-    juce::Slider netSensSlider, netDepthSlider, netSmoothSlider;
+  // Network Knobs
+  juce::Slider netSensSlider, netDepthSlider, netSmoothSlider;
 
-    // Global / Mojo Knobs (Footer)
-    juce::Slider mixSlider, outputSlider, focusSlider;
-    juce::Slider heatSlider, driftSlider, varianceSlider, entropySlider, noiseSlider; // Mojo ручки
+  // Global / Mojo Knobs (Footer)
+  juce::Slider mixSlider, outputSlider, focusSlider;
+  juce::Slider heatSlider, driftSlider, varianceSlider, entropySlider,
+      noiseSlider; // Mojo ручки
 
-    // Buttons & Selectors
-    juce::TextButton deltaButton;
+  // Buttons & Selectors
+  juce::TextButton deltaButton;
 
-    // Attachments
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment, netSatAttachment, qualityAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> driveAttachment, dynamicsAttachment, outputAttachment, focusAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> heatAttachment, driftAttachment, varianceAttachment, entropyAttachment, noiseAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> deltaAttachment, cascadeAttachment;
-    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
+  // Attachments
+  std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
+      groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment,
+      netSatAttachment, qualityAttachment;
+  std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
+      driveAttachment, dynamicsAttachment, outputAttachment, focusAttachment;
+  std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
+      heatAttachment, driftAttachment, varianceAttachment, entropyAttachment,
+      noiseAttachment;
+  std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
+      deltaAttachment, cascadeAttachment;
+  std::vector<
+      std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>>
+      sliderAttachments;
 
-    std::unique_ptr<CoheraUI::CoheraLookAndFeel> lookAndFeel;
+  std::unique_ptr<CoheraUI::CoheraLookAndFeel> lookAndFeel;
 
-    // New Visual System v2.0
-    CosmicDust cosmicDust;
-    NeuralLink neuralLink;
-    TransferFunctionDisplay shaperScope;
+  // New Visual System v2.0
+  ScreenShaker screenShaker;
+  juce::Component shakerContainer;
+  CosmicDust cosmicDust;
+  HorizonGrid horizonGrid;
+  HeadsUpDisplay hud;
+    TextureOverlay textureOverlay;
+  NeuralLink neuralLink;
+  TransferFunctionDisplay shaperScope;
+    TechDecor techDecor;
+    BioScanner bioScanner;
+    GlitchOverlay glitchOverlay;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (CoheraSaturatorAudioProcessorEditor)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
+      CoheraSaturatorAudioProcessorEditor)
 };

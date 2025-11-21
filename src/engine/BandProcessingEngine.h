@@ -33,7 +33,7 @@ public:
     // Обновленная сигнатура: добавляем driveTilt
     // driveTilt: статический множитель (0.5 для Sub, 1.2 для Air и т.д.)
     // netModulation: динамический модулятор от сети (пока не используется, но передаем)
-    void process(juce::dsp::AudioBlock<float>& block,
+    float process(juce::dsp::AudioBlock<float>& block,
                  const ParameterSet& params,
                  float driveTilt = 1.0f,
                  float netModulation = 0.0f)
@@ -53,8 +53,8 @@ public:
             combinedDriveMult *= (1.0f + params.globalHeat * 0.2f);
         }
 
-        // 4. Transient & Saturation
-        transientEngine.process(block, params, combinedDriveMult);
+        // 4. Transient & Saturation (returns max transient level)
+        float maxTrans = transientEngine.process(block, params, combinedDriveMult);
 
         // 5. DC Blocker
         size_t numSamples = block.getNumSamples();
@@ -69,6 +69,8 @@ public:
                 data[i] = dcBlockers[ch].process(data[i]);
             }
         }
+
+        return maxTrans;
     }
 
 private:

@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     std::cout << "Running Industry Standard Tests..." << std::endl;
     std::cout << "==================================" << std::endl;
 
-    // runner.runAllTests(); // DISABLED
+    runner.runAllTests();
 
     // Get results
     int totalTests = runner.getNumResults();

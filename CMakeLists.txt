@@ -91,6 +91,9 @@ target_sources(Cohera_Saturator PRIVATE
     src/ui/CoheraLookAndFeel.h
     src/ui/components/SaturationCore.h
     src/ui/components/NetworkBrain.h
+    src/ui/visuals/BioScanner.h
+    src/ui/visuals/GlitchOverlay.h
+    src/ui/visuals/TechDecor.h
     # src/ui/LookAndFeel.cpp (добавим позже)
 )
 
@@ -170,6 +173,59 @@ target_link_libraries(Cohera_Tests PRIVATE
 
 set_target_properties(Cohera_Tests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/Cohera_Saturator_artefacts/Tests"
+)
+
+# Basic Signal Flow Test Runner (Fundamental Sanity Check)
+add_executable(BasicSignalFlowTest
+    src/tests/SimpleTestRunner.cpp
+    src/tests/TestHelpers.h
+    src/tests/TestAudioGenerator.h
+    src/tests/DAWSimulationTest.cpp
+    src/tests/ComprehensiveParameterTests.cpp
+    src/PluginProcessor.cpp
+    src/PluginEditor.cpp
+    src/CoheraTypes.h
+    src/parameters/ParameterSet.h
+    src/parameters/ParameterManager.h
+    src/engine/SaturationEngine.h
+    src/engine/TransientEngine.h
+    src/engine/AnalogModelingEngine.h
+    src/engine/BandProcessingEngine.h
+    src/engine/FilterBankEngine.h
+    src/engine/MixEngine.h
+    src/engine/ProcessingEngine.h
+    src/dsp/FilterBank.cpp
+    src/dsp/FilterBank.h
+    src/dsp/MathSaturator.h
+    src/dsp/DCBlocker.h
+    src/dsp/Envelope.h
+    src/dsp/TransientSplitter.h
+    src/dsp/ThermalModel.h
+    src/dsp/HarmonicEntropy.h
+    src/dsp/StereoVariance.h
+    src/dsp/MSMatrix.h
+    src/FIR/fir_coeffs_multi_sr.h
+    src/FIR/fir_minphase_128.h
+    src/network/NetworkManager.h
+    src/ui/SimpleFFT.h
+    src/ui/Components/SpectrumVisor.h
+    src/ui/Components/TopBar.h
+    src/ui/Components/SaturationCore.h
+    src/ui/Components/NetworkBrain.h
+    src/ui/CoheraLookAndFeel.h
+    src/analyzer/AnalyzerPipelineConfig.h
+)
+
+target_include_directories(BasicSignalFlowTest PRIVATE src)
+
+target_link_libraries(BasicSignalFlowTest PRIVATE
+    juce::juce_audio_processors
+    juce::juce_dsp
+    juce::juce_core
+)
+
+set_target_properties(BasicSignalFlowTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
 
 # Simple standalone test runner (no complex dependencies)

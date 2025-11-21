@@ -113,7 +113,8 @@ public:
         auto highBlock = oversampler->processSamplesUp(ioBlock);
 
         // 3. Process
-        filterBankEngine.process(highBlock, params, netModulations);
+        float transientLevel = filterBankEngine.process(highBlock, params, netModulations);
+        lastTransientLevel.store(transientLevel);
 
         // 4. Downsample
         oversampler->processSamplesDown(ioBlock);
@@ -150,6 +151,8 @@ private:
 public:
     // RMS измерение для Reactor Knob анимации
     float getInputRMS() const { return inputRMS.load(); }
+    float getOutputRMS() const { return outputRMS.load(); }
+    float getTransientLevel() const { return lastTransientLevel.load(); }
 
 private:
     double sampleRate = 44100.0;
@@ -158,6 +161,7 @@ private:
 
     std::atomic<float> inputRMS { 0.0f };
     std::atomic<float> outputRMS { 0.0f };
+    std::atomic<float> lastTransientLevel { 0.0f };
 
     std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
     FilterBankEngine filterBankEngine;

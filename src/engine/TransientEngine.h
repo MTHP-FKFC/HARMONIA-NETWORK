@@ -20,7 +20,7 @@ public:
             s.reset();
         }
 
-        smoothedPunch.reset(spec.sampleRate, 0.05);
+        smoothedPunch.reset(spec.sampleRate, 0.5); // Увеличено до 500мс для максимальной плавности
         smoothedPunch.setCurrentAndTargetValue(0.0f);
     }
 
@@ -31,7 +31,7 @@ public:
     }
 
     // Основной процессинг
-    void process(juce::dsp::AudioBlock<float>& block, const ParameterSet& params, float driveMult = 1.0f)
+    float process(juce::dsp::AudioBlock<float>& block, const ParameterSet& params, float driveMult = 1.0f)
     {
         smoothedPunch.setTargetValue(params.punch);
 
@@ -40,6 +40,8 @@ public:
 
         size_t numSamples = block.getNumSamples();
         size_t numChannels = block.getNumChannels();
+
+        float maxTransient = 0.0f;
 
         for (size_t i = 0; i < numSamples; ++i)
         {
@@ -63,6 +65,10 @@ public:
                 {
                     // 2. Split & Crush
                     auto split = splitters[ch].process(input);
+                    
+                    // Detect transient peak for UI
+                    float absTrans = std::abs(split.trans);
+                    if (absTrans > maxTransient) maxTransient = absTrans;
 
                     // Body: всегда основной алгоритм
                     float processedBody = mathSaturator.processSample(split.body, baseDrive, params.saturationMode);
@@ -87,6 +93,7 @@ public:
                 }
             }
         }
+        return maxTransient;
     }
 
 private:

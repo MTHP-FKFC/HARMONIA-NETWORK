@@ -16,7 +16,6 @@
 #include "engine/ProcessingEngine.h"
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/PsychoAcousticGain.h"
-// #include "dsp/TransientSplitter.h" // TEMPORARILY COMMENTED
 #include "dsp/VoltageRegulator.h"
 #include "dsp/ThermalModel.h"
 #include "dsp/StereoVariance.h"
@@ -79,9 +78,11 @@ public:
     // Public access for Visual System
     float getInputRMS() const { return processingEngine.getInputRMS(); }
     float getOutputRMS() const { return outputRMS.load(); }
+    float getTransientLevel() const { return lastTransientLevel.load(); }
 
 private:
     std::atomic<float> outputRMS { 0.0f };
+    std::atomic<float> lastTransientLevel { 0.0f };
 
 private:
     // === 1. Параметры (State) ===
@@ -105,8 +106,6 @@ private:
     std::vector<juce::AudioBuffer<float>*> bandBufferPtrs;
 
     // === DSP: Divine Math Saturation ===
-    // Математические сатураторы с фундаментальными константами Вселенной
-    std::array<MathSaturator, kNumBands> mathShapers;
 
     // === DC BLOCKERS ===
     // Убивают постоянный ток от асимметричных алгоритмов ([Band][Channel])
@@ -162,15 +161,12 @@ private:
     // === NETWORK CONTROL (The Holy Trinity) ===
     juce::SmoothedValue<float> smoothedNetDepth;
     juce::SmoothedValue<float> smoothedNetSens;
-    float netSmoothState = 0.0f; // Состояние One-Pole фильтра для Smooth
 
     // === GLOBAL HEAT ===
     int myInstanceIndex = -1; // ID слота в сети
     juce::LinearSmoothedValue<float> smoothedGlobalHeat;
 
     // === PUNCH (Transient Control) ===
-    // Сплиттеры транзиентов ([Band][Channel], разделяют сигнал на атаку и тело)
-    // std::array<std::array<TransientSplitter, 2>, kNumBands> splitters; // TEMPORARILY COMMENTED
     juce::SmoothedValue<float> smoothedPunch;
 
     // === ANALOG MODELING ===
@@ -207,7 +203,7 @@ private:
 
     // === QUALITY MODE ===
     // Для экономии CPU в режиме Low Quality
-    bool isHighQuality = true; // true = 4x oversampling, false = direct processing
+    // isHighQuality удален - был мертвым кодом
 
     // === NEW ARCHITECTURE ===
     // Новая модульная архитектура
@@ -215,8 +211,7 @@ private:
     Cohera::ProcessingEngine processingEngine;
 
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
-    int currentGroup = 0;
-    bool isReference = false;
+    // currentGroup и isReference удалены - были мертвым кодом
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CoheraSaturatorAudioProcessor)
 };

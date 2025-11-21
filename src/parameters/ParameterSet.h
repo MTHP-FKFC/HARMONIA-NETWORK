@@ -35,6 +35,7 @@ struct ParameterSet
     float variance = 0.0f;
     float noise = 0.0f;
     float entropy = 0.0f;
+    float focus = 0.0f;       // -1.0 .. 1.0 (Mid/Side focus)
 
     // === Network ===
     NetworkMode netMode = NetworkMode::Unmasking;
@@ -50,10 +51,10 @@ struct ParameterSet
     // чтобы DSP получал уже готовый множитель
     float getEffectiveDriveGain() const
     {
-        // Пример простой формулы (как было в вашем коде)
-        if (drive < 20.0f) return 1.0f;
-        float boost = (drive - 20.0f) / 80.0f;
-        return 1.0f + (boost * 9.0f); // до +20dB (x10)
+        // Линейное маппинг: 0% = 1.0x, 100% = 10.0x (20dB gain)
+        // Теперь сатурация слышна сразу с первых процентов!
+        if (drive <= 0.0f) return 1.0f;
+        return 1.0f + (drive / 100.0f) * 9.0f; // 1.0x to 10.0x
     }
 
     float getSaturationBlend() const
