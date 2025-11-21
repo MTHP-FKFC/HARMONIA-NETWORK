@@ -5,8 +5,9 @@
 #include "../CoheraTypes.h"
 #include "../parameters/ParameterSet.h"
 #include "../dsp/DCBlocker.h"
+#include "../dsp/InteractionEngine.h" // <--- ВАЖНО: Подключаем мозг
 
-// Подключаем наши восстановленные движки
+// Подключаем наши движки
 #include "TransientEngine.h"
 #include "AnalogModelingEngine.h"
 
@@ -30,33 +31,85 @@ public:
         for(auto& dcb : dcBlockers) dcb.reset();
     }
 
-    // Обновленная сигнатура: добавляем driveTilt
-    // driveTilt: статический множитель (0.5 для Sub, 1.2 для Air и т.д.)
-    // netModulation: динамический модулятор от сети (пока не используется, но передаем)
+    // process обрабатывает блок аудио
     float process(juce::dsp::AudioBlock<float>& block,
                  const ParameterSet& params,
                  float driveTilt = 1.0f,
                  float netModulation = 0.0f)
     {
-        // 1. Analog Modeling (Mojo)
-        auto [driveMultL, driveMultR] = analogEngine.process(block, params);
+        // === 1. ВЫЧИСЛЕНИЕ СЕТЕВОЙ МОДУЛЯЦИИ ===
+        // Спрашиваем у InteractionEngine, что и как крутить
+        // params.netSens усиливает входящий сигнал модуляции
+        ModulationTargets mods = InteractionEngine::calculateModulation(
+            params.netMode,
+            netModulation,
+            params.netSens
+        );
 
-        // 2. Network Logic (Заглушка)
-        // В будущем: float netFactor = ...logic(netModulation)...
+        // Применяем Depth (Глубину влияния) ко всем модуляторам
+        float depth = params.netDepth;
 
-        // 3. Итоговый множитель драйва
-        // Tilt * (Average Analog Drift) * (Global Heat)
+        // === 2. ANALOG MODELING (MOJO) ===
+        // Создаем копию параметров для модификации
+        ParameterSet effectiveParams = params;
+
+        // Применяем модуляцию к Mojo параметрам (Entropy Storm, Voltage Starve)
+        if (std::abs(mods.mojoMod) > 0.001f) {
+            effectiveParams.entropy += mods.mojoMod * depth;
+            effectiveParams.analogDrift += mods.mojoMod * 0.5f * depth;
+            effectiveParams.variance += mods.mojoMod * 0.5f * depth;
+
+            // Клиппинг параметров 0..1
+            effectiveParams.entropy = juce::jlimit(0.0f, 1.0f, effectiveParams.entropy);
+        }
+
+        auto [driveMultL, driveMultR] = analogEngine.process(block, effectiveParams);
+
+        // === 3. РАСЧЕТ ДРАЙВА ===
+        // Базовый множитель
         float combinedDriveMult = driveTilt * (driveMultL + driveMultR) * 0.5f;
 
-        // Global Heat (имитация просадки напряжения = буст драйва)
+        // A. Global Heat (Voltage Sag)
         if (params.globalHeat > 0.0f) {
             combinedDriveMult *= (1.0f + params.globalHeat * 0.2f);
         }
 
-        // 4. Transient & Saturation (returns max transient level)
-        float maxTrans = transientEngine.process(block, params, combinedDriveMult);
+        // B. Network Drive Modulation (Unmasking, Ghost)
+        if (std::abs(mods.driveMod) > 0.001f) {
+            // driveMod может быть отрицательным (Ducking) или положительным (Boost)
+            // Пример: -0.5 * depth -> уменьшаем драйв в 2 раза
+            combinedDriveMult *= (1.0f + mods.driveMod * depth);
+        }
 
-        // 5. DC Blocker
+        // Защита от отрицательного драйва
+        combinedDriveMult = std::max(0.0f, combinedDriveMult);
+
+        // === 4. ПРИМЕНЕНИЕ МОДУЛЯЦИИ К ДРУГИМ ПАРАМЕТРАМ ===
+
+        // Transient Clone (Punch Boost)
+        if (std::abs(mods.punchMod) > 0.001f) {
+            effectiveParams.punch += mods.punchMod * depth;
+            effectiveParams.punch = juce::jlimit(-1.0f, 1.0f, effectiveParams.punch);
+        }
+
+        // Harmonic Shield (Clean Blend)
+        // Тут хитрость: blendMod управляет миксом внутри сатуратора?
+        // SaturationEngine использует getSaturationBlend() из params.
+        // Но мы не можем легко изменить drive внутри params так, чтобы blend изменился.
+        // Поэтому SaturationEngine должен быть достаточно умен, но пока оставим как есть.
+        // Для Harmonic Shield мы просто уменьшаем combinedDriveMult (это уже делает логика Unmasking).
+
+        // === 5. TRANSIENT & SATURATION ===
+        float maxTrans = transientEngine.process(block, effectiveParams, combinedDriveMult);
+
+        // === 6. OUTPUT GAIN MODULATION (Gated, Unmasking) ===
+        if (std::abs(mods.volumeMod) > 0.001f) {
+            float volGain = 1.0f + mods.volumeMod * depth;
+            volGain = std::max(0.0f, volGain); // Не инвертируем фазу
+            block.multiplyBy(volGain);
+        }
+
+        // === 7. DC BLOCKER ===
         size_t numSamples = block.getNumSamples();
         size_t numChannels = block.getNumChannels();
 

@@ -105,9 +105,13 @@ public:
         init(apvts);
     }
 
-    NetworkBrain() : meter(nullptr)
+    NetworkBrain() : meter(nullptr) // Default meter for later initialization
     {
-        // Default constructor for later initialization
+        // Initialize with default values
+        group.setText("NETWORK INTELLIGENCE");
+        group.setColour(juce::GroupComponent::outlineColourId, juce::Colour(0, 200, 150));
+        group.setColour(juce::GroupComponent::textColourId, juce::Colour(0, 200, 150));
+        addAndMakeVisible(group);
     }
 
     void setAPVTS(juce::AudioProcessorValueTreeState& apvts)
@@ -118,7 +122,6 @@ public:
 private:
     void init(juce::AudioProcessorValueTreeState& apvts)
     {
-        meter.setAPVTS(apvts);
         group.setText("NETWORK INTELLIGENCE");
         group.setColour(juce::GroupComponent::outlineColourId, juce::Colour(0, 200, 150)); // Зеленый акцент
         group.setColour(juce::GroupComponent::textColourId, juce::Colour(0, 200, 150));

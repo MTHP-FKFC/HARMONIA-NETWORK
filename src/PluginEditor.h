@@ -3,6 +3,7 @@
 #include "PluginProcessor.h"
 #include "ui/CoheraLookAndFeel.h"
 #include "ui/Components/EnergyLink.h"
+// #include "ui/Components/NetworkBrain.h"
 #include "ui/ControlGroup.h"
 #include "ui/SpectrumVisor.h"
 #include "ui/components/ReactorKnob.h"
@@ -17,7 +18,7 @@
 #include "ui/visuals/ScreenShaker.h"
 #include "ui/visuals/BioScanner.h"
 #include <juce_gui_basics/juce_gui_basics.h>
-// #include "ui/Components/InteractionMeter.h"
+// // #include "ui/Components/InteractionMeter.h"
 
 class CoheraSaturatorAudioProcessorEditor : public juce::AudioProcessorEditor,
                                             private juce::Timer {
@@ -46,6 +47,8 @@ private:
   // Components
   SpectrumVisor spectrumVisor;
   EnergyLink energyLink; // Центральный поток энергии
+  // NetworkBrain networkBrain; // Network Intelligence Panel - temporarily disabled
+  // InteractionMeter interactionMeter; // Network activity meter - temporarily disabled
 
   // Groups
   ControlGroup satGroup{"SATURATION CORE", CoheraUI::kOrangeNeon};

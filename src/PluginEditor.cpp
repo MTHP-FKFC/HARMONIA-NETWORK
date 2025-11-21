@@ -57,12 +57,10 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   shakerContainer.addAndMakeVisible(energyLink);
 
   // --- NETWORK BRAIN ---
-  // Temporarily disabled for fixing build issues
-  // shakerContainer.addAndMakeVisible(networkBrain);
+  // shakerContainer.addAndMakeVisible(networkBrain); // Temporarily disabled
 
   // --- INTERACTION METER ---
-  // Temporarily disabled for fixing build issues
-  // shakerContainer.addAndMakeVisible(interactionMeter);
+  // shakerContainer.addAndMakeVisible(interactionMeter); // Temporarily disabled
 
   // --- SATURATION CORE (Left) ---
   shakerContainer.addAndMakeVisible(satGroup);
@@ -187,7 +185,7 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   setupKnob(noiseSlider, "noise", "NOISE", CoheraUI::kRedNeon);
 
   // Interaction Meter - temporarily disabled
-  // interactionMeter.setAPVTS(p.getAPVTS());
+  // interactionMeter.setAPVTS(p.getAPVTS()); // Temporarily disabled
   // networkBrain.setAPVTS(p.getAPVTS());
   // addAndMakeVisible(interactionMeter);
 
@@ -524,10 +522,11 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(
 
   headerFlex.performLayout(headerArea.reduced(5, 5)); // Небольшой отступ
 
-  // Network layout temporarily disabled for build fix
+  // Meter (справа) - temporarily disabled
   // auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5, 10);
   // interactionMeter.setBounds(meterArea);
 
+  // Network knobs temporarily disabled - using netGroup instead
   // auto knobArea = area.reduced(5, 0);
   // juce::FlexBox netFlex;
   // ... network knobs temporarily disabled ...
