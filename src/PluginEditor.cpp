@@ -57,7 +57,12 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   shakerContainer.addAndMakeVisible(energyLink);
 
   // --- NETWORK BRAIN ---
-  shakerContainer.addAndMakeVisible(networkBrain);
+  // Temporarily disabled for fixing build issues
+  // shakerContainer.addAndMakeVisible(networkBrain);
+
+  // --- INTERACTION METER ---
+  // Temporarily disabled for fixing build issues
+  // shakerContainer.addAndMakeVisible(interactionMeter);
 
   // --- SATURATION CORE (Left) ---
   shakerContainer.addAndMakeVisible(satGroup);
@@ -152,22 +157,18 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
                         "Stereo Bloom", "Sympathetic"},
       1);
   netModeSelector.setSelectedId(1);
-  netModeAttachment =
-      std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
-          p.getAPVTS(), "mode", netModeSelector);
+  // netModeAttachment temporarily disabled
 
   // Net Saturation Selector
   shakerContainer.addAndMakeVisible(netSatSelector);
   netSatSelector.addItemList(
       {"Clean Gain", "Drive Boost", "Rectify", "Bit Crush"}, 1);
-  netSatAttachment =
-      std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
-          p.getAPVTS(), "net_reaction", netSatSelector);
+  // netSatAttachment temporarily disabled
 
   // Network Knobs
-  setupKnob(netSensSlider, "net_sens", "SENS", CoheraUI::kCyanNeon);
-  setupKnob(netDepthSlider, "net_depth", "DEPTH", CoheraUI::kCyanNeon);
-  setupKnob(netSmoothSlider, "net_smooth", "RELEASE", CoheraUI::kCyanNeon);
+  // setupKnob(netSensSlider, "net_sens", "SENS", CoheraUI::kCyanNeon);
+  // setupKnob(netDepthSlider, "net_depth", "DEPTH", CoheraUI::kCyanNeon);
+  // setupKnob(netSmoothSlider, "net_smooth", "RELEASE", CoheraUI::kCyanNeon);
 
   // Dynamics Knob
   setupKnob(dynamicsSlider, "dynamics", "DYNAMICS", CoheraUI::kOrangeNeon);
@@ -187,6 +188,7 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
 
   // Interaction Meter - temporarily disabled
   // interactionMeter.setAPVTS(p.getAPVTS());
+  // networkBrain.setAPVTS(p.getAPVTS());
   // addAndMakeVisible(interactionMeter);
 
   // --- BOTTOM MIX ---
@@ -290,7 +292,6 @@ void CoheraSaturatorAudioProcessorEditor::paint(juce::Graphics &g) {
 }
 
 void CoheraSaturatorAudioProcessorEditor::paintOverChildren(juce::Graphics &g) {
-  /*
   float flashAlpha = screenShaker.getFlashAlpha();
 
   if (flashAlpha > 0.01f) {
@@ -304,7 +305,6 @@ void CoheraSaturatorAudioProcessorEditor::paintOverChildren(juce::Graphics &g) {
     g.setGradientFill(flash);
     g.fillAll();
   }
-  */
 }
 
 // Timer callback для обновления живых визуализаторов
@@ -442,7 +442,7 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
   // Устанавливаем границы Групп (Рамки)
   satGroup.setBounds(leftPanel);
   neuralLink.setBounds(linkPanel.reduced(0, 20)); // Чуть отступ сверху/снизу
-  networkBrain.setBounds(rightPanel);
+  // networkBrain.setBounds(rightPanel); // Temporarily disabled
 
   // Заполняем внутренности групп (с учетом отступа под заголовок группы)
   // Отступ сверху 30px под текст "SATURATION CORE"
@@ -524,33 +524,13 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(
 
   headerFlex.performLayout(headerArea.reduced(5, 5)); // Небольшой отступ
 
-  // Оставшееся делим: Слева ручки, Справа Метр
-  // Метр занимает 15% ширины справа - temporarily disabled
-  // auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5,
-  // 10); interactionMeter.setBounds(meterArea);
+  // Network layout temporarily disabled for build fix
+  // auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5, 10);
+  // interactionMeter.setBounds(meterArea);
 
-  // Ручки: все 3 в один ряд (Sens, Depth, Smooth)
-  auto knobArea = area.reduced(5, 0);
-
-  juce::FlexBox netFlex;
-  netFlex.justifyContent =
-      juce::FlexBox::JustifyContent::spaceAround; // Равномерное распределение
-
-  // Все три ручки в одном ряду
-  netFlex.items.add(juce::FlexItem(netSensSlider)
-                        .withFlex(1.0f)
-                        .withMaxWidth(150)
-                        .withMaxHeight(150));
-  netFlex.items.add(juce::FlexItem(netDepthSlider)
-                        .withFlex(1.0f)
-                        .withMaxWidth(150)
-                        .withMaxHeight(150));
-  netFlex.items.add(juce::FlexItem(netSmoothSlider)
-                        .withFlex(1.0f)
-                        .withMaxWidth(150)
-                        .withMaxHeight(150));
-
-  netFlex.performLayout(knobArea);
+  // auto knobArea = area.reduced(5, 0);
+  // juce::FlexBox netFlex;
+  // ... network knobs temporarily disabled ...
 }
 
 // --- ХЕЛПЕР: Футер (Mix & Mojo) ---

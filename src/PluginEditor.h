@@ -46,7 +46,6 @@ private:
   // Components
   SpectrumVisor spectrumVisor;
   EnergyLink energyLink; // Центральный поток энергии
-  NetworkBrain networkBrain { audioProcessor.getAPVTS() }; // Network Intelligence Panel
 
   // Groups
   ControlGroup satGroup{"SATURATION CORE", CoheraUI::kOrangeNeon};

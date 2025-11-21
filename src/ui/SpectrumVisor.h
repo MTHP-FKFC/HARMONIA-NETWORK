@@ -31,7 +31,9 @@ public:
 
         // 3. Спектр (Реальные FFT данные)
         if (!fftData.empty()) {
-            drawSpectrum(g, area.getWidth(), area.getHeight(), fftData, CoheraUI::kOrangeNeon, true);
+            // Конвертируем array в vector для совместимости
+            std::vector<float> fftVector(fftData.begin(), fftData.end());
+            drawSpectrum(g, area.getWidth(), area.getHeight(), fftVector, CoheraUI::kOrangeNeon, true);
         } else {
             // Fallback на dummy data если FFT не готов
             std::vector<float> dummyData = {0.1f, 0.3f, 0.8f, 0.6f, 0.2f, 0.4f, 0.9f, 0.5f, 0.1f};

@@ -102,6 +102,23 @@ class NetworkBrain : public juce::Component
 public:
     NetworkBrain(juce::AudioProcessorValueTreeState& apvts) : meter(apvts)
     {
+        init(apvts);
+    }
+
+    NetworkBrain() : meter(nullptr)
+    {
+        // Default constructor for later initialization
+    }
+
+    void setAPVTS(juce::AudioProcessorValueTreeState& apvts)
+    {
+        init(apvts);
+    }
+
+private:
+    void init(juce::AudioProcessorValueTreeState& apvts)
+    {
+        meter.setAPVTS(apvts);
         group.setText("NETWORK INTELLIGENCE");
         group.setColour(juce::GroupComponent::outlineColourId, juce::Colour(0, 200, 150)); // Зеленый акцент
         group.setColour(juce::GroupComponent::textColourId, juce::Colour(0, 200, 150));
