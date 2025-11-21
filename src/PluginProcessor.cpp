@@ -74,11 +74,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
     layout.add(std::make_unique<juce::AudioParameterChoice>(
         "mode", "Interaction Mode",
         juce::StringArray{
-            "Unmasking (Duck)",   // 0: Реф громкий -> Мы чище
-            "Ghost (Follow)",     // 1: Реф громкий -> Мы злее
-            "Gated (Reverse)",    // 2: Реф тихий -> Мы злее
-            "Stereo Bloom",       // 3: Реф громкий -> Мы расширяемся
-            "Sympathetic"         // 4: Реф частоты -> Мы резонируем
+            "Unmasking (Duck)",       // 0: Освободи место
+            "Ghost (Follow)",         // 1: Синхронная энергия
+            "Gated (Reverse)",        // 2: Играй в паузах
+            "Stereo Bloom",           // 3: Пространственный взрыв
+            "Sympathetic",            // 4: Резонанс
+            "Transient Clone",        // 5: Заимствование атаки
+            "Spectral Sculpt",        // 6: Динамический EQ
+            "Voltage Starve",         // 7: Энергетический вампиризм
+            "Entropy Storm",          // 8: Управляемый хаос
+            "Harmonic Shield"         // 9: Анти-сатурация
         }, 0));
 
     // === CASCADE (Output Stage) ===

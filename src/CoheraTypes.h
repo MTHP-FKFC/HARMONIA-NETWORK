@@ -26,11 +26,19 @@ enum class SaturationMode {
 };
 
 enum class NetworkMode {
-    Unmasking,   // 0 Duck
-    Ghost,       // 1 Follow
-    Gated,       // 2 Reverse
-    StereoBloom, // 3
-    Sympathetic  // 4
+    // --- CLASSIC MIXING ---
+    Unmasking,      // 0: Duck Volume ("Освободи место")
+    Ghost,          // 1: Follow Drive ("Синхронная энергия")
+    Gated,          // 2: Reverse Volume ("Играй в паузах")
+    StereoBloom,    // 3: Expand Width ("Пространственный взрыв")
+    Sympathetic,    // 4: Resonate ("Резонанс")
+
+    // --- ADVANCED MIXING ---
+    TransientClone, // 5: Boost Punch ("Заимствование Атаки")
+    SpectralSculpt, // 6: Shift Filters ("Динамический Эквалайзер")
+    VoltageStarve,  // 7: Sag Voltage ("Энергетический Вампиризм")
+    EntropyStorm,   // 8: Chaos Increase ("Управляемый Хаос")
+    HarmonicShield  // 9: Reduce Saturation ("Анти-Сатурация")
 };
 
 enum class QualityMode {

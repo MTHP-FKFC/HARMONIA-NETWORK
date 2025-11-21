@@ -1,96 +1,118 @@
 #pragma once
 
-#include "Waveshaper.h"
+#include "../CoheraTypes.h"
 
-struct DualShaperConfig
-{
-    SaturationType typeA; // Состояние покоя
-    float driveScaleA;    // Множитель драйва А
+// === MODULATION TARGETS ===
+// Структура, которая говорит системе, КАКОЙ параметр модулировать
+struct ModulationTargets {
+    float driveMod = 0.0f;    // +/- Drive (общий множитель)
+    float volumeMod = 0.0f;   // +/- Output Gain (громкость)
+    float punchMod = 0.0f;    // +/- Punch (транзиенты)
+    float filterMod = 0.0f;   // +/- Filter Cutoff (Tighten/Smooth)
+    float mojoMod = 0.0f;     // +/- Mojo (Drift/Entropy/Heat)
+    float blendMod = 0.0f;    // +/- Dry/Wet Blend (чистота/грязь)
 
-    SaturationType typeB; // Состояние удара (Сайдчейн)
-    float driveScaleB;    // Множитель драйва B (обычно буст)
+    // Вспомогательные методы
+    void reset() {
+        driveMod = volumeMod = punchMod = filterMod = mojoMod = blendMod = 0.0f;
+    }
+
+    bool isActive() const {
+        return std::abs(driveMod) > 0.001f || std::abs(volumeMod) > 0.001f ||
+               std::abs(punchMod) > 0.001f || std::abs(filterMod) > 0.001f ||
+               std::abs(mojoMod) > 0.001f || std::abs(blendMod) > 0.001f;
+    }
 };
 
 class InteractionEngine
 {
 public:
-    // Метод возвращает конфигурацию для конкретной полосы и режима
-    static DualShaperConfig getConfiguration(int modeIndex, int bandIndex, SaturationType userSelectedType)
+    // === MAIN MODULATION CALCULATOR ===
+    // inputEnvelope: 0.0 .. 1.0 (сигнал от Reference)
+    // sensitivity: 0.0 .. 2.0 (ручка Sens)
+    static ModulationTargets calculateModulation(Cohera::NetworkMode mode, float inputEnvelope, float sensitivity)
     {
-        // 0 = Unmasking, 1 = Ghost, 2 = Gated, 3 = Bloom, 4 = Sympathetic
+        ModulationTargets targets;
+        float signal = inputEnvelope * sensitivity;
 
-        // По дефолту: A = Выбор юзера, B = Выбор юзера (нет изменений)
-        DualShaperConfig cfg { userSelectedType, 1.0f, userSelectedType, 1.0f };
+        switch (mode) {
+            // === CLASSIC MIXING MODES ===
 
-        switch (modeIndex)
-        {
-            case 0: // UNMASKING (Ducking)
-                // Когда бьет бочка (B), мы становимся Clean и тише (0.5 drive)
-                cfg.typeA = userSelectedType;
-                cfg.typeB = SaturationType::Clean;
-                cfg.driveScaleB = 0.2f; // Сильно уменьшаем драйв
+            case Cohera::NetworkMode::Unmasking: // 0: "Освободи место"
+                // Reference громкий -> Listener тихий + меньше драйва
+                targets.driveMod = -0.5f * signal;
+                targets.volumeMod = -1.0f * signal;
                 break;
 
-            case 1: // GHOST (Harmonics)
-                // Только для НЧ полос (0 и 1) меняем тип на Rectifier
-                if (bandIndex <= 1) {
-                    cfg.typeA = userSelectedType;
-                    cfg.typeB = SaturationType::Rectifier;
-                    cfg.driveScaleB = 2.0f; // Бустим драйв для яркости эффекта
-                }
-                // Для ВЧ можно сделать BitCrush для агрессии
-                else if (bandIndex >= 4) {
-                    cfg.typeA = userSelectedType;
-                    cfg.typeB = SaturationType::BitCrush;
-                    cfg.driveScaleB = 1.5f;
-                }
+            case Cohera::NetworkMode::Ghost: // 1: "Синхронная энергия"
+                // Reference громкий -> Listener получает больше сатурации
+                targets.driveMod = 1.0f * signal;
                 break;
 
-            case 2: // GATED (Reverse)
-                // В покое (A) мы грязные (Rectifier/Crush).
-                // При ударе (B) становимся чистыми (UserType).
-                if (bandIndex <= 2) {
-                    cfg.typeA = SaturationType::Rectifier; // Грязь в паузах
-                    cfg.driveScaleA = 1.5f;
-                    cfg.typeB = userSelectedType;          // Чистота на ударе
-                }
+            case Cohera::NetworkMode::Gated: // 2: "Играй в паузах"
+                // Reference громкий -> Listener молчит
+                targets.volumeMod = -1.0f * signal;
                 break;
 
-            case 3: // STEREO BLOOM
-                // (Логика M/S обрабатывается снаружи, здесь типы одинаковые)
-                // Просто бустим драйв на ударе
-                cfg.driveScaleB = 1.5f;
+            case Cohera::NetworkMode::StereoBloom: // 3: "Пространственный взрыв"
+                // Reference громкий -> Listener расширяется (Focus в Side)
+                // NOTE: Это обрабатывается в StereoEngine, здесь только драйв
+                targets.driveMod = 0.3f * signal;
                 break;
 
-            case 4: // SYMPATHETIC
-                // Добавляем гармоники (Asymmetric) на резонансе
-                cfg.typeB = SaturationType::Asymmetric;
-                cfg.driveScaleB = 1.3f;
+            case Cohera::NetworkMode::Sympathetic: // 4: "Резонанс"
+                // Reference громкий -> Listener насыщается гармониками
+                targets.driveMod = 0.8f * signal;
+                targets.mojoMod = 0.5f * signal; // Буст энтропии
+                break;
+
+            // === ADVANCED MIXING MODES ===
+
+            case Cohera::NetworkMode::TransientClone: // 5: "Заимствование Атаки"
+                // Reference бьет -> Listener получает резкий буст Punch
+                targets.punchMod = 1.0f * signal;
+                break;
+
+            case Cohera::NetworkMode::SpectralSculpt: // 6: "Динамический Эквалайзер"
+                // Reference громкий -> Listener сдвигает фильтры (Tighten вверх)
+                targets.filterMod = 1.0f * signal;
+                break;
+
+            case Cohera::NetworkMode::VoltageStarve: // 7: "Энергетический Вампиризм"
+                // Reference громкий -> У Listener'а падает "напряжение"
+                targets.mojoMod = 1.0f * signal;  // Heat вызывает просадку
+                targets.driveMod = 0.2f * signal; // Немного грязи
+                break;
+
+            case Cohera::NetworkMode::EntropyStorm: // 8: "Управляемый Хаос"
+                // Reference активен -> Listener получает максимум хаоса
+                targets.mojoMod = 1.0f * signal; // Drift + Entropy + Variance
+                break;
+
+            case Cohera::NetworkMode::HarmonicShield: // 9: "Анти-Сатурация"
+                // Reference громкий -> Listener становится ЧИЩЕ
+                targets.blendMod = -1.0f * signal; // Убираем Wet (чистота)
                 break;
         }
 
-        return cfg;
+        return targets;
     }
 
-    // Процессинг с морфингом
-    static float processMorph(float input, float baseDrive, float morph, const DualShaperConfig& cfg)
-    {
-        // Рассчитываем два варианта
-        // Если morph = 0 (нет сигнала сети), слышим только A.
-        // Если morph = 1 (пик сигнала), слышим только B.
+    // === LEGACY SUPPORT ===
+    // Для обратной совместимости с старой системой (если нужно)
+    struct DualShaperConfig {
+        int typeA = 0;
+        float driveScaleA = 1.0f;
+        int typeB = 0;
+        float driveScaleB = 1.0f;
+    };
 
-        // Оптимизация: если morph близко к краям, не считаем второй вариант
-        if (morph < 0.01f) {
-            return Waveshaper::process(input, baseDrive * cfg.driveScaleA, cfg.typeA);
-        }
-        if (morph > 0.99f) {
-            return Waveshaper::process(input, baseDrive * cfg.driveScaleB, cfg.typeB);
-        }
+    static DualShaperConfig getConfiguration(int modeIndex, int bandIndex, int userSelectedType) {
+        // Преобразование старых индексов в новые режимы
+        Cohera::NetworkMode mode = static_cast<Cohera::NetworkMode>(modeIndex);
 
-        float outA = Waveshaper::process(input, baseDrive * cfg.driveScaleA, cfg.typeA);
-        float outB = Waveshaper::process(input, baseDrive * cfg.driveScaleB, cfg.typeB);
-
-        // Линейный кроссфейд
-        return outA * (1.0f - morph) + outB * morph;
+        // Для legacy: возвращаем базовую конфигурацию без модуляции
+        DualShaperConfig cfg { userSelectedType, 1.0f, userSelectedType, 1.0f };
+        return cfg;
     }
 };

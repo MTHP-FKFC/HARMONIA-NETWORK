@@ -42,18 +42,50 @@ public:
         float barHeight = 0.0f;
         float startY = centerY;
 
-        if (mode == 0) { // Unmasking (Ducking) -> Вниз
+        if (mode == 0) { // Unmasking (Duck) -> Вниз
             col = juce::Colours::cyan;
             barHeight = netSignal * (h * 0.4f); // Вниз
         }
         else if (mode == 1) { // Ghost (Boost) -> Вверх
             col = juce::Colours::orange;
-            barHeight = -netSignal * (h * 0.4f); // Вверх (минус Y)
+            barHeight = -netSignal * (h * 0.4f); // Вверх
         }
-        else { // Gated -> Вверх (когда тихо)
-             float inv = 1.0f - netSignal;
-             col = juce::Colours::red;
-             barHeight = -inv * (h * 0.4f);
+        else if (mode == 2) { // Gated (Reverse) -> Вверх когда тихо
+            float inv = 1.0f - netSignal;
+            col = juce::Colours::red;
+            barHeight = -inv * (h * 0.4f);
+        }
+        else if (mode == 3) { // Stereo Bloom -> Вверх
+            col = juce::Colours::magenta;
+            barHeight = -netSignal * (h * 0.3f);
+        }
+        else if (mode == 4) { // Sympathetic -> Вверх
+            col = juce::Colours::yellow;
+            barHeight = -netSignal * (h * 0.35f);
+        }
+        else if (mode == 5) { // Transient Clone -> Резкие пики вверх
+            col = juce::Colours::white;
+            barHeight = -netSignal * (h * 0.5f);
+        }
+        else if (mode == 6) { // Spectral Sculpt -> Волнообразно
+            col = juce::Colours::green;
+            barHeight = netSignal * (h * 0.25f) * ((netSignal > 0.5f) ? -1.0f : 1.0f);
+        }
+        else if (mode == 7) { // Voltage Starve -> Вниз (просадка)
+            col = juce::Colours::darkred;
+            barHeight = netSignal * (h * 0.45f);
+        }
+        else if (mode == 8) { // Entropy Storm -> Хаотично
+            col = juce::Colours::purple;
+            barHeight = -netSignal * (h * 0.4f) * (0.5f + 0.5f * std::sin(netSignal * 10.0f));
+        }
+        else if (mode == 9) { // Harmonic Shield -> Вверх (чистота)
+            col = juce::Colours::lightblue;
+            barHeight = -netSignal * (h * 0.3f);
+        }
+        else { // Default
+            col = juce::Colours::grey;
+            barHeight = netSignal * (h * 0.2f);
         }
 
         g.setColour(col);
@@ -83,8 +115,19 @@ public:
         addSlider(smoothSlider, smoothAtt, apvts, "net_smooth", "Smooth");
         smoothSlider.setName("Net_Smooth");
 
-        // Режим взаимодействия
-        modeCombo.addItemList({"Unmasking", "Ghost", "Gated", "Stereo Bloom", "Sympathetic"}, 1);
+        // Режим взаимодействия (10 режимов)
+        modeCombo.addItemList({
+            "Unmasking",       // 0: Duck Volume
+            "Ghost",           // 1: Follow Drive
+            "Gated",           // 2: Reverse Volume
+            "Stereo Bloom",    // 3: Expand Width
+            "Sympathetic",     // 4: Resonate
+            "Transient Clone", // 5: Boost Punch
+            "Spectral Sculpt", // 6: Shift Filters
+            "Voltage Starve",  // 7: Sag Voltage
+            "Entropy Storm",   // 8: Chaos Increase
+            "Harmonic Shield"  // 9: Reduce Saturation
+        }, 1);
         addAndMakeVisible(modeCombo);
         modeAtt = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts, "mode", modeCombo);
 
