@@ -20,7 +20,7 @@ echo "🚀 Building with $CPU_CORES CPU cores..."
 
 # Build all plugin formats at once
 echo "🎛️  Building all plugin formats..."
-make Cohera_Saturator_All -j$CPU_CORES
+make Cohera_Saturator -j$CPU_CORES
 
 if [ $? -eq 0 ]; then
     echo ""
