@@ -43,10 +43,10 @@ protected:
         auto bounds = getLocalBounds().toFloat().reduced(2);
         auto center = bounds.getCentre();
 
-        // 1. Фон (темное стекло с градиентом)
+        // 1. Фон (полупрозрачное стекло с градиентом для overlay)
         juce::ColourGradient bgGrad(
-            juce::Colour(15, 15, 20).withAlpha(0.8f), bounds.getTopLeft(),
-            juce::Colour(25, 25, 35).withAlpha(0.6f), bounds.getBottomRight(), false);
+            juce::Colour(15, 15, 20).withAlpha(0.3f), bounds.getTopLeft(),
+            juce::Colour(25, 25, 35).withAlpha(0.2f), bounds.getBottomRight(), false);
         g.setGradientFill(bgGrad);
         g.fillRoundedRectangle(bounds, 4.0f);
 
@@ -91,9 +91,8 @@ private:
 
         for (float x = -1.0f; x <= 1.01f; x += 0.02f)
         {
-            // TEMPORARILY DISABLE MathSaturator to test basic stability
-            // float y = mathSaturator.processSample(x, vizDrive, mode);
-            float y = std::tanh(x * vizDrive); // Simple fallback
+        // Use real MathSaturator for accurate transfer function
+        float y = mathSaturator.processSample(x, vizDrive, mode);
             y = juce::jlimit(-1.1f, 1.1f, y);
 
             float sx = center.x + (x * bounds.getWidth() * 0.4f);
@@ -123,8 +122,7 @@ private:
 
         // Выходной сигнал через сатуратор
         float vizDrive = 1.0f + (drive / 20.0f);
-        // float outputY = mathSaturator.processSample(smoothedInput, vizDrive, mode);
-        float outputY = std::tanh(smoothedInput * vizDrive); // Simple fallback
+        float outputY = mathSaturator.processSample(smoothedInput, vizDrive, mode);
         outputY = juce::jlimit(-1.1f, 1.1f, outputY);
 
         float dotY = center.y - (outputY * bounds.getHeight() * 0.4f);

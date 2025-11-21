@@ -412,6 +412,12 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
 
     bioScanner.setBounds(spectrumVisor.getBounds());
 
+  // Transfer Function Display поверх анализатора - классно!
+  shaperScope.setBounds(topSection.withSizeKeepingCentre(
+    static_cast<int>(topSection.getWidth() * 0.6f),
+    static_cast<int>(topSection.getHeight() * 0.6f)
+  ));
+
   area.removeFromTop(16); // Spacer между Визором и Панелями
 
   // ==============================================================================
@@ -460,9 +466,7 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(
   driveSlider.setBounds(
       driveArea.withSizeKeepingCentre(150, 150)); // Fixed 150px size
 
-  // Transfer Function Display - под Drive ручкой
-  auto scopeArea = topHalf.removeFromBottom(70).reduced(10, 5);
-  shaperScope.setBounds(scopeArea);
+  // Transfer Function Display теперь поверх анализатора (в layoutMainPanels)
 
   // Справа от Драйва: Control Bar (Algo + Cascade)
   auto controlBar = topHalf;
