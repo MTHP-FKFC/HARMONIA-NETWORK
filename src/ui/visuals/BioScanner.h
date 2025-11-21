@@ -12,7 +12,7 @@ public:
     }
 
     // Метод для установки уровня энергии (RMS)
-    void setEnergyLevel(float energy)
+    void setEnergyLevel(float energy) override
     {
         currentEnergy = energy;
     }
