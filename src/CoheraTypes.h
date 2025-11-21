@@ -15,6 +15,13 @@ enum class SaturationMode {
     Fibonacci,      // Фрактальный грит
     SuperEllipse,   // Идеальный панч
 
+    // === COSMIC SERIES (Фундаментальная физика) ===
+    LorentzForce,   // γ - Плотность (Теория Относительности)
+    RiemannZeta,    // ζ - Простые гармоники (Гипотеза Римана)
+    MandelbrotSet,  // z² - Текстура (Фрактальная геометрия)
+    QuantumWell,    // ψ - Воздух (Квантовая механика)
+    PlanckLimit,    // h - Тьма (Планковская длина)
+
     // === CLASSIC SERIES (Студийная классика) ===
     AnalogTape,     // Лента (Hysteresis emulation via ATAN)
     VintageConsole, // Транзистор (Cubic distortion)

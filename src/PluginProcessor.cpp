@@ -188,6 +188,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
             "Pi Fold",
             "Fibonacci",
             "Super Ellipse",
+            // === COSMIC PHYSICS ===
+            "Lorentz Force",
+            "Riemann Zeta",
+            "Mandelbrot Set",
+            "Quantum Well",
+            "Planck Limit",
             // === CLASSIC SERIES ===
             "Analog Tape",
             "Vintage Console",
