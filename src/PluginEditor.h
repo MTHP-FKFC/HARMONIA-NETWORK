@@ -15,7 +15,7 @@
 #include "ui/visuals/NeuralLink.h"
 #include "ui/visuals/TechDecor.h"
 #include "ui/visuals/TextureOverlay.h"
-#include "ui/visuals/TransferFunctionDisplay.h"
+#include "ui/visuals/NebulaShaper.h"
 #include "ui/visuals/ScreenShaker.h"
 #include "ui/visuals/BioScanner.h"
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -96,7 +96,7 @@ private:
   HeadsUpDisplay hud;
     TextureOverlay textureOverlay;
   NeuralLink neuralLink;
-  TransferFunctionDisplay shaperScope;
+  NebulaShaper nebulaShaper { audioProcessor }; // Cosmic particle visualizer
     TechDecor techDecor;
     BioScanner bioScanner;
     GlitchOverlay glitchOverlay;

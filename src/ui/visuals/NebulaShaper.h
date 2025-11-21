@@ -67,36 +67,17 @@ protected:
     {
         if (getWidth() <= 0 || getHeight() <= 0) return;
 
-        // A. Инициализация FrameBuffer (для эффекта шлейфа)
-        if (!frameBuffer.isValid() || frameBuffer.getWidth() != getWidth() || frameBuffer.getHeight() != getHeight()) {
-            frameBuffer = juce::Image(juce::Image::ARGB, getWidth(), getHeight(), true);
-            juce::Graphics gb(frameBuffer);
-            gb.fillAll(juce::Colours::transparentBlack); // Чистим при ресайзе
-        }
+        // A. Прозрачный режим - рисуем напрямую без frameBuffer
+        // Для overlay на анализаторе нужен прозрачный фон
 
-        // B. Рисуем в буфер (Trail Effect)
-        {
-            juce::Graphics gb(frameBuffer);
+        // B. Рисуем облако точек напрямую (без trail для overlay)
+        drawNebulaPoints(g);
 
-            // 1. Dimming (Затухание старого кадра)
-            // Рисуем полупрозрачный черный прямоугольник поверх старого кадра
-            gb.setColour(CoheraUI::kBackground.withAlpha(0.15f)); // Скорость затухания шлейфа
-            gb.fillAll();
+        // C. Рисуем минимальную сетку для ориентации
+        drawMinimalGrid(g);
 
-            // 2. Рисуем новые точки (Nebula Cloud)
-            drawNebulaPoints(gb);
-        }
-
-        // C. Выводим результат на экран
-        g.setOpacity(1.0f);
-        g.drawImageAt(frameBuffer, 0, 0);
-
-        // D. Рисуем статичную кривую поверх (Overlay)
-        // Она должна быть четкой, без шлейфа
+        // D. Рисуем кривую передачи поверх
         drawTransferCurve(g);
-
-        // E. Рамка и блик (Glass UI)
-        drawGlassOverlay(g);
     }
 
 private:
@@ -149,13 +130,13 @@ private:
             float size;
 
             if (p.distortion > 0.1f) {
-                // Hot Particle
-                color = CoheraUI::kOrangeNeon;
-                size = 3.0f + p.distortion * 5.0f; // Вздувается при клиппинге
+                // Hot Particle - ярко-красный/оранжевый
+                color = juce::Colours::orangered;
+                size = 4.0f + p.distortion * 8.0f; // Вздувается при клиппинге
             } else {
-                // Cold Particle
-                color = CoheraUI::kCyanNeon;
-                size = 2.0f;
+                // Cold Particle - ярко-голубой
+                color = juce::Colours::deepskyblue;
+                size = 3.0f;
             }
 
             // Альфа зависит от "возраста" в цикле отрисовки (чем дальше от writePos, тем прозрачнее)
@@ -203,33 +184,22 @@ private:
             else { curve.lineTo(sx, sy); }
         }
 
-        // Неоновая обводка кривой
-        g.setColour(CoheraUI::kOrangeNeon.withAlpha(0.3f)); // Glow
-        g.strokePath(curve, juce::PathStrokeType(5.0f, juce::PathStrokeType::curved));
+        // Яркая неоновая обводка для контраста
+        g.setColour(juce::Colours::cyan.withAlpha(0.8f)); // Bright cyan glow
+        g.strokePath(curve, juce::PathStrokeType(4.0f, juce::PathStrokeType::curved));
 
-        g.setColour(CoheraUI::kTextBright); // Core
-        g.strokePath(curve, juce::PathStrokeType(1.5f, juce::PathStrokeType::curved));
+        g.setColour(juce::Colours::white); // Bright core
+        g.strokePath(curve, juce::PathStrokeType(2.0f, juce::PathStrokeType::curved));
     }
 
-    void drawGlassOverlay(juce::Graphics& g)
+    void drawMinimalGrid(juce::Graphics& g)
     {
         auto bounds = getLocalBounds().toFloat();
 
-        // Сетка координат
-        g.setColour(CoheraUI::kTextDim.withAlpha(0.1f));
-        g.drawLine(bounds.getCentreX(), 0, bounds.getCentreX(), bounds.getHeight());
-        g.drawLine(0, bounds.getCentreY(), bounds.getWidth(), bounds.getCentreY());
-
-        // Блик сверху
-        juce::ColourGradient glare(
-            juce::Colours::white.withAlpha(0.05f), 0, 0,
-            juce::Colours::transparentWhite, 0, bounds.getHeight() * 0.4f, false);
-        g.setGradientFill(glare);
-        g.fillRoundedRectangle(bounds.removeFromTop(bounds.getHeight() * 0.4f), 4.0f);
-
-        // Рамка
-        g.setColour(CoheraUI::kTextDim.withAlpha(0.2f));
-        g.drawRoundedRectangle(getLocalBounds().toFloat(), 6.0f, 1.0f);
+        // Простая сетка координат для ориентации
+        g.setColour(juce::Colours::white.withAlpha(0.3f));
+        g.drawLine(bounds.getCentreX(), 0, bounds.getCentreX(), bounds.getHeight(), 1.0f);
+        g.drawLine(0, bounds.getCentreY(), bounds.getWidth(), bounds.getCentreY(), 1.0f);
     }
 
     // Data
@@ -242,7 +212,6 @@ private:
     int writePos = 0;
 
     // Visual State
-    juce::Image frameBuffer;
     MathSaturator saturator;
     juce::Random random;
 

@@ -53,6 +53,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   shakerContainer.addAndMakeVisible(spectrumVisor);
   shakerContainer.addAndMakeVisible(bioScanner);
 
+  // --- COSMIC NEBULA SHAPER (Transfer Function Overlay) ---
+  shakerContainer.addAndMakeVisible(nebulaShaper);
+
   // --- ENERGY LINK ---
   shakerContainer.addAndMakeVisible(energyLink);
 
@@ -210,8 +213,6 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   shakerContainer.addAndMakeVisible(neuralLink);
   neuralLink.setAPVTS(audioProcessor.getAPVTS());
 
-  shakerContainer.addAndMakeVisible(shaperScope);
-
   // --- LAYER 4: OVERLAY ---
   shakerContainer.addAndMakeVisible(textureOverlay);
   textureOverlay.setInterceptsMouseClicks(false, false);
@@ -364,9 +365,6 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
       cascade = *cascadeParam > 0.5f;
     }
 
-    shaperScope.setParameters(drive, mathMode, inputRMS);
-    shaperScope.setCascadeMode(cascade);
-    shaperScope.setEnergyLevel(outputRMS);
   }
 }
 
@@ -409,14 +407,10 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
 
   // Visor занимает всё оставшееся место в топе
   spectrumVisor.setBounds(topSection);
+  bioScanner.setBounds(spectrumVisor.getBounds());
 
-    bioScanner.setBounds(spectrumVisor.getBounds());
-
-  // Transfer Function Display поверх анализатора - классно!
-  shaperScope.setBounds(topSection.withSizeKeepingCentre(
-    static_cast<int>(topSection.getWidth() * 0.6f),
-    static_cast<int>(topSection.getHeight() * 0.6f)
-  ));
+  // Cosmic Nebula Shaper - Transfer Function Overlay
+  nebulaShaper.setBounds(topSection);
 
   area.removeFromTop(16); // Spacer между Визором и Панелями
 
