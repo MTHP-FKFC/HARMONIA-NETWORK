@@ -95,6 +95,10 @@ public:
     float getOutputRMS() const { return outputRMS.load(); }
     float getTransientLevel() const { return lastTransientLevel.load(); }
 
+    // For SmartReactorKnob - Network activity data
+    float getNetworkInput() const { return processingEngine.getInputRMS(); } // SENS reacts to input level
+    float getModIntensity() const { return lastTransientLevel.load(); } // DEPTH reacts to modulation activity
+
 private:
     std::atomic<float> outputRMS { 0.0f };
     std::atomic<float> lastTransientLevel { 0.0f };

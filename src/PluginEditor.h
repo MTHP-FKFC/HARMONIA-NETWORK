@@ -4,6 +4,7 @@
 #include "ui/CoheraLookAndFeel.h"
 #include "ui/Components/EnergyLink.h"
 // #include "ui/Components/NetworkBrain.h"
+#include "ui/components/SmartReactorKnob.h"
 #include "ui/ControlGroup.h"
 #include "ui/SpectrumVisor.h"
 #include "ui/components/ReactorKnob.h"
@@ -34,6 +35,8 @@ public:
 private:
   void setupKnob(juce::Slider &s, juce::String paramId,
                  juce::String displayName, juce::Colour c);
+  void setupReactorKnob(CoheraUI::SmartReactorKnob& s, juce::String paramId,
+                        juce::String displayName);
 
   // Layout helpers
   void layoutSaturation(juce::Rectangle<int> area);
@@ -63,6 +66,10 @@ private:
   ReactorKnob driveSlider;
   juce::Slider tightenSlider, smoothSlider, punchSlider, dynamicsSlider;
 
+  // Network Smart Knobs (Strategy Pattern)
+  std::unique_ptr<CoheraUI::SmartReactorKnob> netSensKnob;
+  std::unique_ptr<CoheraUI::SmartReactorKnob> netDepthKnob;
+
   // Global / Mojo Knobs (Footer)
   juce::Slider mixSlider, outputSlider, focusSlider;
   juce::Slider heatSlider, driftSlider, varianceSlider, entropySlider,
@@ -80,6 +87,8 @@ private:
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
       heatAttachment, driftAttachment, varianceAttachment, entropyAttachment,
       noiseAttachment;
+  std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
+      netSensAttachment, netDepthAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
       deltaAttachment, cascadeAttachment;
   std::vector<

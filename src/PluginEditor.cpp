@@ -202,6 +202,35 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
       std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
           p.getAPVTS(), "delta", deltaButton);
 
+  // === SMART REACTOR KNOBS (Strategy Pattern) ===
+
+  // SENS (Lamp Physics - reacts to network input)
+  netSensKnob = std::make_unique<CoheraUI::SmartReactorKnob>(
+      std::make_unique<CoheraUI::LampPhysics>(),
+      CoheraUI::kCyanNeon
+  );
+
+  // Подключаем данные (Детектор входа)
+  netSensKnob->setDataSource([this]() {
+      return audioProcessor.getNetworkInput();
+  });
+
+  // Настраиваем UI (имя)
+  setupReactorKnob(*netSensKnob, "net_sens", "SENS");
+
+  // DEPTH (Plasma Physics - reacts to modulation intensity)
+  netDepthKnob = std::make_unique<CoheraUI::SmartReactorKnob>(
+      std::make_unique<CoheraUI::PlasmaPhysics>(),
+      CoheraUI::kOrangeNeon // Пусть Depth отличается цветом (Глубина)
+  );
+
+  // Подключаем данные (Интенсивность модуляции)
+  netDepthKnob->setDataSource([this]() {
+      return audioProcessor.getModIntensity();
+  });
+
+  setupReactorKnob(*netDepthKnob, "net_depth", "DEPTH");
+
   // === NEW VISUAL SYSTEM v2.0 ===
   // FIXED: Components now start timers only after being added to tree
   // addAndMakeVisible(cosmicDust); // Removed
@@ -252,6 +281,20 @@ void CoheraSaturatorAudioProcessorEditor::setupKnob(juce::Slider &s,
       std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
           audioProcessor.getAPVTS(), paramId, s));
 }
+
+// Хелпер для настройки Smart Reactor Knobs (Strategy Pattern)
+void CoheraSaturatorAudioProcessorEditor::setupReactorKnob(CoheraUI::SmartReactorKnob& s,
+                                                           juce::String paramId,
+                                                           juce::String displayName) {
+  shakerContainer.addAndMakeVisible(s); // Добавляем в контейнер для тряски!
+  s.setName(displayName);
+
+  // Аттачмент для SmartReactorKnob (тоже Slider)
+  sliderAttachments.push_back(
+      std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+          audioProcessor.getAPVTS(), paramId, s));
+}
+
 
 void CoheraSaturatorAudioProcessorEditor::paint(juce::Graphics &g) {
   auto area = getLocalBounds().toFloat();
@@ -522,14 +565,25 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(
 
   headerFlex.performLayout(headerArea.reduced(5, 5)); // Небольшой отступ
 
-  // Meter (справа) - temporarily disabled
-  // auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5, 10);
-  // interactionMeter.setBounds(meterArea);
+  // Reactor Knobs: SENS и DEPTH в одну строку
+  auto knobArea = area.reduced(5, 0);
 
-  // Network knobs temporarily disabled - using netGroup instead
-  // auto knobArea = area.reduced(5, 0);
-  // juce::FlexBox netFlex;
-  // ... network knobs temporarily disabled ...
+  juce::FlexBox netFlex;
+  netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Равномерное распределение
+
+  // SENS (Главная - Lamp Physics)
+  netFlex.items.add(juce::FlexItem(*netSensKnob)
+                      .withFlex(1.0f)
+                      .withMaxWidth(150)
+                      .withMaxHeight(150));
+
+  // DEPTH (Plasma Physics)
+  netFlex.items.add(juce::FlexItem(*netDepthKnob)
+                      .withFlex(1.0f)
+                      .withMaxWidth(150)
+                      .withMaxHeight(150));
+
+  netFlex.performLayout(knobArea);
 }
 
 // --- ХЕЛПЕР: Футер (Mix & Mojo) ---
