@@ -14,6 +14,7 @@ using namespace Cohera;
 #include "tests/BasicSignalFlowTest.cpp"
 #include "tests/DAWSimulationTest.cpp"
 #include "tests/ComprehensiveParameterTests.cpp"
+#include "tests/DeadCodeHunter.cpp"
 #include "tests/EngineIntegrationTests.cpp"
 #include "tests/RealWorldScenarios.cpp"
 #include "tests/IndustryStandardTests.cpp"

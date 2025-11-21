@@ -213,5 +213,14 @@ private:
     // Временные переменные для логики (чтобы не дергать параметры каждый сэмпл)
     // currentGroup и isReference удалены - были мертвым кодом
 
+    // === VISUALIZATION DATA ACCESS (для UI и тестов) ===
+    const std::array<float, 6>& getGainReduction() const {
+        return processingEngine.getGainReductionValues();
+    }
+
+    bool isFFTActive() const {
+        return analyzer.isDataReady();
+    }
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CoheraSaturatorAudioProcessor)
 };

@@ -127,6 +127,15 @@ public:
 
       if (bandTrans > maxGlobalTransient)
         maxGlobalTransient = bandTrans;
+
+      // Обновляем Gain Reduction для UI (RMS уровень полосы после обработки)
+      float bandRMS = 0.0f;
+      for (int ch = 0; ch < numChannels; ++ch) {
+          bandRMS += subBlock.getChannelPointer(ch)[0] * subBlock.getChannelPointer(ch)[0];
+      }
+      bandRMS = std::sqrt(bandRMS / numChannels);
+      // Нормализуем относительно входного уровня (примерно)
+      currentGR[b] = bandRMS > 0.0001f ? std::min(2.0f, bandRMS) : 1.0f;
     }
 
     // --- 4. SUM BANDS ---
@@ -179,6 +188,14 @@ private:
 
   juce::SmoothedValue<float> smoothTighten;
   juce::SmoothedValue<float> smoothSmooth;
+
+  // Gain Reduction для UI метров (обновляется в process)
+  std::array<float, 6> currentGR { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+
+public:
+  const std::array<float, 6>& getGainReductionValues() const {
+      return currentGR;
+  }
 };
 
 } // namespace Cohera

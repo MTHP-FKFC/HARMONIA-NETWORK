@@ -9,6 +9,13 @@ add_subdirectory(/Users/macos/JUCE JUCE)
 # Используем legacy parameter IDs чтобы избежать конфликтов VST2/VST3
 add_compile_definitions(JUCE_FORCE_USE_LEGACY_PARAM_IDS=1)
 
+# Строгие предупреждения для поиска мертвого кода
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(-Wall -Wextra -Werror=unused-variable -Werror=unused-function -Werror=unused-private-field)
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    add_compile_options(/W4)
+endif()
+
 # 2. Создаем цель плагина
 juce_add_plugin(Cohera_Saturator
     COMPANY_NAME "CoheraAudio"
@@ -182,6 +189,7 @@ add_executable(BasicSignalFlowTest
     src/tests/TestAudioGenerator.h
     src/tests/DAWSimulationTest.cpp
     src/tests/ComprehensiveParameterTests.cpp
+    src/tests/DeadCodeHunter.cpp
     src/PluginProcessor.cpp
     src/PluginEditor.cpp
     src/CoheraTypes.h

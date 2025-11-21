@@ -90,6 +90,8 @@ public:
 
     const std::array<float, scopeSize>& getScopeData() const { return scopeData; }
 
+    bool isDataReady() const { return nextBlockReady.load(); }
+
 private:
     juce::dsp::FFT forwardFFT;
     juce::dsp::WindowingFunction<float> window;

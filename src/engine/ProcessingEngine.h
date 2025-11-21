@@ -154,6 +154,11 @@ public:
     float getOutputRMS() const { return outputRMS.load(); }
     float getTransientLevel() const { return lastTransientLevel.load(); }
 
+    // Gain Reduction для UI метров
+    const std::array<float, 6>& getGainReductionValues() const {
+        return filterBankEngine.getGainReductionValues();
+    }
+
 private:
     double sampleRate = 44100.0;
     juce::uint32 blockSize = 512;
