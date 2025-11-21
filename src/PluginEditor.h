@@ -5,6 +5,7 @@
 #include "ui/Components/EnergyLink.h"
 // #include "ui/Components/NetworkBrain.h"
 #include "ui/components/SmartReactorKnob.h"
+#include "ui/visuals/NebulaShaper.h"
 #include "ui/ControlGroup.h"
 #include "ui/SpectrumVisor.h"
 #include "ui/components/ReactorKnob.h"
@@ -50,6 +51,7 @@ private:
   // Components
   SpectrumVisor spectrumVisor;
   EnergyLink energyLink; // Центральный поток энергии
+  NebulaShaper nebulaShaper { audioProcessor }; // Nebula visualizer
   // NetworkBrain networkBrain; // Network Intelligence Panel - temporarily disabled
   // InteractionMeter interactionMeter; // Network activity meter - temporarily disabled
 
@@ -77,6 +79,8 @@ private:
 
   // Buttons & Selectors
   juce::TextButton deltaButton;
+  juce::TextButton viewSwitchButton;
+  bool showNebula = false; // View switch state
 
   // Attachments
   std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>

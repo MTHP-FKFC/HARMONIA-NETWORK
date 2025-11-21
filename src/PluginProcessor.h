@@ -3,6 +3,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_dsp/juce_dsp.h>
+#include <mutex>
+#include <vector>
 #include "dsp/FilterBank.h"
 #include "dsp/Waveshaper.h"
 #include "dsp/MathSaturator.h"
@@ -99,9 +101,32 @@ public:
     float getNetworkInput() const { return processingEngine.getInputRMS(); } // SENS reacts to input level
     float getModIntensity() const { return lastTransientLevel.load(); } // DEPTH reacts to modulation activity
 
+    // For NebulaShaper - Transfer function visualization data
+    void pushVisualizerData(float input, float output) {
+        std::lock_guard<std::mutex> lock(visualizerMutex);
+        visualizerFIFO.push_back({input, output});
+        if (visualizerFIFO.size() > 2000) { // Limit FIFO size
+            visualizerFIFO.erase(visualizerFIFO.begin());
+        }
+    }
+
+    bool popVisualizerData(float& input, float& output) {
+        std::lock_guard<std::mutex> lock(visualizerMutex);
+        if (visualizerFIFO.empty()) return false;
+        auto point = visualizerFIFO.front();
+        visualizerFIFO.erase(visualizerFIFO.begin());
+        input = point.first;
+        output = point.second;
+        return true;
+    }
+
 private:
     std::atomic<float> outputRMS { 0.0f };
     std::atomic<float> lastTransientLevel { 0.0f };
+
+    // Visualizer data FIFO
+    std::vector<std::pair<float, float>> visualizerFIFO;
+    std::mutex visualizerMutex;
 
 private:
     // === 1. Параметры (State) ===

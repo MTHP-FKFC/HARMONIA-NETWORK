@@ -56,6 +56,10 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   // --- ENERGY LINK ---
   shakerContainer.addAndMakeVisible(energyLink);
 
+  // --- NEBULA SHAPER ---
+  shakerContainer.addAndMakeVisible(nebulaShaper);
+  nebulaShaper.setVisible(false); // Hidden by default
+
   // --- NETWORK BRAIN ---
   // shakerContainer.addAndMakeVisible(networkBrain); // Temporarily disabled
 
@@ -201,6 +205,16 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   deltaAttachment =
       std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
           p.getAPVTS(), "delta", deltaButton);
+
+  // View Switch Button (Spectrum vs Nebula)
+  addAndMakeVisible(viewSwitchButton);
+  viewSwitchButton.setButtonText("VIEW");
+  viewSwitchButton.setColour(juce::TextButton::buttonColourId, CoheraUI::kPanel.darker(0.2f));
+  viewSwitchButton.onClick = [this]() {
+      showNebula = !showNebula;
+      spectrumVisor.setVisible(!showNebula);
+      nebulaShaper.setVisible(showNebula);
+  };
 
   // === SMART REACTOR KNOBS (Strategy Pattern) ===
 
@@ -452,6 +466,10 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
 
   // Visor занимает всё оставшееся место в топе
   spectrumVisor.setBounds(topSection);
+  nebulaShaper.setBounds(topSection);
+
+  // View Switch Button (top right corner of visor)
+  viewSwitchButton.setBounds(topSection.getRight() - 55, topSection.getY() + 5, 50, 20);
 
     bioScanner.setBounds(spectrumVisor.getBounds());
 

@@ -251,6 +251,19 @@ void CoheraSaturatorAudioProcessor::processBlock(juce::AudioBuffer<float>& buffe
     // Обрабатываем через ProcessingEngine
     processingEngine.processBlockWithDry(buffer, dryBuffer, params);
 
+    // Собираем данные для NebulaShaper (каждый N-й сэмпл для производительности)
+    static int sampleCounter = 0;
+    if (++sampleCounter % 64 == 0) { // Каждые 64 сэмпла
+        for (int i = 0; i < originalNumSamples && i < 10; ++i) { // Максимум 10 точек за блок
+            float in = dryBuffer.getSample(0, i);
+            float out = buffer.getSample(0, i);
+            // Нормализуем к -1..1 для визуализации
+            in = juce::jlimit(-1.0f, 1.0f, in);
+            out = juce::jlimit(-1.0f, 1.0f, out);
+            pushVisualizerData(in, out);
+        }
+    }
+
     // Кормим анализатор выходным сигналом
     for (int i = 0; i < originalNumSamples; ++i)
     {
