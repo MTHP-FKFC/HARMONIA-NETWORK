@@ -231,6 +231,7 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samples
 
     // 3. Сброс анализатора (чтобы старый спектр не висел)
     analyzer.prepare();
+    analyzer.setSampleRate((float)sampleRate);
 
     // 4. Сообщаем хосту новую задержку (целое значение, как требует JUCE)
     const int hostLatency = juce::roundToInt(processingEngine.getLatency());

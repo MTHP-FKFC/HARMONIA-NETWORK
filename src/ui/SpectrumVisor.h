@@ -6,11 +6,27 @@
 class SpectrumVisor : public juce::Component
 {
 public:
-    SpectrumVisor() {}
+    SpectrumVisor() {
+        // Инициализируем предыдущие данные
+        prevFftData.fill(0.0f);
+    }
 
     // Установка реальных FFT данных
     void setFFTData(const std::array<float, 512>& data) {
-        fftData = data;
+        // Сглаживаем данные для предотвращения резких прыжков
+        const float smoothingFactor = 0.7f; // Чем выше, тем плавнее
+
+        for (size_t i = 0; i < data.size(); ++i) {
+            // Экспоненциальное сглаживание
+            fftData[i] = prevFftData[i] * smoothingFactor + data[i] * (1.0f - smoothingFactor);
+
+            // Ограничиваем диапазон
+            fftData[i] = juce::jlimit(0.0f, 1.0f, fftData[i]);
+
+            // Сохраняем для следующего кадра
+            prevFftData[i] = fftData[i];
+        }
+
         repaint();
     }
 
@@ -61,17 +77,32 @@ private:
         juce::Path p;
         float step = w / (data.size() - 1);
 
-        // Строим Path
-        p.startNewSubPath(0, h);
+        // Строим Path правильно - стабилизированное основание
+        p.startNewSubPath(0, h); // Начинаем от левого нижнего угла
+
+        // Рисуем спектр
         for (size_t i = 0; i < data.size(); ++i) {
             float x = i * step;
-            float y = h - (data[i] * h * 0.8f); // Оставляем место для меток
-            if (i == 0)
-                p.startNewSubPath(x, y);
-            else
-                p.lineTo(x, y);
+
+            // ФИКСИРУЕМ ЛЕВЫЙ КРАЙ - первые 3 бины всегда на минимальном уровне
+            float spectrumValue;
+            if (i < 3) {
+                spectrumValue = 0.0f; // Минимальный уровень для низких частот (левый край)
+            } else {
+                spectrumValue = data[i];
+            }
+
+            // Стабилизируем Y - ограничиваем диапазон и сглаживаем
+            float rawY = spectrumValue * h * 0.8f;
+            float clampedY = juce::jlimit(0.0f, h * 0.8f, rawY); // Не даем уходить за пределы
+            float y = h - clampedY;
+            p.lineTo(x, y);
         }
-        p.lineTo(w, h);
+
+        // Рисуем горизонтальную линию по основанию до правого края
+        // Вместо p.lineTo(w, h) - это предотвращает "скакалочку"
+        p.lineTo(w, h); // Горизонтальная линия по основанию
+
         p.closeSubPath();
 
         if (fill) {
@@ -189,4 +220,6 @@ private:
 private:
     // Реальные FFT данные от процессора
     std::array<float, 512> fftData;
+    // Предыдущие данные для сглаживания
+    std::array<float, 512> prevFftData;
 };

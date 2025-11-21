@@ -9,8 +9,12 @@ static constexpr int scopeSize = 512; // Разрешение для рисов�
 class SimpleFFT
 {
 public:
-    SimpleFFT() : forwardFFT(fftOrder), window(fftSize, juce::dsp::WindowingFunction<float>::hann)
+    SimpleFFT() : forwardFFT(fftOrder), window(fftSize, juce::dsp::WindowingFunction<float>::hann), sampleRate(44100.0f)
     {
+    }
+
+    void setSampleRate(float newSampleRate) {
+        sampleRate = newSampleRate;
     }
 
     void prepare()
@@ -60,9 +64,23 @@ public:
             
             for (int i = 0; i < scopeSize; ++i)
             {
-                // Берем диапазон частот
-                // Для красоты можно сделать логарифмический маппинг индекса, но пока линейно
-                int fftIdx = (int)juce::jmap((float)i, 0.0f, (float)scopeSize, 0.0f, (float)(fftSize / 2));
+                // Логарифмический маппинг частот для правильного отображения спектра
+                // 20Hz - 20000Hz (стандартный диапазон аудио)
+                float minFreq = 20.0f;
+                float maxFreq = 20000.0f;
+
+                // Нормализуем i в диапазоне 0..1
+                float normalizedPos = (float)i / (float)(scopeSize - 1);
+
+                // Логарифмический маппинг
+                float freq = minFreq * std::pow(maxFreq / minFreq, normalizedPos);
+
+                // Переводим частоту в индекс FFT
+                // fftSize/2 - размер спектра (Nyquist frequency)
+                int fftIdx = (int)((freq / (sampleRate / 2.0f)) * (fftSize / 2.0f));
+
+                // Ограничиваем индекс допустимым диапазоном
+                fftIdx = juce::jlimit(0, (int)(fftSize / 2) - 1, fftIdx);
                 
                 float level = fftData[(size_t)fftIdx];
                 
@@ -95,6 +113,7 @@ public:
 private:
     juce::dsp::FFT forwardFFT;
     juce::dsp::WindowingFunction<float> window;
+    float sampleRate;
 
     std::array<float, fftSize> fifo;
     std::array<float, fftSize * 2> fftData; // *2 нужно для performFrequencyOnlyForwardTransform

@@ -2,7 +2,6 @@
 
 #include "PluginProcessor.h"
 #include "ui/CoheraLookAndFeel.h"
-#include "ui/Components/EnergyLink.h"
 #include "ui/Components/NetworkBrain.h"
 #include "ui/ControlGroup.h"
 #include <functional>
@@ -18,6 +17,7 @@
 #include "ui/visuals/NebulaShaper.h"
 #include "ui/visuals/ScreenShaker.h"
 #include "ui/visuals/BioScanner.h"
+#include "ui/visuals/PlasmaCore.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 // #include "ui/Components/InteractionMeter.h"
 
@@ -47,7 +47,6 @@ private:
 
   // Components
   SpectrumVisor spectrumVisor;
-  EnergyLink energyLink; // Центральный поток энергии
   NetworkBrain networkBrain; // Network Intelligence Panel
 
   // Groups
@@ -100,6 +99,7 @@ private:
     TechDecor techDecor;
     BioScanner bioScanner;
     GlitchOverlay glitchOverlay;
+    PlasmaCore plasmaCore; // Central plasma energy core
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
       CoheraSaturatorAudioProcessorEditor)

@@ -62,6 +62,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   // --- ENERGY LINK ---
   shakerContainer.addAndMakeVisible(energyLink);
 
+  // --- PLASMA CORE (Central Energy Reactor) ---
+  shakerContainer.addAndMakeVisible(plasmaCore);
+
   // --- NETWORK BRAIN ---
   shakerContainer.addAndMakeVisible(networkBrain);
 
@@ -224,8 +227,8 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   shakerContainer.addAndMakeVisible(glitchOverlay);
   glitchOverlay.toFront(true);
 
-  // Timer для редактора (если нужен отдельный)
-  // startTimerHz(20);
+  // Запускаем таймер редактора, чтобы PlasmaCore/визуализации обновлялись
+  startTimerHz(30);
 
   // Базовый размер
   setSize(900, 650);
@@ -373,6 +376,40 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
     }
 
   }
+
+  // Собираем данные для Плазмы
+  PlasmaState plasmaState;
+
+  // 1. Искажение от Драйва (положение ручки + RMS)
+  float drivePos = driveSlider.getValue() / driveSlider.getMaximum();
+  plasmaState.driveLevel = drivePos * audioProcessor.getInputRMS();
+
+  // 2. Каналы (для красоты берем RMS и немного разносим, если есть Variance)
+  // Можно взять реальные L/R RMS из процессора, если добавить геттеры
+  // Пока используем общий RMS для симметрии, но с модуляцией от Variance
+  float var = 0.0f;
+  if (auto *varianceParam = apvts.getRawParameterValue("variance")) {
+    var = *varianceParam / 100.0f;
+  }
+  plasmaState.leftSignal = audioProcessor.getInputRMS() * (1.0f - var * 0.2f);
+  plasmaState.rightSignal = audioProcessor.getInputRMS() * (1.0f + var * 0.2f);
+
+  // 3. Сеть (берем из параметра net_sens)
+  if (auto *netSensParam = apvts.getRawParameterValue("net_sens")) {
+    plasmaState.netModulation = *netSensParam / 100.0f; // Нормализуем от 0..100 к 0..1
+  } else {
+    plasmaState.netModulation = 0.0f;
+  }
+
+  // 4. Глобальная перегрузка (Heat)
+  // Берем из атомика Depth (так как Depth показывает общую модуляцию)
+  // Или добавляем спец. детектор перегруза.
+  // Используем outputRMS > 0.9 как "Heat Flash"
+  float outPeak = audioProcessor.getOutputRMS();
+  plasmaState.globalHeat = (outPeak > 0.8f) ? (outPeak - 0.8f) * 5.0f : 0.0f; // Вспышка только на пиках
+
+  // Отправляем в ядро
+  plasmaCore.updateState(plasmaState);
 }
 
 void CoheraSaturatorAudioProcessorEditor::resized() {
@@ -450,7 +487,7 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
 
   // Устанавливаем границы Групп (Рамки)
   satGroup.setBounds(leftPanel);
-  neuralLink.setBounds(linkPanel.reduced(0, 20)); // Чуть отступ сверху/снизу
+  plasmaCore.setBounds(linkPanel.reduced(0, 10)); // Чуть отступаем сверху/снизу
   networkBrain.setBounds(rightPanel);
 
   // Заполняем внутренности групп (с учетом отступа под заголовок группы)
