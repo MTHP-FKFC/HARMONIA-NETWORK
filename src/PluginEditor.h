@@ -46,7 +46,7 @@ private:
   // Components
   SpectrumVisor spectrumVisor;
   EnergyLink energyLink; // Центральный поток энергии
-  // InteractionMeter interactionMeter; // Наш новый метр - временно отключен
+  NetworkBrain networkBrain { audioProcessor.getAPVTS() }; // Network Intelligence Panel
 
   // Groups
   ControlGroup satGroup{"SATURATION CORE", CoheraUI::kOrangeNeon};
@@ -61,9 +61,6 @@ private:
   ReactorKnob driveSlider;
   juce::Slider tightenSlider, smoothSlider, punchSlider, dynamicsSlider;
 
-  // Network Knobs
-  juce::Slider netSensSlider, netDepthSlider, netSmoothSlider;
-
   // Global / Mojo Knobs (Footer)
   juce::Slider mixSlider, outputSlider, focusSlider;
   juce::Slider heatSlider, driftSlider, varianceSlider, entropySlider,
@@ -74,8 +71,8 @@ private:
 
   // Attachments
   std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
-      groupAttachment, roleAttachment, mathModeAttachment, netModeAttachment,
-      netSatAttachment, qualityAttachment;
+      groupAttachment, roleAttachment, mathModeAttachment,
+      qualityAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
       driveAttachment, dynamicsAttachment, outputAttachment, focusAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>

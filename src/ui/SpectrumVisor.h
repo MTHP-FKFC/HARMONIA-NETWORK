@@ -8,6 +8,12 @@ class SpectrumVisor : public juce::Component
 public:
     SpectrumVisor() {}
 
+    // Установка реальных FFT данных
+    void setFFTData(const std::array<float, 512>& data) {
+        fftData = data;
+        repaint();
+    }
+
     void paint(juce::Graphics& g) override
     {
         auto bounds = getLocalBounds().toFloat();
@@ -23,9 +29,14 @@ public:
         // 2. Сетка (Grid)
         drawGrid(g, area.getWidth(), area.getHeight());
 
-        // 3. Спектр (Placeholder - градиентная заливка)
-        std::vector<float> dummyData = {0.1f, 0.3f, 0.8f, 0.6f, 0.2f, 0.4f, 0.9f, 0.5f, 0.1f};
-        drawSpectrum(g, area.getWidth(), area.getHeight(), dummyData, CoheraUI::kOrangeNeon, true);
+        // 3. Спектр (Реальные FFT данные)
+        if (!fftData.empty()) {
+            drawSpectrum(g, area.getWidth(), area.getHeight(), fftData, CoheraUI::kOrangeNeon, true);
+        } else {
+            // Fallback на dummy data если FFT не готов
+            std::vector<float> dummyData = {0.1f, 0.3f, 0.8f, 0.6f, 0.2f, 0.4f, 0.9f, 0.5f, 0.1f};
+            drawSpectrum(g, area.getWidth(), area.getHeight(), dummyData, CoheraUI::kOrangeNeon, true);
+        }
 
         // 4. Стекло (Glass Reflection)
         juce::ColourGradient glare(
@@ -172,4 +183,8 @@ private:
         float maxDb = 0.0f;
         return height - ((db - minDb) / (maxDb - minDb)) * height;
     }
+
+private:
+    // Реальные FFT данные от процессора
+    std::array<float, 512> fftData;
 };

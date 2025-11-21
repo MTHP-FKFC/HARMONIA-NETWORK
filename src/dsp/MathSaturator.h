@@ -104,7 +104,6 @@ public:
                 // Fractal Geometry: z = z^2 + c
                 // Audio: Iterative nonlinearity creating "grit" texture
                 {
-                    float z = 0.0f;
                     float c = std::tanh(x); // Limit input
 
                     // 3 iterations of Mandelbrot formula

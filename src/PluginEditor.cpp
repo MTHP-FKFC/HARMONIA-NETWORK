@@ -56,6 +56,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   // --- ENERGY LINK ---
   shakerContainer.addAndMakeVisible(energyLink);
 
+  // --- NETWORK BRAIN ---
+  shakerContainer.addAndMakeVisible(networkBrain);
+
   // --- SATURATION CORE (Left) ---
   shakerContainer.addAndMakeVisible(satGroup);
 
@@ -65,6 +68,8 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
       juce::StringArray{
           // === DIVINE SERIES ===
           "Golden Ratio", "Euler Tube", "Pi Fold", "Fibonacci", "Super Ellipse",
+          // === COSMIC PHYSICS ===
+          "Lorentz Force", "Riemann Zeta", "Mandelbrot Set", "Quantum Well", "Planck Limit",
           // === CLASSIC SERIES ===
           "Analog Tape", "Vintage Console", "Diode Class A", "Tube Driver",
           "Digital Fuzz", "Bit Decimator", "Rectifier"},
@@ -340,6 +345,12 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
   glitchOverlay.setEnergyLevel(transientLevel);
   bioScanner.setEnergyLevel(outputRMS);
 
+  // Обрабатываем FFT данные
+  audioProcessor.processFFTForGUI();
+
+  // Обновляем FFT данные для SpectrumVisor
+  spectrumVisor.setFFTData(audioProcessor.getFFTData());
+
   // TransferFunctionDisplay - безопасный доступ к параметрам
   auto &apvts = audioProcessor.getAPVTS();
   if (auto *driveParam = apvts.getRawParameterValue("drive_master")) {
@@ -431,7 +442,7 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
   // Устанавливаем границы Групп (Рамки)
   satGroup.setBounds(leftPanel);
   neuralLink.setBounds(linkPanel.reduced(0, 20)); // Чуть отступ сверху/снизу
-  netGroup.setBounds(rightPanel);
+  networkBrain.setBounds(rightPanel);
 
   // Заполняем внутренности групп (с учетом отступа под заголовок группы)
   // Отступ сверху 30px под текст "SATURATION CORE"

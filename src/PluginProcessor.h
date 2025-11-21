@@ -61,6 +61,16 @@ public:
         return analyzer.isDataReady();
     }
 
+    // FFT данные для SpectrumVisor
+    const std::array<float, 512>& getFFTData() const {
+        return analyzer.getScopeData();
+    }
+
+    // Обработка FFT для GUI (вызывается из timerCallback)
+    void processFFTForGUI() {
+        analyzer.process();
+    }
+
     // Кол-во программ
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
