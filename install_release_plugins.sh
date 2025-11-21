@@ -17,6 +17,10 @@ mkdir -p "$VST3_DIR"
 
 echo "📦 Installing AU Plugin..."
 if [ -d "$AU_PLUGIN" ]; then
+    # Remove old version if exists
+    if [ -d "$AU_DIR/Cohera Saturator.component" ]; then
+        rm -rf "$AU_DIR/Cohera Saturator.component"
+    fi
     cp -r "$AU_PLUGIN" "$AU_DIR/"
     echo "✅ AU Plugin installed to: $AU_DIR"
 else
@@ -25,6 +29,10 @@ fi
 
 echo "📦 Installing VST3 Plugin..."
 if [ -d "$VST3_PLUGIN" ]; then
+    # Remove old version if exists
+    if [ -d "$VST3_DIR/Cohera Saturator.vst3" ]; then
+        rm -rf "$VST3_DIR/Cohera Saturator.vst3"
+    fi
     cp -r "$VST3_PLUGIN" "$VST3_DIR/"
     echo "✅ VST3 Plugin installed to: $VST3_DIR"
 else

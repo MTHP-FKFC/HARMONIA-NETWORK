@@ -1,0 +1,638 @@
+[ 11%] Building CXX object CMakeFiles/Cohera_Tests.dir/src/tests/EngineIntegrationTests.cpp.o
+[ 11%] Building CXX object CMakeFiles/Cohera_Tests.dir/src/tests/TestRunner.cpp.o
+[ 17%] Building CXX object CMakeFiles/Cohera_Tests.dir/src/tests/RealWorldScenarios.cpp.o
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/FilterBank.h:5:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/../FIR/fir_coeffs_multi_sr.h:2714:37: warning: unused parameter 'band' [-Wunused-parameter]
+ 2714 | inline const float* getLpCoeffs(int band, double sampleRate) {
+      |                                     ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:6:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/BandProcessingEngine.h:8:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/InteractionEngine.h:112:29: warning: unused variable 'mode' [-Wunused-variable]
+  112 |         Cohera::NetworkMode mode = static_cast<Cohera::NetworkMode>(modeIndex);
+      |                             ^~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/InteractionEngine.h:110:65: warning: unused parameter 'bandIndex' [-Wunused-parameter]
+  110 |     static DualShaperConfig getConfiguration(int modeIndex, int bandIndex, int userSelectedType) {
+      |                                                                 ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/FilterBank.h:5:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/../FIR/fir_coeffs_multi_sr.h:2714:37: warning: unused parameter 'band' [-Wunused-parameter]
+ 2714 | inline const float* getLpCoeffs(int band, double sampleRate) {
+      |                                     ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/FilterBank.h:5:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/../FIR/fir_coeffs_multi_sr.h:2714:37: warning: unused parameter 'band' [-Wunused-parameter]
+ 2714 | inline const float* getLpCoeffs(int band, double sampleRate) {
+      |                                     ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:6:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/BandProcessingEngine.h:8:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/InteractionEngine.h:112:29: warning: unused variable 'mode' [-Wunused-variable]
+  112 |         Cohera::NetworkMode mode = static_cast<Cohera::NetworkMode>(modeIndex);
+      |                             ^~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/InteractionEngine.h:110:65: warning: unused parameter 'bandIndex' [-Wunused-parameter]
+  110 |     static DualShaperConfig getConfiguration(int modeIndex, int bandIndex, int userSelectedType) {
+      |                                                                 ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:6:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/BandProcessingEngine.h:8:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/InteractionEngine.h:112:29: warning: unused variable 'mode' [-Wunused-variable]
+  112 |         Cohera::NetworkMode mode = static_cast<Cohera::NetworkMode>(modeIndex);
+      |                             ^~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../dsp/InteractionEngine.h:110:65: warning: unused parameter 'bandIndex' [-Wunused-parameter]
+  110 |     static DualShaperConfig getConfiguration(int modeIndex, int bandIndex, int userSelectedType) {
+      |                                                                 ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:6:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/BandProcessingEngine.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h:20:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   20 |             tubes[ch]In file included from .p/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:6:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/BandProcessingEngine.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h:20:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+repar   e20( | s pec.sampleRate); In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp     
+:      4| :
+            ~~~~~ ^~In file included from 
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+     tubes[cIn file included from h]./Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.hp:r10e:
+pIn file included from a/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hr:e6(:
+sIn file included from p/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/BandProcessingEngine.he:c12.:
+sa/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.hm:/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h20::21:19: p19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+lewarning: Rimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]a
+t   21 |              e20 | ) ; 
+        |      t u b e s [            ~~~~~ ^~c
+h].rteusbeets([)c;h
+]      .| p            ~~~~~ ^~r
+epare(spec.sampleRate);
+      |             ~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h:21:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   21 |             tubes[ch]/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h:21:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h.   r:e22s:e28t:( )warning: ;implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+
+      |             ~~~~~ ^~
+21   22 |    |                     e n ttruobpyModules[ch].pereps[ch]a.rree(ssepec.sampl/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.hetR(a)t:e);22
+:      28| :            ~~~~~~~~~~~~~~ ^~ ;warning: 
+implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]      
+   22 |      
+|             ~~~~~ ^~
+       entropyModules[ch].prepa/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h:23:28: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   r23 | e(spec.sa         m   p/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.hl:e22R:a28teen)t;r:opy Mwarning: 
+implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]      
+|             ~~~~~~~~~~~~~~ ^~
+o   d22u | l e s [ c h ] . r e s e te(n)t;r/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.ho:p23y:M28o: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+
+      d|    u23l            ~~~~~~~~~~~~~~ ^~e
+s[ch].pre | pa re(  spec.   s a m p l  enetRraotpey);
+      |             ~~~~~~~~~~~~~~ ^~
+Modules[ch].reset();
+      |             ~~~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h:23:28: /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h:36:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   36 |     23  |               tubes[c        entropyModhule]s.[rcehs]e.tr(e)s;e
+t      (| )/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h;:
+36                  ~~~~~ ^~|             ~~~~~~~~~~~~~~ ^~:
+19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+
+   36 |          /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h : 37 :t28u:b ewarning: simplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion][
+ch].r   37 |     eset();
+      |             ~~~~~ ^~        en
+tropyModules[/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.hch]:.36r:e19s:e /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.hwarning: :37:28: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+timplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]   37 | 
+();   
+36       | |              ~~~~~~~~~~~~~~ ^~ 
+                      etnutbreosp[ycMh].reset();
+      od|             ~~~~~ ^~
+ules[ch].reset();
+      |             ~~~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/AnalogModelingEngine.h:37:28: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   37 |             entropyModules[ch].reset();
+      |             ~~~~~~~~~~~~~~ ^~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:35:19:In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:10:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:35:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   35 |       bandBuffers[i].setSize(2,  warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+(   35 |  i n    bandBuftfe)rssp[eic]..msaextimumSize(2,BlockSize (int)spec. maxim+u m2B)l;o
+c      k| S      ~~~~~~~~~~~ ^i
+ze + 2);
+      |       ~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:36:22: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:36:22:36 warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion] | 
+         b36a | n      banddBBuuffferPtrsferPtrs[i] =In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp: &ban[diB]u f=fers[i];
+       &3ban:
+dIn file included from Buffers[i]| ;
+      |       ~~~~~~~~~~~~~~ ^
+      ~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:36:40: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+:10:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:35:19: /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:36:40: warning: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]   
+36 |       35  |     b a n     36 |       bandbBaunfdfBeurfPfterrss[[ii]] .=s e&tbSainze(2ddBuffers[i];,Buff erPtrs[i] = &bandB
+(uffienrt      | s                           ~~~~~~~~~~~ ^[i
+];
+      |                            ~~~~~~~~~~~ ^
+)spec.maximumBlockSize + 2);
+      |       ~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:39:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   39 |       bandEngines[i].prepare(spec);
+      |       ~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:36:22: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   36 |      /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:39:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion] 
+bandBuf   f39e | r P t r s [ ib]a = &bandBuffers/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h[in:d]E46:18: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+;ng   i46n | e s [
+      i ].|       ~~~~~~~~~~~~~~ ^
+prepare/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h :36  pre(Fs:p40e:c )warning: ;implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+
+      |       ~~~~~~~~~~~ ^   
+36 |       ilters[ch].prepare(spbandBuffeec);
+      |       ~~~~~~~~~~ ^~
+rPtrs[i] = &bandBuffers[i];
+      |                            ~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:46:18: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   46 |       pr/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.he:F47i:l18t:e warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   47 |       preFirsl[ch].pretpearrse(spec);
+      |       ~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:39:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   39 |       ban[dEngines[i].prepar/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:e47(:c18h:] .sspewarning: tType(juimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   c47e | : : d sep:c ) ; 
+p      r:eSFtialtteeVa|       ~~~~~~~~~~~ ^
+riableTPTFilterType::highpass);
+      |       ~~~~~~~~~~ ^~
+rs[ch].se/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:49:19tType(:j uwarning: cimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]e
+:   :49d | s p/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h::S: 46:18: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+    46  |        prt eFpostFilters[ialtteeVrasr[ich].parbech]l.epTrPTFiltperTypee:paare(spec);
+      |       ~~~~~~~~~~~ ^~:rhei(gsh
+pec);
+      |       ~~~~~~~~~~ ^~
+pass);
+      |       ~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:50:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   50 |  /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h : 49 : 19:  warning: pimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]o
+stFilt   e49r | s [ c h ] . speotsTtyFpiel(tjers[ch]./Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hu:47:18:ce::dsp::pStateV warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+ariabrle   pa47 |       rper(esFpielct)e;r
+s      |       ~~~~~~~~~~~ ^~
+[ch].setType(juce::dsp::StateVareiTa/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hb:l50e:T19P: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+TFiP   lterTyp50e | ::high   pTaFsisl t erType::)l owpass);;
+      |       ~~~~~~~~~~ ^~
+p
+os      t| F      ~~~~~~~~~~~ ^~i
+lters[ch].setType(juce::dsp::StateVariableTPTFil/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.ht:erType::l49:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+owpa   s49s |       )p;o
+      |       ~~~~~~~~~~~ ^~
+stFilters[ch].prepare(spec);
+      |       ~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:50:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   50 |       postFilters[ch].setType(juce::dsp::StateVariableTPTFilterType::lowpass);
+      |       ~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:64:18: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   64 |       preFilters[ch].reset();
+      |       ~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:65:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   65 |       postFilters[ch].reset();
+      |       ~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:64:18: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   64 |       preFilters[ch].reset();
+      |       ~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:65:19: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   65 |       postFilters[ch].reset();
+      |       ~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:89:20: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   89 |         preFilters[ch]./Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hs:64:18: warning: etCutoimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+ffFr   e64q | u e n c y ( cpurteoFff);
+ilter      s| [        ~~~~~~~~~~ ^~ch].
+reset();
+      |       ~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:89:20: warning: /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]65
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h   89 | : 91 : 49 :    preFilte:rs19: warning:  [ch]warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion].implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]
+   65 |       postFiltse
+rs[ch].res   91 |         eflto(a)t; 
+*edt      C|       ~~~~~~~~~~~ ^~
+utoffFrequency(cutoff);
+      a|         ~~~~~~~~~~ ^~
+ta = ioBlock.getChannelPointer(/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hch);
+      |                               ~~~~~~~~~~~~~~~~~ ^~
+:91:49: warning: implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]
+   91 |         float *data = i/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:92:30o:B lwarning: oimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]c
+k.getC   h92 |        annelPo dat/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hi:n89t:e20r:( cah[)i;]
+       warning: |                               ~~~~~~~~~~~~~~~~~ ^~implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+
+   89 | =   p r     preeFiltFi/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hl:t92:30: warning: ers[echr]s.[pch].setrCouimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]tof
+cfeFsreq   u92e | n c y ( c    ustSoafmdple(ch, af)tda[ait]a[i]);
+      |                   ~~~~~~~~~~ ^~
+ ;= 
+p      r|         ~~~~~~~~~~ ^~
+e/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hF:91:i49l:t ewarning: rs[ch].processSamplimplicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]
+e(c   h91, |          fdlaotaat[i]);
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h       | *:104:67: warning: implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]d
+at                  ~~~~~~~~~~ ^~a
+ = ioB  lock.ge104 |  t C          h a n n e l P o i                    ioBlock.getChannnter(c/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:e104:hlP)o;i67: 
+warning:       n|                               ~~~~~~~~~~~~~~~~~ ^~t
+eimplicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]r
+(ch),
+      |                                                 ~~~~~~~~~~~~~~~~~ ^~  
+104 |                      /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h : 92      :30          :  warning: iimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+oBlock   92.getCha |         data[i] = prenFilters[ch].processnSealPointer(cmhp)l,e
+(      c| h                                                ~~~~~~~~~~~~~~~~~ ^~,
+ data[i]);
+      |                   ~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:121:58: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  121 |       juce::dsp::AudioBlock<float> bandBlock(bandBuffers[b]);
+      |                                              ~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:104:67: warning: implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]
+  104 |                                         ioBlock.getChannelPointer(ch),
+      |                                                 ~~~~~~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:128:63: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h128 | : 121 : 58 : warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+          121 |       juce::dsp::     Audi/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h : 121 : 58 :   warning: oimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]Bl
+ock<    121 f  l o a t >  bandB loc k ( b a n   |        netdMBoudul    juce::dsap::ftifoenrss[[b]);
+      |                                              ~~~~~~~~~~~ ^
+b]);
+      |                                                ~~~~~~~~~~~~~~ ^
+Au/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hd:i127o:B37l: warning: oimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]c
+k<float  127 |       flo> baatndBlock(ba nbdaBnuffedrTsr[b]);
+      |                                              ~~~~~~~~~~~ ^
+ans = bandE/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hn:128:63: warning: gines[b].proceimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+s  s128( |     s u b B l o c     k ,      p a rams, kBand T   i l     t[b],
+      |                         ~~~~~~~~~~~ ^ 
+      /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h : 128 : 63 :   warning: nimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]e
+tModulati  o128n | s [ b ] ) ; 
+        |                                                 ~~~~~~~~~~~~~~ ^   /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:136:85: warning:  implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion] 
+     
+136 |                  /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h : 127    :37: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   b127a | n d R M S   +f=l osautb BblaoncdkT.rans = ba g e t C hannelP oi n t n er(ch)[      netdEnginesM[obd]u.l0at]i o*n sp[rbo]c)e;ss(subBlsoucbkB, p
+      |                                                ~~~~~~~~~~~~~~ ^
+locka./Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hr:a127m:s, kBandTilt[bgetChann37elPoin],:
+t      er(ch) [0warning: ]implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]| ;                        ~~~~~~~~~~~ ^
+
+      |                                                                   ~~~~~~~~~~~~~~~~~ ^~
+
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:  136127: | 49 :   warning:  implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion] 
+ float   136bandTrans = bandE/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hn:g136i:n85es[ | b] . p r o c    : b warning: implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]e
+ssa(sunbdBR  M136S |           + = subBlolcokck, params, bkBa.getCandRMS += subBlock.ndTilt[b],
+      |                         ~~~~~~~~~~~ ^
+gheatnCnhealnnelPPointer(ch)[0] * subB/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:136:85l:o warning: iimplicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]noter(c
+ch)[0] *   136 |   s ukbB lo  .getCck.g et C h abnannedlRPMoS += subhinteBrlock.a(ch)[0]getChannelPointer(ch)[0] *; subBlock.getChnanelPo
+inte      |                                                                   ~~~~~~~~~~~~~~~~~ ^~
+n/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hn:e136l:P49o:i nwarning: timplicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]e
+r(r(chc)h[)0][;0];
+        | 136                                                                  ~~~~~~~~~~~~~~~~~ ^~ | 
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:136: 49: warning: implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]
+  136  |            
+      |                               ~~~~~~~~~~~~~~~~~ ^~
+     ba n dbandRMS += subBlock.getRChannelPointeMr(ch)S += s[u0b]B l*o csku.bgBeltoCchka.getChnnelPointer(ch)[0a/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:140:17] *n subBlocknelP:o warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+.gie  t140Channnteer(chl) | [0   P o i nc]urr;e
+n      t|                               ~~~~~~~~~~~~~~~~~ ^~
+tGer(Rc[hb)][ 0=] ;b
+a      n|                               ~~~~~~~~~~~~~~~~~ ^~
+dRMS > 0.0001f ? std::min(2.0f, bandRMS) : 1.0f;
+      |       ~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:140:17:/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:140:17: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  140 warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+ |   140  |       curren     curt/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:151:25: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+r  e151nGtRG[Rb[b] = ban |         d RM]   ban S d> 0.B0u0f0f1efr s?[ b].gesttR= ebadnadPointer(ch), // :dSRrMcS
+       >|              ~~~~~~~~~~~ ^0
+.0001f /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h?: 150:39: warning: implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]
+  150 | s:min(2 .td 0::m in(2.0f,          ioBbloandRMfck.g,etChannelPointer(ch),     // Dest
+      |                     ~~~~~~~~~~~~~~~~~ ^~
+ bandRMS) : 1.0f;
+S) : 1.0f;      |       ~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:166:21: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  
+      |       ~~~~~~~~~ ^166
+ |         postFilters[ch].setCutoffFrequency(cutoff);
+      |         ~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:151:25: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  151 |             bandBuffers[b].getReadPointer/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h(:c167h:)49,:  /warning: /implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion] 
+Src
+      |               ~~~~~~~~~~~ ^167
+ |         float *data = ioBlock./Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:150:39: warning: gimplicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]e
+tChannelPointe  r(ch);
+      |                               ~~~~~~~~~~~~~~~~~ ^~150 |    
+         ioBloc/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hk:.151g:e25t:C hwarning: aimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]n
+nelPo/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hi:168:31:  151 |            warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+n  168t  |   b a n d B u  dfaftear[ei] =r (postFils[b].cgeht)R,e a d P o i/n/t er(ch)t,ers[cDesht].processSam //
+ p      l| e                    ~~~~~~~~~~~~~~~~~ ^~(
+ch, datSa[i]);
+      |                   ~~~~~~~~~~~ ^~
+rc
+      |             ~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:166:21: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  166 |         postFilters[ch]./Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.hsetCutoffFrequency:(cu150t:o39f:f )warning: ;implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]
+
+      |         ~~~~~~~~~~~ ^~
+  150 |       /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:167:49:   warning:  implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion] 
+  ioBlock.getChannelPointer(ch),     // Dest
+      |                     ~~~~~~~~~~~~~~~~~ ^~
+  167 |         flo/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:166:21: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+a  t *data = ioBlock.getChannelPoint166er(ch) |        ;
+      |                               ~~~~~~~~~~~~~~~~~ ^~
+ postFilters[ch].setCutoffFrequency(cutoff);
+      |         ~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:168:31: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  168 |         data[i] = postFilters[ch].processSample(ch/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h,:167:49: warning: implicit conversion changes signedness: 'int' to 'size_t' (aka 'unsigned long') [-Wsign-conversion]
+ data[  167 |     i]);
+      |                   ~~~~~~~~~~~ ^~ 
+   float *data = ioBlock.getChannelPointer(ch);
+      |                               ~~~~~~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/FilterBankEngine.h:168:31: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+  168 |         data[i] = postFilters[ch].processSample(ch, data[i]);
+      |                   ~~~~~~~~~~~ ^~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:11:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:19:52: warning: implicit conversion turns floating-point number into integer: 'const double' to 'int' [-Wfloat-conversion]
+   19 |         dryDelayLine.setMaximumDelayInSamples(spec.sampleRate);
+      |                      ~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~^~~~~~~~~~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:11:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:19:52: warning: implicit conversion turns floating-point number into integer: 'const double' to 'int' [-Wfloat-conversion]
+   19 |         dryDelayLine.setMaximumDelayInSamples(spec.sampleRate);
+      |                      ~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~^~~~~~~~~~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:11:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:19:52: warning: implicit conversion turns floating-point number into integer: 'const double' to 'int' [-Wfloat-conversion]
+   19 |         dryDelayLine.setMaximumDelayInSamples(spec.sampleRate);
+      |                      ~~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~^~~~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:71:97: warning: comparison of integers of different signs: 'int' and 'size_t' (aka 'unsigned long') [-Wsign-compare]
+   71 |         if (delayedDryBuffer.getNumSamples() != numSamples || delayedDryBuffer.getNumChannels() != numChannels) {
+      |                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:71:46: warning: comparison of integers of different signs: 'int' and 'size_t' (aka 'unsigned long') [-Wsign-compare]
+   71 |         if (delayedDryBuffer.getNumSamples() != numSamples || delayedDryBuffer.getNumChannels() != numChannels) {
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:89:48: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   89 |             float dryL = dryBlock.getSample(0, i);
+      |                                   ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:90:68: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   90 |             float dryR = (numChannels > 1) ? dryBloc/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.hk:.71g:e97t:S awarning: mcomparison of integers of different signs: 'int' and 'size_t' (aka 'unsigned long') [-Wsign-compare]p
+le(1, i) : dryL;
+      |                                                       ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:92:48/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:   71 |         if (delayedDryBuffer.getNumSamples() != numSam71pl:e97s:  |warning: |comparison of integers of different signs: 'int' and 'size_t' (aka 'unsigned long') [-Wsign-compare]
+: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   71 |       92  |         i f   ( d e l a yfeldoDarty BwueftfLe r=. gweettNBulmoScakm.pgleetsS(a)m p!l=e (n0u,m Sia)m;p
+l      e| s                                  ~~~~~~~~~    ^ 
+|| delayedDryBuf/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.hf:e93r:.68g:e twarning: Nimplicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]u
+mChann   e93l | s ( )   ! =   n u m C h afnlnoealts )w e{t
+R       | =                                                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~ 
+(numChannels > 1) ?/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h :w71e:t46B:l owarning: ccomparison of integers of different signs: 'int' and 'size_t' (aka 'unsigned long') [-Wsign-compare]k
+.getSamp   l71e | ( 1 ,   i )   :  iwfe t(Ld;e
+l      a| y                                                      ~~~~~~~~~    ^e
+dDryB/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.hu:f124f:e35r:. gwarning: eimplicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]t
+NumS  124 |       d e l a y e d DwreytBBulfofcekr..sgeettSNaummpClhea(n0n,e lis,( )o u!t=L )n;u
+m      C| h                     ~~~~~~~~~    ^a
+nnel/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.hs:)125 :{56
+:       | warning:                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+
+  125 |      /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h : 71 : 46 :   warning: icomparison of integers of different signs: 'int' and 'size_t' (aka 'unsigned long') [-Wsign-compare]
+   71 |         if (delayedDryBuffer.getNumSamaples(m)p l!e=s (n)u m!f=  (nSuammSpamples || delayedDrynumChannelles || deBuffser.getNlumaCyheadnDnreylBsu() != numChannels)  > 1) wetBlock.setSample(1, i, outR);
+      |                                           ~~~~~~~~~    ^f
+fer.getNumChannels() != numChannels) {
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:89:48: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   89 |             float dryL = dryBlock.getSample(0, i);
+      |                                   ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:90:68: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   90 |             float dryR = (numChannels > 1) ?{
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:89:48: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   89 |             float dryL = dryBlock.getSample(0, i);
+      |                                   ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:90:68: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   90 |             float dryR = (numChannels > 1) ? dryBlock.getSample(1, i) : dryL;
+      |                                                       ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:92:48: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   92 |             float wetL = wetB dryBlock.getSample(1, i) : dryL;
+      |                                                       ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:92:48: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   92 |    l o c k . g e t S ample(0, i);
+float wetL = wetBlock.getSample(0, i      );
+      |                                   ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:93:68: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   93 |             float wetR = (numChannels > 1) ? wetBlock.getSample(1, i) : wetL;
+      |                                                       ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:124:35: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+  124 |             wetBlock.setSample(0, i, outL);
+      |                      ~~~~~~~~~    ^
+| /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:                                  ~~~~~~~~~    ^125
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:93:68: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+   93 |             float wetR = (numChannels > 1) ? wetBlock.getSample(1, i) : wetL;
+      |                                                       ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:124:35: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+  124 |       :  56 :   warning:  implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]w
+etBlock.se  t125Sample(0, i, outL);
+      |                      ~~~~~~~~~    ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/MixEngine.h:125:56: warning: implicit conversion loses integer precision: 'size_t' (aka 'unsigned long') to 'int' [-Wshorten-64-to-32]
+  125 |             if (numChannels > 1) wetBlock.setSample(1, i, outR);
+      |                                           ~~~~~~~~~    ^
+ |             if (numChannels > 1) wetBlock.setSample(1, i, outR);
+      |                                           ~~~~~~~~~    ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:12:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:5:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:32:40: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   32 |             groupBandSignals[groupIdx][bandIdx].store(value, std::memory_order_relaxed);
+      |             ~~~~~~~~~~~~~~~~           ^~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:32:30: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   32 |             groupBandSignals[groupIdx][bandIdx].store(value, std::memory_order_relaxed);
+      |             ~~~~~~~~~~~~~~~~ ^~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:41:47: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   41 |             return groupBandSignals[groupIdx][bandIdx].load(std::memory_order_relaxed);
+      |                    ~~~~~~~~~~~~~~~~           ^~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:41:37: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   41 |             return groupBandSignals[groupIdx][bandIdx].load(std::memory_order_relaxed);
+      |                    ~~~~~~~~~~~~~~~~ ^~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:56:30: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   56 |             if (slotOccupied[i].compare_exchange_strong(expected, true))
+      |                 ~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:58:32: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   58 |                 instanceEnergy[i].store(0.0f);
+      |                 ~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:70:28: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   70 |             instanceEnergy[id].store(0.0f);
+      |             ~~~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:71:26: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   71 |             slotOccupied[id].store(false);
+      |             ~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:80:28: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   80 |             instanceEnergy[id].store(energy, std::memory_order_relaxed);
+      |             ~~~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:92:30: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   92 |             if (slotOccupied[i].load(std::memory_order_relaxed))
+      |                 ~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:94:41: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   94 |                 total += instanceEnergy[i].load(std::memory_order_relaxed);
+      |                          ~~~~~~~~~~~~~~ ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:12:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:5:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:32:40: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   32 |             groupBandSignals[groupIdx][bandIdx].store(value, std::memory_order_relaxed);
+      |             ~~~~~~~~~~~~~~~~           ^~~~~~~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:32:30: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   32 |             groupBandSignals[groupIdx][bandIdx].store(value, s12:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:5:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:32:40: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+t   32 | d:       : memory_order_relaxed);
+      |             ~~~~~~~~~~~~~~~~ ^~~~~~~~
+    groupBandSignals[groupIdx][bandIdx].store(value, std::memory_order_relaxed);
+      |             ~~~~~~~~~~~~~~~~           ^~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:32:30: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   32 |             gro/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:41:47: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   41 |             return groupBandSignals[groupIdx][bandIdx].loaudp(Bsatndd:S:imgenals[groupIdx][bandIdx].store(valuIn file included from e/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:12:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:6:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/../dsp/Envelope.h:9mory_o,rd std::memory_order_reer_relaxlaxed);
+      |             ~~~~~~~~~~~~~~~~ ^~~~~~~~
+ed);
+      |                    ~~~~~~~~~~~~~~~~           ^~~~~~~
+:23: warning: unused parameter 'sampleRate' [-Wunused-parameter]
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:41:37: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+    9 |     void reset(double sampleRate)
+      |                       ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:41:47: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   41 |             return groupBandSignals[groupIdx][bandIdx].load(std::memory_order_relaxed);
+      |                    ~~~~~~~~~~~~~~~~           ^~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:41:37: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   41 |             return groupBandSignals[groupIdx][bandIdx].load(std::memory_order_relaxed);
+      |                    ~~~~~~~~~~~~~~~~ ^~~~~~~~
+   41 |             return groupBandSi/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:56:30: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   56 |             if (slotOccupied[i].compare_exchange_strong(expected, true))
+      |                 ~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:58:32: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   58 |                 instanceEnergy[i].store(0.0f);
+      |                 ~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:70:28:g warning: nimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   70 |             instanceEnergy[id].store(0.0f);
+      |             ~~~~~~~~~~~~~~ ^~
+als[groupIdx][bandIdx].load/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h(:s71t:d26::: mwarning: eimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]m
+ory_   o71r | d e r _ r e l a x e d ) ;s
+l      o| t                   ~~~~~~~~~~~~~~~~ ^~~~~~~~O
+ccupied[id].store(false);
+      |             ~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:80:28: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   80 |             instanceEnergy[id].store(energy, std::memory_order_r/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.he:l56a:x30e:d )warning: ;implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+
+      |             ~~~~~~~~~~~~~~ ^~
+   56 |             if (slotOccupied[i].compare_exchange_strong(expected, true))
+      |                 ~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:92:30: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   92 |             if (slotOccupi/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.he:d58[:i32]:. lwarning: oimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]a
+d(std::memory_order_   r58e | l a x e d ) ) 
+        |                  ~~~~~~~~~~~~ ^ 
+     instanceEnergy[i].store(0.0f);
+      |                 ~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:94:41: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   94 |                 total += instanceEnergy[i].load(std::memory_order_relaxed);
+      |                          ~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:70:28: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   70 |             instanceEnergy[id].store(0.0f);
+      |             ~~~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:71:26: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   71 |             slotOccupied[id].store(false);
+      |             ~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:80:28: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   80 |             instanceEnergy[id].store(energy, std::memory_order_relaxed);
+      |             ~~~~~~~~~~~~~~ ^~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:92:30: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   92 |             if (slotOccupied[i].load(std::memory_order_relaxed))
+      |                 ~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkManager.h:94:41: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   94 |                 total += instanceEnergy[i].load(std::memory_order_relaxed);
+      |                          ~~~~~~~~~~~~~~ ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:12:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:6:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/../dsp/Envelope.h:9:23: warning: unused parameter 'sampleRate' [-Wunused-parameter]
+    9 |     void reset(double sampleRate)
+      |                       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:62:35: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   62 |                 receivedEnvelopes[i].setTargetValue(rawNet);
+      |                 ~~~~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:63:52: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   63 |                 float smoothed = receivedEnvelopes[i].getNextValue();
+      |                                  ~~~~~~~~~~~~~~~~~ ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:12:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:6:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/../dsp/Envelope.h:/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h9:23: warning: unused parameter 'sampleRate' [-Wunused-parameter]
+    9 |     void reset(double sampleRate)
+      |                       ^
+:70:29: warning: In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:62:35: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   62 |                 receivimplicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   70 |                 modulations[i] = processed * params.netDepth;
+      |                 ~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:76:15: warning: unused variable 'rms' [-Wunused-variable]
+   76 |         float rms = inputBuffer.getRMSLevel(0, 0, inputBuffer.getNumSamples());
+      |               ^~~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:4:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/EngineIntegrationTests.cpp:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/ProcessingEngine.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:62:35: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   62 |                 receivedEnvelopes[i].setTargetValue(rawNet);
+      |                 ~~~~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:63:52: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+e   63 |      d  E nvelopes[i].setTargetValue(rawNet);
+      |                 ~~~~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:63:52: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   63 |                 float smoothed = receivedEn        float smoothed = receivedEnvelopes[i].getNextValue();
+      |                                  ~~~~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:70:29: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   70 |                 modulvelopes[i].getNextValue();
+      |                                  ~~~~~~~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:70:29: warning: implicit conversion changes signedness: 'int' to 'size_type' (aka 'unsigned long') [-Wsign-conversion]
+   70 |                 modulations[i] = processedations[i] = processed * params.netDepth;
+      |                 ~~~~~~~~~~~ ^
+ * params.netDepth;
+      |                 ~~~~~~~~~~~ ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:76:15: warning: unused variable 'rms' [-Wunused-variable]
+   76 |         float rms = inputBuffer.getRMSLevel(0, 0, inputBuffer.getNumSamples());
+      |               ^~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/../engine/../network/NetworkController.h:76:15: warning: unused variable 'rms' [-Wunused-variable]
+   76 |         float rms = inputBuffer.getRMSLevel(0, 0, inputBuffer.getNumSamples());
+      |               ^~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:7:14: warning: unused parameter 'argc' [-Wunused-parameter]
+    7 | int main(int argc, char* argv[])
+      |              ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestRunner.cpp:7:26: warning: unused parameter 'argv' [-Wunused-parameter]
+    7 | int main(int argc, char* argv[])
+      |                          ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/RealWorldScenarios.cpp:3:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestHelpers.h:26:13: warning: unused function 'fillImpulse' [-Wunused-function]
+   26 | static void fillImpulse(juce::AudioBuffer<float>& buffer, int position = 0)
+      |             ^~~~~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestHelpers.h:34:13: warning: unused function 'isSilent' [-Wunused-function]
+   34 | static bool isSilent(const juce::AudioBuffer<float>& buffer)
+      |             ^~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestHelpers.h:40:12: warning: unused function 'findPeakPosition' [-Wunused-function]
+   40 | static int findPeakPosition(const juce::AudioBuffer<float>& buffer)
+      |            ^~~~~~~~~~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/tests/TestHelpers.h:56:13: warning: unused function 'areBuffersEqual' [-Wunused-function]
+   56 | static bool areBuffersEqual(const juce::AudioBuffer<float>& a, const juce::AudioBuffer<float>& b, float epsilon = 1e-4f)
+      |             ^~~~~~~~~~~~~~~
+63 warnings generated.
+59 warnings generated.
+61 warnings generated.
+[ 23%] Linking CXX executable Cohera_Saturator_artefacts/Tests/Cohera_Tests
+[100%] Built target Cohera_Tests

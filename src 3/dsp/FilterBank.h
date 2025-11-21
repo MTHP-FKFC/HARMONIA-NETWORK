@@ -46,7 +46,6 @@ struct FilterBankConfig
     AnalysisWindowMode  analysisWindowMode = AnalysisWindowMode::Hann;  // For analyzer role
 
     int                 numBands      = 6;      // сейчас 6-полосный
-    int                 numChannels   = 2;      // Default stereo
     double              sampleRate    = 44100.0;
     juce::uint32        maxBlockSize  = 2048;
 };
@@ -110,8 +109,8 @@ private:
 
     int latencySamples = 0;
 
-    // Dynamic channels × 6 bands
-    std::vector<std::vector<juce::dsp::FIR::Filter<float>>> firFilters;
+    // 2 канала × 6 полос (как сейчас)
+    std::array<std::array<juce::dsp::FIR::Filter<float>, 6>, 2> firFilters;
 
     void buildFirFilters(); // перенесём сюда всю логику выбора coeffs
 
@@ -138,8 +137,8 @@ private:
     FilterBankConfig config;
     int latencySamples = 0;
 
-    // Dynamic structure for analyzer
-    std::vector<std::vector<juce::dsp::FIR::Filter<float>>> firFilters;
+    // Аналогичная структура для анализатора
+    std::array<std::array<juce::dsp::FIR::Filter<float>, 6>, 2> firFilters;
 
     void buildFirFilters();
 };

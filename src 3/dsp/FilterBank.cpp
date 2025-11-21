@@ -1,9 +1,7 @@
-#include "FIR/FilterBank.h"
-#include "FIR/fir_minphase_128.h"  // Phase 2.2.4: Minimum-phase coefficients
-#include "CoheraTypes.h"       // SampleRateSupport utilities
+#include "FilterBank.h"
+#include "../FIR/fir_minphase_128.h"  // Phase 2.2.4: Minimum-phase coefficients
+#include "../CoheraTypes.h"       // SampleRateSupport utilities
 #include <algorithm>
-#include <iostream>
-#include <fstream>
 
 using FirFilter = juce::dsp::FIR::Filter<float>;
 
@@ -79,110 +77,24 @@ void PlaybackFilterBank::buildFirFilters()
     const float* lpCoeffs[5] {};
     const float* hpCoeffs[5] {};
 
-    // ✅ SAMPLE RATE COMPATIBILITY: Enhanced sample rate support with fallback
-    auto selectCoefficientsForSampleRate = [&](double sampleRate) {
-        // Use SampleRateSupport for validation and fallback
-        if (!SampleRateSupport::isSupportedSampleRate(sampleRate)) {
-            sampleRate = SampleRateSupport::getNearestSupportedSampleRate(sampleRate);
-            juce::Logger::writeToLog(juce::String::formatted(
-                "[FilterBank] Using fallback sample rate: %.1f Hz", sampleRate));
-        }
-        
-        // Select coefficients based on validated sample rate
-        if (std::abs(sampleRate - 44100.0) < 1.0) {
-            return std::make_pair(
-                std::array<const float*, 5>{
-                    FirCoeffs::MinPhase::SR44100::kLP125.data(),
-                    FirCoeffs::MinPhase::SR44100::kLP300.data(),
-                    FirCoeffs::MinPhase::SR44100::kLP800.data(),
-                    FirCoeffs::MinPhase::SR44100::kLP2500.data(),
-                    FirCoeffs::MinPhase::SR44100::kLP5000.data()
-                },
-                std::array<const float*, 5>{
-                    FirCoeffs::SR44100::kHp0.data(),
-                    FirCoeffs::SR44100::kHp1.data(),
-                    FirCoeffs::SR44100::kHp2.data(),
-                    FirCoeffs::SR44100::kHp3.data(),
-                    FirCoeffs::SR44100::kHp4.data()
-                }
-            );
-        }
-        else if (std::abs(sampleRate - 48000.0) < 1.0) {
-            return std::make_pair(
-                std::array<const float*, 5>{
-                    FirCoeffs::MinPhase::SR48000::kLP125.data(),
-                    FirCoeffs::MinPhase::SR48000::kLP300.data(),
-                    FirCoeffs::MinPhase::SR48000::kLP800.data(),
-                    FirCoeffs::MinPhase::SR48000::kLP2500.data(),
-                    FirCoeffs::MinPhase::SR48000::kLP5000.data()
-                },
-                std::array<const float*, 5>{
-                    FirCoeffs::SR48000::kHp0.data(),
-                    FirCoeffs::SR48000::kHp1.data(),
-                    FirCoeffs::SR48000::kHp2.data(),
-                    FirCoeffs::SR48000::kHp3.data(),
-                    FirCoeffs::SR48000::kHp4.data()
-                }
-            );
-        }
-        else if (std::abs(sampleRate - 88200.0) < 1.0) {
-            return std::make_pair(
-                std::array<const float*, 5>{
-                    FirCoeffs::MinPhase::SR88200::kLP125.data(),
-                    FirCoeffs::MinPhase::SR88200::kLP300.data(),
-                    FirCoeffs::MinPhase::SR88200::kLP800.data(),
-                    FirCoeffs::MinPhase::SR88200::kLP2500.data(),
-                    FirCoeffs::MinPhase::SR88200::kLP5000.data()
-                },
-                std::array<const float*, 5>{
-                    FirCoeffs::SR88200::kHp0.data(),
-                    FirCoeffs::SR88200::kHp1.data(),
-                    FirCoeffs::SR88200::kHp2.data(),
-                    FirCoeffs::SR88200::kHp3.data(),
-                    FirCoeffs::SR88200::kHp4.data()
-                }
-            );
-        }
-        else if (std::abs(sampleRate - 96000.0) < 1.0) {
-            return std::make_pair(
-                std::array<const float*, 5>{
-                    FirCoeffs::MinPhase::SR96000::kLP125.data(),
-                    FirCoeffs::MinPhase::SR96000::kLP300.data(),
-                    FirCoeffs::MinPhase::SR96000::kLP800.data(),
-                    FirCoeffs::MinPhase::SR96000::kLP2500.data(),
-                    FirCoeffs::MinPhase::SR96000::kLP5000.data()
-                },
-                std::array<const float*, 5>{
-                    FirCoeffs::SR96000::kHp0.data(),
-                    FirCoeffs::SR96000::kHp1.data(),
-                    FirCoeffs::SR96000::kHp2.data(),
-                    FirCoeffs::SR96000::kHp3.data(),
-                    FirCoeffs::SR96000::kHp4.data()
-                }
-            );
-        }
-        else {
-            // Fallback to 48kHz for unsupported rates
-            juce::Logger::writeToLog(juce::String::formatted(
-                "[FilterBank] Unsupported sample rate %.1f, using 48kHz fallback", sampleRate));
-            // Return 48kHz coefficients directly
-            return std::make_pair(
-                std::array<const float*, 5>{
-                    FirCoeffs::MinPhase::SR48000::kLP125.data(),
-                    FirCoeffs::MinPhase::SR48000::kLP300.data(),
-                    FirCoeffs::MinPhase::SR48000::kLP800.data(),
-                    FirCoeffs::MinPhase::SR48000::kLP2500.data(),
-                    FirCoeffs::MinPhase::SR48000::kLP5000.data()
-                },
-                std::array<const float*, 5>{
-                    FirCoeffs::SR48000::kHp0.data(),
-                    FirCoeffs::SR48000::kHp1.data(),
-                    FirCoeffs::SR48000::kHp2.data(),
-                    FirCoeffs::SR48000::kHp3.data(),
-                    FirCoeffs::SR48000::kHp4.data()
-                }
-            );
-        }
+    // Simplified: Use only 44.1kHz coefficients for now
+    auto selectCoefficientsForSampleRate = [&](double /*sampleRate*/) {
+        return std::make_pair(
+            std::array<const float*, 5>{
+                FirCoeffs::MinPhase::SR44100::kLP125.data(),
+                FirCoeffs::MinPhase::SR44100::kLP300.data(),
+                FirCoeffs::MinPhase::SR44100::kLP800.data(),
+                FirCoeffs::MinPhase::SR44100::kLP2500.data(),
+                FirCoeffs::MinPhase::SR44100::kLP5000.data()
+            },
+            std::array<const float*, 5>{
+                FirCoeffs::SR44100::kHp0.data(),
+                FirCoeffs::SR44100::kHp1.data(),
+                FirCoeffs::SR44100::kHp2.data(),
+                FirCoeffs::SR44100::kHp3.data(),
+                FirCoeffs::SR44100::kHp4.data()
+            }
+        );
     };
 
     // Select coefficient source based on phase mode
@@ -221,24 +133,6 @@ void PlaybackFilterBank::buildFirFilters()
         else // Legacy128
         {
             latencySamples = 64; // Truncated 128-tap latency
-        }
-    }
-    // Log chosen latency and sample rate for diagnostics
-    juce::String fbLine = juce::String::formatted(
-        "[FilterBankDiag] phaseMode=%d sampleRate=%.1f latencySamples=%d\n",
-        static_cast<int>(config.phaseMode), config.sampleRate, latencySamples);
-    juce::Logger::writeToLog(fbLine);
-    std::cerr << fbLine.toStdString();
-    juce::File fbLog = juce::File::getSpecialLocation(juce::File::userDesktopDirectory).getChildFile("cohera_test_results.txt");
-    if (fbLog.exists())
-        fbLog.appendText(fbLine, false, false);
-
-    // Also append to a local workspace file so CI can inspect it
-    {
-        std::ofstream ofs("build/latency_diag.log", std::ios::app);
-        if (ofs.is_open()) {
-            ofs << fbLine.toStdString();
-            ofs.close();
         }
     }
 

@@ -147,6 +147,15 @@ public:
 
             // Пик должен быть ровно на позиции Latency
             // (0 + latency)
+            if (outPeak != latency) {
+                // Diagnostic dump around expected latency
+                int start = std::max(0, latency - 10);
+                int end = std::min(buffer.getNumSamples() - 1, latency + 40);
+                std::cerr << "[FBTestDiag] reportedLatency=" << latency << " outPeak=" << outPeak << "\n";
+                std::cerr << "[FBTestDiag] sample window (index:value):\n";
+                for (int i = start; i <= end; ++i)
+                    std::cerr << i << ": " << buffer.getSample(0, i) << "\n";
+            }
             expectEquals(outPeak, latency, "Impulse response peak matches reported latency");
 
             // Проверяем амплитуду пика. Из-за фильтрации (звона) она будет < 1.0,
@@ -154,6 +163,8 @@ public:
             // Наш движок применяет 0.35f компенсацию суммы.
             // Если вход 1.0, выход ~0.35.
             float peakVal = buffer.getSample(0, outPeak);
+            if (peakVal <= 0.1f)
+                std::cerr << "[FBTestDiag] peakVal=" << peakVal << " at outPeak=" << outPeak << "\n";
             expect(peakVal > 0.1f, "Signal passes through bands");
         }
     }
@@ -204,6 +215,7 @@ public:
 
             // Тест Latency Report
             // Запускаем импульс
+            engine.reset();
             buffer.clear();
             buffer.setSample(0, 0, 1.0f);
             dryBuffer.makeCopyOf(buffer);
@@ -215,8 +227,92 @@ public:
             int expected = (int)engine.getLatency();
 
             // Dry DelayLine должна была задержать сигнал ровно на latency
+            if (peak != expected) {
+                std::cerr << "[PhaseTestDiag] reportedLatency=" << expected << " observedPeak=" << peak << "\n";
+                int start = std::max(0, expected - 16);
+                int end = std::min(buffer.getNumSamples() - 1, expected + 48);
+                std::cerr << "[PhaseTestDiag] sample window (index:value):\n";
+                for (int i = start; i <= end; ++i)
+                    std::cerr << i << ": " << buffer.getSample(0, i) << "\n";
+            }
             expectEquals(peak, expected, "Dry path delay matches reported latency perfectly");
         }
+    }
+};
+
+// ==============================================================================
+// TEST: Stereo Focus (M/S Processing)
+// ==============================================================================
+
+class StereoFocusTest : public juce::UnitTest
+{
+public:
+    StereoFocusTest() : juce::UnitTest("Stereo Focus (M/S Processing)") {}
+
+    void runTest() override
+    {
+        beginTest("M/S Matrix Encoding/Decoding");
+
+        // Test basic M/S encoding/decoding
+        float l = 1.0f, r = 0.5f;
+        float mid = 0.5f * (l + r);  // 0.75
+        float side = 0.5f * (l - r); // 0.25
+
+        float outL = mid + side; // 1.0
+        float outR = mid - side; // 0.5
+
+        expect(std::abs(outL - l) < 0.001f, "M/S encoding/decoding preserves Left channel");
+        expect(std::abs(outR - r) < 0.001f, "M/S encoding/decoding preserves Right channel");
+
+        beginTest("StereoFocus Multipliers");
+
+        StereoFocus focus;
+
+        // Test Focus = 0 (balanced)
+        auto mult0 = focus.getDriveScalars(0.0f);
+        expect(std::abs(mult0.midScale - 1.0f) < 0.001f, "Focus=0: Mid scale = 1.0");
+        expect(std::abs(mult0.sideScale - 1.0f) < 0.001f, "Focus=0: Side scale = 1.0");
+
+        // Test Focus = -100 (Mid only) - with makeUp gain
+        auto multMid = focus.getDriveScalars(-100.0f);
+        expect(std::abs(multMid.midScale - 1.5f) < 0.001f, "Focus=-100: Mid scale = 1.5 (with makeUp)");
+        expect(std::abs(multMid.sideScale - 0.0f) < 0.001f, "Focus=-100: Side scale = 0.0 (Mid only)");
+
+        // Test Focus = +100 (Side only) - with makeUp gain
+        auto multSide = focus.getDriveScalars(100.0f);
+        expect(std::abs(multSide.midScale - 0.0f) < 0.001f, "Focus=+100: Mid scale = 0.0 (Side only)");
+        expect(std::abs(multSide.sideScale - 1.5f) < 0.001f, "Focus=+100: Side scale = 1.5 (with makeUp)");
+
+        beginTest("StereoFocus Processing");
+
+        // Create test stereo signal
+        juce::AudioBuffer<float> input(2, 512);
+        juce::AudioBuffer<float> output(2, 512);
+
+        // Fill with test signal: L=1.0, R=0.5 (stereo)
+        for (int i = 0; i < 512; ++i) {
+            input.setSample(0, i, 1.0f);
+            input.setSample(1, i, 0.5f);
+        }
+
+        // Test Focus = -1.0 (Mid only) - should result in mono
+        bool success = CoheraTests::testStereoFocus(-1.0f, input, output, 1.5f, 0.0f);
+        expect(success, "StereoFocus processing completed");
+
+        // Check that output is mono (L = R)
+        float rmsL = output.getRMSLevel(0, 0, 512);
+        float rmsR = output.getRMSLevel(1, 0, 512);
+        expect(std::abs(rmsL - rmsR) < 0.001f, "Focus=-100 produces mono output");
+
+        // Test Focus = +1.0 (Side only) - should result in amplified difference signal
+        success = CoheraTests::testStereoFocus(1.0f, input, output, 0.0f, 1.5f);
+        expect(success, "StereoFocus processing completed for Side only");
+
+        // For side-only with makeUp, output should be L=0.375, R=-0.375
+        float expectedL = 0.375f;
+        float expectedR = -0.375f;
+        expect(std::abs(output.getSample(0, 0) - expectedL) < 0.001f, "Side-only: Left channel correct");
+        expect(std::abs(output.getSample(1, 0) - expectedR) < 0.001f, "Side-only: Right channel correct");
     }
 };
 
@@ -224,3 +320,4 @@ public:
 static BandEngineTest bandTest;
 static FilterBankIntegrationTest fbTest;
 static FullSystemPhaseTest phaseTest;
+static StereoFocusTest focusTest;

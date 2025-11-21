@@ -22,6 +22,10 @@ echo "🚀 Building with $CPU_CORES CPU cores..."
 echo "🎛️  Building all plugin formats..."
 make Cohera_Saturator -j$CPU_CORES
 
+# Build VST3 specifically (sometimes it doesn't build with the main target)
+echo "🔧 Building VST3 specifically..."
+make Cohera_Saturator_VST3 -j$CPU_CORES
+
 if [ $? -eq 0 ]; then
     echo ""
     echo "✅ ALL PLUGINS BUILT SUCCESSFULLY!"

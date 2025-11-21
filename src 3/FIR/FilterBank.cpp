@@ -2,8 +2,6 @@
 #include "FIR/fir_minphase_128.h"  // Phase 2.2.4: Minimum-phase coefficients
 #include "CoheraTypes.h"       // SampleRateSupport utilities
 #include <algorithm>
-#include <iostream>
-#include <fstream>
 
 using FirFilter = juce::dsp::FIR::Filter<float>;
 
@@ -221,24 +219,6 @@ void PlaybackFilterBank::buildFirFilters()
         else // Legacy128
         {
             latencySamples = 64; // Truncated 128-tap latency
-        }
-    }
-    // Log chosen latency and sample rate for diagnostics
-    juce::String fbLine = juce::String::formatted(
-        "[FilterBankDiag] phaseMode=%d sampleRate=%.1f latencySamples=%d\n",
-        static_cast<int>(config.phaseMode), config.sampleRate, latencySamples);
-    juce::Logger::writeToLog(fbLine);
-    std::cerr << fbLine.toStdString();
-    juce::File fbLog = juce::File::getSpecialLocation(juce::File::userDesktopDirectory).getChildFile("cohera_test_results.txt");
-    if (fbLog.exists())
-        fbLog.appendText(fbLine, false, false);
-
-    // Also append to a local workspace file so CI can inspect it
-    {
-        std::ofstream ofs("build/latency_diag.log", std::ios::app);
-        if (ofs.is_open()) {
-            ofs << fbLine.toStdString();
-            ofs.close();
         }
     }
 

@@ -81,12 +81,11 @@ private:
         double meanSquare = sumSquares / (double)(numSamples * numCh);
 
         // Интегрируем во времени (сглаживание)
-        // ИСПРАВЛЕНО: коэффициенты были перепутаны!
-        // rmsCoeff - это "скорость усреднения", большое значение = быстрая реакция
         float& accumulator = updateState ? accumulatorIn : accumulatorOut;
-        accumulator = accumulator * (1.0f - rmsCoeff) + (float)meanSquare * rmsCoeff;
+        accumulator = accumulator * rmsCoeff + (float)meanSquare * (1.0f - rmsCoeff);
 
-        // Возвращаем накопленную энергию (сглаженную во времени)
+        // Возвращаем мгновенную энергию (чтобы не ждать разгона аккумулятора)
+        // Или аккумулятор? Для стабильности лучше аккумулятор.
         return accumulator;
     }
 

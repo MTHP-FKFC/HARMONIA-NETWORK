@@ -105,20 +105,6 @@ public:
         init(apvts);
     }
 
-    NetworkBrain() : meter(nullptr) // Default meter for later initialization
-    {
-        // Initialize with default values
-        group.setText("NETWORK INTELLIGENCE");
-        group.setColour(juce::GroupComponent::outlineColourId, juce::Colour(0, 200, 150));
-        group.setColour(juce::GroupComponent::textColourId, juce::Colour(0, 200, 150));
-        addAndMakeVisible(group);
-    }
-
-    void setAPVTS(juce::AudioProcessorValueTreeState& apvts)
-    {
-        init(apvts);
-    }
-
 private:
     void init(juce::AudioProcessorValueTreeState& apvts)
     {

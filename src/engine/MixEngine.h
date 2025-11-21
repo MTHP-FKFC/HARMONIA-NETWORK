@@ -1,9 +1,13 @@
 #pragma once
 
 #include <juce_dsp/juce_dsp.h>
+#include <iostream>
+#include <fstream>
+#include <cmath>
 #include "../CoheraTypes.h"
-#include "../dsp/AutoGainStage.h"
+#include "../dsp/PsychoAcousticGain.h"
 #include "../dsp/DCBlocker.h"
+#include "../dsp/StereoFocus.h"
 
 namespace Cohera {
 
@@ -16,14 +20,14 @@ public:
         dryDelayLine.prepare(spec);
         dryDelayLine.setMaximumDelayInSamples(spec.sampleRate);
 
-        // Настраиваем AutoGain
-        autoGain.prepare(spec.sampleRate);
+        // Настраиваем PsychoAcoustic Auto-Gain (LUFS matching)
+        psychoGain.prepare(spec.sampleRate);
     }
 
     void reset()
     {
         dryDelayLine.reset();
-        autoGain.resetStates();
+        psychoGain.reset();
         dcBlockerLeft.reset();
         dcBlockerRight.reset();
     }
@@ -31,9 +35,26 @@ public:
     // Установка задержки (должна вызываться при изменении latency фильтров)
     void setLatencySamples(float samples)
     {
-        // Небольшая защита, чтобы не ставить отрицательную
-        if (samples < 0) samples = 0;
-        dryDelayLine.setDelay(samples);
+        if (samples < 0.0f)
+            samples = 0.0f;
+
+        juce::String mixLine = juce::String::formatted("[MixEngineDiag] Setting dry delay to %.3f samples\n", samples);
+        juce::Logger::writeToLog(mixLine);
+        std::cerr << mixLine.toStdString();
+        juce::File mixLog = juce::File::getSpecialLocation(juce::File::userDesktopDirectory).getChildFile("cohera_test_results.txt");
+        if (mixLog.exists())
+            mixLog.appendText(mixLine, false, false);
+
+        // Also append to local workspace log file for diagnostics
+        {
+            std::ofstream ofs("build/latency_diag.log", std::ios::app);
+            if (ofs.is_open()) {
+                ofs << mixLine.toStdString();
+                ofs.close();
+            }
+        }
+        currentDelaySamples = samples;
+        dryDelayLine.setDelay(currentDelaySamples);
     }
 
     // Смешивает Wet (processed) с Dry (из delay line).
@@ -42,13 +63,11 @@ public:
     void process(juce::dsp::AudioBlock<float>& wetBlock,
                  const juce::AudioBuffer<float>& dryInputBuffer,
                  float mixAmount,
-                 float outputGain)
+                 float outputGain,
+                 float focus)
     {
         size_t numSamples = wetBlock.getNumSamples();
         size_t numChannels = wetBlock.getNumChannels();
-
-        // 0. AutoGain: Анализируем вход перед обработкой
-        autoGain.analyzeInput(dryInputBuffer);
 
         // Re-allocate dry buffer if needed (cheap check)
         if (delayedDryBuffer.getNumSamples() != numSamples || delayedDryBuffer.getNumChannels() != numChannels) {
@@ -63,57 +82,79 @@ public:
         // Применяем задержку к копии
         juce::dsp::AudioBlock<float> dryBlock(delayedDryBuffer);
         juce::dsp::ProcessContextReplacing<float> dryContext(dryBlock);
+        dryDelayLine.setDelay(currentDelaySamples);
         dryDelayLine.process(dryContext);
 
-        // 1. Mix & AutoGain Loop
+        // Main Loop: LUFS Gain -> Mix -> Output
         for (size_t i = 0; i < numSamples; ++i)
         {
-            // Получаем компенсацию уровня для этого сэмпла
-            float autoGainValue = autoGain.getNextValue();
+            // 1. Читаем сэмплы
+            float dryL = dryBlock.getSample(0, i);
+            float dryR = (numChannels > 1) ? dryBlock.getSample(1, i) : dryL;
+            
+            float wetL = wetBlock.getSample(0, i);
+            float wetR = (numChannels > 1) ? wetBlock.getSample(1, i) : wetL;
 
-            for (size_t ch = 0; ch < numChannels; ++ch)
+            // 2. PSYCHOACOUSTIC MATCHING
+            // Сравниваем громкость Dry и Wet так, как это слышит ухо.
+            // Получаем множитель, который нужно применить к Wet.
+            float compensation = psychoGain.processStereoSample(dryL, dryR, wetL, wetR);
+            
+            // Применяем компенсацию к Wet
+            wetL *= compensation;
+            wetR *= compensation;
+
+            // 3. MIX (Линейный)
+            float outL = dryL * (1.0f - mixAmount) + wetL * mixAmount;
+            float outR = dryR * (1.0f - mixAmount) + wetR * mixAmount;
+
+            // 4. OUTPUT GAIN
+            outL *= outputGain;
+            outR *= outputGain;
+
+            // 5. SAFETY LIMITER (Hard Limit at ±1.0 to prevent explosion)
+            if (outL > 1.0f) outL = 1.0f;
+            else if (outL < -1.0f) outL = -1.0f;
+            
+            if (outR > 1.0f) outR = 1.0f;
+            else if (outR < -1.0f) outR = -1.0f;
+
+            // 5.5. STEREO FOCUS (M/S Processing)
+            if (focus != 0.0f && numChannels > 1)
             {
-                float dry = dryBlock.getSample(ch, i);
-                float wet = wetBlock.getSample(ch, i);
+                // M/S Encoding
+                float mid = 0.5f * (outL + outR);
+                float side = 0.5f * (outL - outR);
 
-                // Линейный микс
-                float out = dry * (1.0f - mixAmount) + wet * mixAmount;
+                // Get multipliers based on focus (-100 = Mid only, +100 = Side only)
+                auto multipliers = stereoFocus.getDriveScalars(focus * 100.0f);
 
-                // AutoGain компенсация (применяется к миксовому сигналу)
-                out *= autoGainValue;
+                // Apply multipliers
+                mid *= multipliers.midScale;
+                side *= multipliers.sideScale;
 
-                // Output Gain
-                out *= outputGain;
-
-                // Safety Clipper (Hard Limit at 0dBFS to prevent explosion)
-                if (out > 1.0f) out = 1.0f;
-                else if (out < -1.0f) out = -1.0f;
-
-                // Final DC Blocker (последний рубеж против DC после сатурации)
-                if (ch == 0)
-                    out = dcBlockerLeft.process(out);
-                else if (ch == 1)
-                    out = dcBlockerRight.process(out);
-
-                // Пишем обратно в Wet блок (который теперь Output)
-                wetBlock.setSample(ch, i, out);
+                // M/S Decoding
+                outL = mid + side;
+                outR = mid - side;
             }
-        }
 
-        // 2. AutoGain: Обновляем состояние после обработки
-        // Создаем временный буфер для анализа выхода
-        juce::AudioBuffer<float> outputAnalysisBuffer((int)numChannels, (int)numSamples);
-        for (size_t ch = 0; ch < numChannels; ++ch) {
-            outputAnalysisBuffer.copyFrom((int)ch, 0, wetBlock.getChannelPointer(ch), (int)numSamples);
+            // 6. FINAL DC BLOCKER (последний рубеж против DC после сатурации)
+            outL = dcBlockerLeft.process(outL);
+            outR = dcBlockerRight.process(outR);
+
+            // Запись
+            wetBlock.setSample(0, i, outL);
+            if (numChannels > 1) wetBlock.setSample(1, i, outR);
         }
-        autoGain.updateGainState(outputAnalysisBuffer);
     }
 
 private:
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> dryDelayLine { 48000 };
     juce::AudioBuffer<float> delayedDryBuffer;
-    AutoGainStage autoGain;
+    PsychoAcousticGain psychoGain;
     DCBlocker dcBlockerLeft, dcBlockerRight;
+    StereoFocus stereoFocus;
+    float currentDelaySamples = 0.0f;
 };
 
 } // namespace Cohera

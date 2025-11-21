@@ -2,6 +2,7 @@
 
 #include <juce_dsp/juce_dsp.h>
 #include <juce_core/juce_core.h>
+#include "../dsp/StereoFocus.h"
 
 namespace CoheraTests {
 
@@ -63,6 +64,48 @@ static bool areBuffersEqual(const juce::AudioBuffer<float>& a, const juce::Audio
                 return false;
         }
     }
+    return true;
+}
+
+// Тестирование M/S обработки StereoFocus
+static bool testStereoFocus(float focusValue, const juce::AudioBuffer<float>& input,
+                           juce::AudioBuffer<float>& output, float expectedMidScale, float expectedSideScale)
+{
+    if (input.getNumChannels() < 2 || output.getNumChannels() < 2) return false;
+
+    // Clear output buffer
+    output.clear();
+
+    StereoFocus focus;
+    auto multipliers = focus.getDriveScalars(focusValue * 100.0f);
+
+    // Проверить что multipliers соответствуют ожиданиям (с допуском для makeUp gain)
+    if (std::abs(multipliers.midScale - expectedMidScale) > 0.01f ||
+        std::abs(multipliers.sideScale - expectedSideScale) > 0.01f) {
+        return false;
+    }
+
+    // Применить M/S обработку
+    for (int i = 0; i < input.getNumSamples(); ++i) {
+        float l = input.getSample(0, i);
+        float r = input.getSample(1, i);
+
+        // M/S encoding
+        float mid = 0.5f * (l + r);
+        float side = 0.5f * (l - r);
+
+        // Apply multipliers
+        mid *= multipliers.midScale;
+        side *= multipliers.sideScale;
+
+        // M/S decoding
+        float outL = mid + side;
+        float outR = mid - side;
+
+        output.setSample(0, i, outL);
+        output.setSample(1, i, outR);
+    }
+
     return true;
 }
 

@@ -16,6 +16,14 @@ CrossoverProfile mapMaterialToProfile(Analyzer::MaterialType materialType, float
 void PlaybackFilterBank::prepare (const FilterBankConfig& cfg)
 {
     config = cfg;
+
+    // Resize firFilters to match numChannels
+    firFilters.resize(config.numChannels);
+    for (int ch = 0; ch < config.numChannels; ++ch)
+    {
+        firFilters[ch].resize(config.numBands);
+    }
+
     buildFirFilters();
 
     juce::dsp::ProcessSpec spec;
@@ -23,7 +31,7 @@ void PlaybackFilterBank::prepare (const FilterBankConfig& cfg)
     spec.maximumBlockSize = config.maxBlockSize;
     spec.numChannels      = 1;
 
-    for (int ch = 0; ch < 2; ++ch)
+    for (int ch = 0; ch < config.numChannels; ++ch)
     {
         for (int band = 0; band < config.numBands; ++band)
             firFilters[ch][band].prepare (spec);
@@ -32,7 +40,7 @@ void PlaybackFilterBank::prepare (const FilterBankConfig& cfg)
 
 void PlaybackFilterBank::reset()
 {
-    for (int ch = 0; ch < 2; ++ch)
+    for (int ch = 0; ch < config.numChannels; ++ch)
         for (int band = 0; band < config.numBands; ++band)
             firFilters[ch][band].reset();
 }
@@ -41,7 +49,7 @@ void PlaybackFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
                                          juce::AudioBuffer<float>* bandBuffers[],
                                          int numSamples)
 {
-    const int numCh = juce::jmin(input.getNumChannels(), 2);
+    const int numCh = juce::jmin(input.getNumChannels(), config.numChannels);
     if (numCh == 0)
         return;
 
@@ -151,7 +159,7 @@ void PlaybackFilterBank::buildFirFilters()
     std::vector<float> bandpassCoeffs(tapsToUse);
 
     // ✅ Reset filter state (coefficients are updated in-place below to avoid runtime allocations)
-    for (int ch = 0; ch < 2; ++ch)
+    for (int ch = 0; ch < config.numChannels; ++ch)
         for (int band = 0; band < config.numBands; ++band)
             firFilters[ch][band].reset();
 
@@ -168,7 +176,7 @@ void PlaybackFilterBank::buildFirFilters()
         firFilters[ch][band].reset();
     };
 
-    for (int ch = 0; ch < 2; ++ch) // Stereo only
+    for (int ch = 0; ch < config.numChannels; ++ch)
     {
         if (config.phaseMode == FilterPhaseMode::LinearFIR256)
         {
@@ -291,6 +299,14 @@ void PlaybackFilterBank::buildFirFilters()
 void AnalyzerFilterBank::prepare (const FilterBankConfig& cfg)
 {
     config = cfg;
+
+    // Resize firFilters to match numChannels
+    firFilters.resize(config.numChannels);
+    for (int ch = 0; ch < config.numChannels; ++ch)
+    {
+        firFilters[ch].resize(config.numBands);
+    }
+
     buildFirFilters();
 
     juce::dsp::ProcessSpec spec;
@@ -298,7 +314,7 @@ void AnalyzerFilterBank::prepare (const FilterBankConfig& cfg)
     spec.maximumBlockSize = config.maxBlockSize;
     spec.numChannels      = 1;
 
-    for (int ch = 0; ch < 2; ++ch)
+    for (int ch = 0; ch < config.numChannels; ++ch)
     {
         for (int band = 0; band < config.numBands; ++band)
             firFilters[ch][band].prepare (spec);
@@ -307,7 +323,7 @@ void AnalyzerFilterBank::prepare (const FilterBankConfig& cfg)
 
 void AnalyzerFilterBank::reset()
 {
-    for (int ch = 0; ch < 2; ++ch)
+    for (int ch = 0; ch < config.numChannels; ++ch)
         for (int band = 0; band < config.numBands; ++band)
             firFilters[ch][band].reset();
 }
@@ -317,7 +333,7 @@ void AnalyzerFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
                                          int numSamples)
 {
     // Аналогичная реализация
-    const int numCh = juce::jmin(input.getNumChannels(), 2);
+    const int numCh = juce::jmin(input.getNumChannels(), config.numChannels);
     if (numCh == 0)
         return;
 

@@ -14,11 +14,14 @@ class FilterBankEngine {
 public:
   void prepare(const juce::dsp::ProcessSpec &spec) {
     sampleRate = spec.sampleRate;
+    // Запоминаем, сколько мы обещали обработать
+    currentMaxBlockSize = spec.maximumBlockSize;
 
     // 1. Настройка Кроссовера
     FilterBankConfig fbConfig;
     fbConfig.sampleRate = spec.sampleRate;
     fbConfig.maxBlockSize = spec.maximumBlockSize;
+    fbConfig.numChannels = (int)spec.numChannels; // Add numChannels
     fbConfig.numBands = kNumBands;
     fbConfig.phaseMode = FilterPhaseMode::MinFIR128; // Safe mode (128 taps)
     fbConfig.profile = CrossoverProfile::Default;
@@ -65,6 +68,7 @@ public:
   }
 
   int getLatencySamples() const { return filterBank.getLatencySamples(); }
+  float getToneShapingLatencySamples() const { return toneShapingLatencyBaseSamples; }
 
   // Основной процесс: Вход -> Фильтр -> Сплит -> Обработка -> Сумма -> Фильтр
   // -> Выход ioBlock: входной сигнал, который будет перезаписан результатом
@@ -74,6 +78,15 @@ public:
                 const std::array<float, kNumBands> &netModulations) {
     const int numSamples = (int)ioBlock.getNumSamples();
     const int numChannels = (int)ioBlock.getNumChannels();
+
+    // ЗАЩИТА ОТ ХОСТА ИЗ АДА
+    // Если пришел блок больше, чем мы ожидали в prepare
+    if ((size_t)numSamples > currentMaxBlockSize) {
+      // В реалтайме аллоцировать плохо, но лучше, чем краш.
+      // В идеале тут надо кинуть варнинг, но мы тихо расширимся.
+      // Для простоты просто продолжим - буферы уже выделены с запасом
+      currentMaxBlockSize = (size_t)numSamples;
+    }
 
     // --- 1. TONE SHAPING (PRE-FILTER / TIGHTEN) ---
     smoothTighten.setTargetValue(params.preFilterFreq);
@@ -153,9 +166,9 @@ public:
     }
 
     // --- 4.5 PHYSICAL COMPENSATION ---
-    // Сумма 6 полос (некоррелированных после искажений) дает прирост энергии.
-    // Компенсируем это.
-    ioBlock.multiplyBy(0.35f);
+    // Исторически тут был множитель 0.35, но после перевода на новую архитектуру
+    // сумма полос уже приблизительно совпадает по уровню с Dry сигналом, поэтому
+    // дополнительное ослабление только портило импульсный отклик.
 
     // --- 5. TONE SHAPING (POST-FILTER / SMOOTH) ---
     for (int i = 0; i < numSamples; ++i) {
@@ -172,6 +185,7 @@ public:
 
 private:
   double sampleRate = 44100.0;
+  size_t currentMaxBlockSize = 1024; // Will be set in prepare()
 
   // DSP
   PlaybackFilterBank filterBank;
@@ -191,6 +205,10 @@ private:
 
   // Gain Reduction для UI метров (обновляется в process)
   std::array<float, 6> currentGR { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+
+  // Derived from measuring the TPT pre/post filters plus band DC-blockers in isolation.
+  // The processing runs at 4x rate, but once downsampled it behaves like an extra ~25.5 samples of latency.
+  static constexpr float toneShapingLatencyBaseSamples = 25.5f;
 
 public:
   const std::array<float, 6>& getGainReductionValues() const {

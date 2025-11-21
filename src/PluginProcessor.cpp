@@ -219,12 +219,26 @@ juce::AudioProcessorValueTreeState::ParameterLayout CoheraSaturatorAudioProcesso
 
 void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
-    // Новая архитектура - просто делегируем
-    juce::dsp::ProcessSpec spec { sampleRate, (uint32)samplesPerBlock, 2 };
+    // 1. Создаем спецификацию
+    juce::dsp::ProcessSpec spec { sampleRate, (juce::uint32)samplesPerBlock, 2 };
+
+    // 2. Полная переинициализация движка
+    // Это должно:
+    // - Пересчитать все коэффициенты фильтров (TPT, IIR)
+    // - Очистить линии задержки (DelayLines)
+    // - Сбросить огибающие (Envelopes)
     processingEngine.prepare(spec);
+
+    // 3. Сброс анализатора (чтобы старый спектр не висел)
     analyzer.prepare();
 
-    setLatencySamples((int)processingEngine.getLatency());
+    // 4. Сообщаем хосту новую задержку (целое значение, как требует JUCE)
+    const int hostLatency = juce::roundToInt(processingEngine.getLatency());
+    setLatencySamples(hostLatency);
+    juce::Logger::writeToLog("Host latency updated: " + juce::String(hostLatency));
+
+    // 5. Очистка "хвостов" (опционально, но полезно при смене треков)
+    processingEngine.reset();
 }
 
 void CoheraSaturatorAudioProcessor::releaseResources()
@@ -300,4 +314,3 @@ juce::AudioProcessorEditor* CoheraSaturatorAudioProcessor::createEditor()
 {
     return new CoheraSaturatorAudioProcessorEditor(*this);
 }
-
