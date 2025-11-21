@@ -6,6 +6,7 @@
 // #include "ui/Components/NetworkBrain.h"
 #include "ui/components/SmartReactorKnob.h"
 #include "ui/visuals/NebulaShaper.h"
+#include "ui/visuals/LivingBackground.h"
 #include "ui/ControlGroup.h"
 #include "ui/SpectrumVisor.h"
 #include "ui/components/ReactorKnob.h"
@@ -52,6 +53,7 @@ private:
   SpectrumVisor spectrumVisor;
   EnergyLink energyLink; // Центральный поток энергии
   NebulaShaper nebulaShaper { audioProcessor }; // Nebula visualizer
+  LivingBackground background; // Dynamic living background
   // NetworkBrain networkBrain; // Network Intelligence Panel - temporarily disabled
   // InteractionMeter interactionMeter; // Network activity meter - temporarily disabled
 

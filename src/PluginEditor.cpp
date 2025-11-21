@@ -56,6 +56,10 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   // --- ENERGY LINK ---
   shakerContainer.addAndMakeVisible(energyLink);
 
+  // --- LIVING BACKGROUND (самый нижний слой) ---
+  shakerContainer.addAndMakeVisible(background);
+  background.toBack();
+
   // --- NEBULA SHAPER ---
   shakerContainer.addAndMakeVisible(nebulaShaper);
   nebulaShaper.setVisible(false); // Hidden by default
@@ -406,6 +410,10 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
   // Обновляем FFT данные для SpectrumVisor
   spectrumVisor.setFFTData(audioProcessor.getFFTData());
 
+  // Update living background with RMS energy
+  float rms = audioProcessor.getOutputRMS();
+  background.setEnergyLevel(rms);
+
   // TransferFunctionDisplay - безопасный доступ к параметрам
   auto &apvts = audioProcessor.getAPVTS();
   if (auto *driveParam = apvts.getRawParameterValue("drive_master")) {
@@ -497,6 +505,9 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
   auto leftPanel = area.removeFromLeft(panelWidth).reduced(4, 0);
   auto linkPanel = area.removeFromLeft(centerGap); // Место для красоты
   auto rightPanel = area.reduced(4, 0);
+
+  // Living Background spans entire area
+  background.setBounds(getLocalBounds());
 
   // Устанавливаем границы Групп (Рамки)
   satGroup.setBounds(leftPanel);
