@@ -462,7 +462,7 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
 // --- ХЕЛПЕР: Раскладка Сатурации ---
 void CoheraSaturatorAudioProcessorEditor::layoutSaturation(
     juce::Rectangle<int> area) {
-  // Верхняя половина: Drive (King) + Control Bar (Cascade)
+  // Верхняя половина: Drive (King) + Control Bar (Algo + Cascade)
   auto topHalf = area.removeFromTop(area.getHeight() * 0.55f);
 
   // Drive Knob - Главный герой, по центру левой части
@@ -473,14 +473,23 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(
 
   // Transfer Function Display теперь поверх анализатора (в layoutMainPanels)
 
-  // Справа от Драйва: Control Bar (Cascade)
+  // Справа от Драйва: Control Bar (Algo + Cascade)
   auto controlBar = topHalf;
 
-  // Центрируем кнопку Cascade
+  // Делим вертикально пополам с отступом
   int controlHeight = 24;
-  int startY = (controlBar.getHeight() - controlHeight) / 2;
+  int gap = 8;
+  int totalH = controlHeight * 2 + gap;
+  int startY = (controlBar.getHeight() - totalH) / 2;
 
-  cascadeButton.setBounds(controlBar.reduced(5, 0).withHeight(controlHeight).withY(controlBar.getY() + startY));
+  auto controlRect = controlBar.reduced(5, 0);
+  controlRect.setY(controlBar.getY() + startY);
+  controlRect.setHeight(totalH);
+
+  mathModeSelector.setBounds(controlRect.removeFromTop(controlHeight)); // Algo
+  controlRect.removeFromTop(gap);
+  cascadeButton.setBounds(
+      controlRect.removeFromTop(controlHeight)); // Cascade Button
 
   // Нижняя половина: 4 ручки тона в ряд (Tighten, Punch, Dyn, Smooth)
   // Используем FlexBox для идеального распределения
@@ -505,18 +514,14 @@ void CoheraSaturatorAudioProcessorEditor::layoutSaturation(
 // --- ХЕЛПЕР: Раскладка Сети ---
 void CoheraSaturatorAudioProcessorEditor::layoutNetwork(
     juce::Rectangle<int> area) {
-  // 1. HEADER: Три селектора в одну строку (матмод + режим сети + краска сатурации)
+  // 1. HEADER: Оба селектора в одну строку (режим + краска сатурации)
   auto headerArea = area.removeFromTop(35); // Немного меньше высоты
 
-  // FlexBox для трех селекторов в ряд
+  // FlexBox для двух селекторов в ряд
   juce::FlexBox headerFlex;
   headerFlex.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
 
-  // Левый селектор: Math Mode (алгоритм сатурации)
-  headerFlex.items.add(
-      juce::FlexItem(mathModeSelector).withFlex(1.0f).withMaxHeight(24));
-
-  // Средний селектор: Interaction Mode (режим сети)
+  // Левый селектор: Interaction Mode
   headerFlex.items.add(
       juce::FlexItem(netModeSelector).withFlex(1.0f).withMaxHeight(24));
 
