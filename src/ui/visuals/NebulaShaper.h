@@ -24,7 +24,7 @@ class NebulaShaper : public AbstractVisualizer
 {
 public:
     NebulaShaper(CoheraSaturatorAudioProcessor& p)
-        : AbstractVisualizer(60), // 60 FPS для плавности
+        : AbstractVisualizer(20), // Уменьшили до 20 FPS для производительности
           processor(p),
           apvts(p.getAPVTS())
     {

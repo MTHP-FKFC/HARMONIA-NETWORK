@@ -15,13 +15,15 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   // --- LAYER 1: BACKGROUND ---
   shakerContainer.addAndMakeVisible(cosmicDust);
   shakerContainer.addAndMakeVisible(techDecor);
-  shakerContainer.addAndMakeVisible(horizonGrid); // <--- NEW (3D Пол)
+  // HorizonGrid отключен для производительности
+  // shakerContainer.addAndMakeVisible(horizonGrid);
 
   techDecor.toBack();
   cosmicDust.toBack();
 
   // --- LAYER 2: HUD ---
-  shakerContainer.addAndMakeVisible(hud); // <--- NEW (Текст и графики на фоне)
+  // HeadsUpDisplay отключен для производительности
+  // shakerContainer.addAndMakeVisible(hud);
 
   // --- LAYER 3: CONTENT ---
 
@@ -51,7 +53,8 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
 
   // --- VISOR ---
   shakerContainer.addAndMakeVisible(spectrumVisor);
-  shakerContainer.addAndMakeVisible(bioScanner);
+  // BioScanner временно отключен для производительности
+  // shakerContainer.addAndMakeVisible(bioScanner);
 
   // --- COSMIC NEBULA SHAPER (Transfer Function Overlay) ---
   shakerContainer.addAndMakeVisible(nebulaShaper);
@@ -207,8 +210,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
 
   // === NEW VISUAL SYSTEM v2.0 ===
   // FIXED: Components now start timers only after being added to tree
-  // addAndMakeVisible(cosmicDust); // Removed
-  // cosmicDust.toBack(); // Фон всегда сзади // Removed
+  // CosmicDust полностью отключен для производительности
+  // shakerContainer.addAndMakeVisible(cosmicDust);
+  // cosmicDust.toBack();
 
   shakerContainer.addAndMakeVisible(neuralLink);
   neuralLink.setAPVTS(audioProcessor.getAPVTS());
@@ -337,12 +341,15 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
   float inputRMS = audioProcessor.getInputRMS();
   float outputRMS = audioProcessor.getOutputRMS();
 
-  cosmicDust.setEnergyLevel(outputRMS);
-  horizonGrid.setEnergyLevel(outputRMS);
-  hud.setEnergyLevel(outputRMS);
+  // CosmicDust и HorizonGrid отключены для производительности
+  // cosmicDust.setEnergyLevel(outputRMS);
+  // horizonGrid.setEnergyLevel(outputRMS);
+  // HeadsUpDisplay отключен для производительности
+  // hud.setEnergyLevel(outputRMS);
   neuralLink.setEnergyLevel(inputRMS);
   glitchOverlay.setEnergyLevel(transientLevel);
-  bioScanner.setEnergyLevel(outputRMS);
+  // BioScanner временно отключен для производительности
+  // bioScanner.setEnergyLevel(outputRMS);
 
   // Обрабатываем FFT данные
   audioProcessor.processFFTForGUI();
@@ -374,9 +381,12 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
   techDecor.setBounds(bounds);
   textureOverlay.setBounds(bounds);
   glitchOverlay.setBounds(bounds);
-  cosmicDust.setBounds(bounds);
-  horizonGrid.setBounds(bounds);
-  hud.setBounds(bounds);
+  // CosmicDust отключен для производительности
+  // cosmicDust.setBounds(bounds);
+  // HorizonGrid отключен для производительности
+  // horizonGrid.setBounds(bounds);
+  // HeadsUpDisplay отключен для производительности
+  // hud.setBounds(bounds);
   textureOverlay.generateTexture(getWidth(), getHeight());
 
   // 1. Контейнер занимает ВЕСЬ экран.
@@ -407,7 +417,8 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
 
   // Visor занимает всё оставшееся место в топе
   spectrumVisor.setBounds(topSection);
-  bioScanner.setBounds(spectrumVisor.getBounds());
+  // BioScanner временно отключен для производительности
+  // bioScanner.setBounds(spectrumVisor.getBounds());
 
   // Cosmic Nebula Shaper - Transfer Function Overlay
   nebulaShaper.setBounds(topSection);
