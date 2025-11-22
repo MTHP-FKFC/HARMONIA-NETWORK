@@ -1,0 +1,274 @@
+[  3%] Building CXX object CMakeFiles/Cohera_Saturator.dir/src/PluginEditor.cpp.o
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginProcessor.h:8:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/dsp/FilterBank.h:5:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/dsp/../FIR/fir_coeffs_multi_sr.h:2714:37: warning: unused parameter 'band' [-Wunused-parameter]
+ 2714 | inline const float* getLpCoeffs(int band, double sampleRate) {
+      |                                     ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginProcessor.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/dsp/Envelope.h:9:23: warning: unused parameter 'sampleRate' [-Wunused-parameter]
+    9 |     void reset(double sampleRate)
+      |                       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginProcessor.h:18:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/ProcessingEngine.h:11:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/FilterBankEngine.h:6:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/BandProcessingEngine.h:8:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/../dsp/InteractionEngine.h:112:29: warning: unused variable 'mode' [-Wunused-variable]
+  112 |         Cohera::NetworkMode mode = static_cast<Cohera::NetworkMode>(modeIndex);
+      |                             ^~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/../dsp/InteractionEngine.h:110:65: warning: unused parameter 'bandIndex' [-Wunused-parameter]
+  110 |     static DualShaperConfig getConfiguration(int modeIndex, int bandIndex, int userSelectedType) {
+      |                                                                 ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginProcessor.h:18:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/ProcessingEngine.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/MixEngine.h:73:97: warning: comparison of integers of different signs: 'int' and 'size_t' (aka 'unsigned long') [-Wsign-compare]
+   73 |         if (delayedDryBuffer.getNumSamples() != numSamples || delayedDryBuffer.getNumChannels() != numChannels) {
+      |                                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/MixEngine.h:73:46: warning: comparison of integers of different signs: 'int' and 'size_t' (aka 'unsigned long') [-Wsign-compare]
+   73 |         if (delayedDryBuffer.getNumSamples() != numSamples || delayedDryBuffer.getNumChannels() != numChannels) {
+      |             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ^  ~~~~~~~~~~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginProcessor.h:18:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/ProcessingEngine.h:25:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/engine/../network/NetworkController.h:76:15: warning: unused variable 'rms' [-Wunused-variable]
+   76 |         float rms = inputBuffer.getRMSLevel(0, 0, inputBuffer.getNumSamples());
+      |               ^~~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:3:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginProcessor.h:25:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/dsp/DeltaMonitor.h:17:36: warning: unused parameter 'wet' [-Wunused-parameter]
+   17 |     float process(float dry, float wet, float mixed)
+      |                                    ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:132:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  132 |     g.setFont(juce::Font("Futura", 13.0f, juce::Font::bold)
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:132:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  132 |     g.setFont(juce::Font("Futura", 13.0f, juce::Font::bold)
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:163:19: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  163 |         g.setFont(juce::Font("Futura", 14.0f, juce::Font::bold));
+      |                   ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:163:19: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  163 |         g.setFont(juce::Font("Futura", 14.0f, juce::Font::bold));
+      |                   ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:170:19: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  170 |         g.setFont(juce::Font("Futura", 11.0f, juce::Font::bold));
+      |                   ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:170:19: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  170 |         g.setFont(juce::Font("Futura", 11.0f, juce::Font::bold));
+      |                   ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:213:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  213 |     g.setFont(juce::Font("Futura", 13.0f, juce::Font::plain));
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:213:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  213 |     g.setFont(juce::Font("Futura", 13.0f, juce::Font::plain));
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:221:12: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  221 |     return juce::Font("Futura", 14.0f, juce::Font::plain);
+      |            ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:221:12: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  221 |     return juce::Font("Futura", 14.0f, juce::Font::plain);
+      |            ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:235:49: warning: unused parameter 'isActive' [-Wunused-parameter]
+  235 |                          bool isSeparator, bool isActive, bool isHighlighted,
+      |                                                 ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:236:46: warning: unused parameter 'hasSubMenu' [-Wunused-parameter]
+  236 |                          bool isTicked, bool hasSubMenu,
+      |                                              ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:238:46: warning: unused parameter 'shortcutKeyText' [-Wunused-parameter]
+  238 |                          const juce::String &shortcutKeyText,
+      |                                              ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:239:48: warning: unused parameter 'icon' [-Wunused-parameter]
+  239 |                          const juce::Drawable *icon,
+      |                                                ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:240:46: warning: unused parameter 'textColour' [-Wunused-parameter]
+  240 |                          const juce::Colour *textColour) override {
+      |                                              ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:319:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  319 |     g.setFont(juce::Font("Futura", 12.0f,
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:4:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/CoheraLookAndFeel.h:319:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  319 |     g.setFont(juce::Font("Futura", 12.0f,
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:5:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/Components/NetworkBrain.h:174:112: warning: unused parameter 'name' [-Wunused-parameter]
+  174 |                    juce::AudioProcessorValueTreeState& apvts, const juce::String& paramID, const juce::String& name)
+      |                                                                                                                ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:7:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/ControlGroup.h:32:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+   32 |     g.setFont(juce::Font("Futura", 15.0f, juce::Font::bold)
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:7:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/ControlGroup.h:32:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+   32 |     g.setFont(juce::Font("Futura", 15.0f, juce::Font::bold)
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/visuals/HeadsUpDisplay.h:34:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+   34 |     g.setFont(juce::Font("Courier New", 10.0f, juce::Font::bold));
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:12:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/visuals/HeadsUpDisplay.h:34:15: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+   34 |     g.setFont(juce::Font("Courier New", 10.0f, juce::Font::bold));
+      |               ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:16:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/visuals/PlasmaCore.h:57:15: warning: unused variable 'cy' [-Wunused-variable]
+   57 |         float cy = bounds.getCentreY();
+      |               ^~
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:18:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/visuals/TechDecor.h:30:19: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+   30 |         g.setFont(juce::Font("Verdana", 9.0f, juce::Font::bold));
+      |                   ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:18:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/visuals/TechDecor.h:30:19: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+   30 |         g.setFont(juce::Font("Verdana", 9.0f, juce::Font::bold));
+      |                   ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:1:
+In file included from /Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:18:
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/ui/visuals/TechDecor.h:34:19: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+   34 |         g.setFont(juce::Font(14.0f));
+      |                   ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:76:7: note: 'Font' has been explicitly marked deprecated here
+   76 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:76:37: error: use of undeclared identifier 'energyLink'; did you mean 'neuralLink'?
+   76 |   shakerContainer.addAndMakeVisible(energyLink);
+      |                                     ^~~~~~~~~~
+      |                                     neuralLink
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.h:98:14: note: 'neuralLink' declared here
+   98 |   NeuralLink neuralLink;
+      |              ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:306:13: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  306 |   g.setFont(juce::Font("Futura", 24.0f, juce::Font::bold)
+      |             ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:306:13: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  306 |   g.setFont(juce::Font("Futura", 24.0f, juce::Font::bold)
+      |             ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:313:13: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  313 |   g.setFont(juce::Font("Futura", 24.0f, juce::Font::plain)
+      |             ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:313:13: warning: 'Font' is deprecated: Use the constructor that takes a FontOptions argument [-Wdeprecated-declarations]
+  313 |   g.setFont(juce::Font("Futura", 24.0f, juce::Font::plain)
+      |             ^
+/Users/macos/JUCE/modules/juce_graphics/fonts/juce_Font.h:88:7: note: 'Font' has been explicitly marked deprecated here
+   88 |     [[deprecated ("Use the constructor that takes a FontOptions argument")]]
+      |       ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:385:11: warning: unused variable 'drive' [-Wunused-variable]
+  385 |     float drive = *driveParam;
+      |           ^~~~~
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:387:28: warning: variable 'mathMode' set but not used [-Wunused-but-set-variable]
+  387 |     Cohera::SaturationMode mathMode = Cohera::SaturationMode::GoldenRatio;
+      |                            ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:392:10: warning: variable 'cascade' set but not used [-Wunused-but-set-variable]
+  392 |     bool cascade = false;
+      |          ^
+/Users/macos/Documents/JUCE/Cohera_Saturator/src/PluginEditor.cpp:603:8: warning: unused variable 'meterArea' [-Wunused-variable]
+  603 |   auto meterArea = area.removeFromRight(area.getWidth() * 0.15f).reduced(5, 10);
+      |        ^~~~~~~~~
+42 warnings and 1 error generated.
+make[3]: *** [CMakeFiles/Cohera_Saturator.dir/src/PluginEditor.cpp.o] Error 1
+make[2]: *** [CMakeFiles/Cohera_Saturator.dir/all] Error 2
+make[1]: *** [CMakeFiles/Cohera_Saturator_Standalone.dir/rule] Error 2
+make: *** [Cohera_Saturator_Standalone] Error 2

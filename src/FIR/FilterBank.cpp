@@ -47,21 +47,33 @@ void PlaybackFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
     if (numCh == 0)
         return;
 
+    // Safety check: ensure filters are prepared
+    if (config.numBands == 0 || config.sampleRate <= 0.0)
+        return;
+
     // 1) Копируем вход в каждый полосный буфер
     for (int ch = 0; ch < numCh; ++ch)
     {
         const float* src = input.getReadPointer(ch);
-        for (int band = 0; band < config.numBands; ++band)
+        for (int band = 0; band < config.numBands && band < 6; ++band)
         {
-            bandBuffers[band]->copyFrom(ch, 0, src, numSamples);
+            if (bandBuffers[band] != nullptr)
+                bandBuffers[band]->copyFrom(ch, 0, src, numSamples);
         }
     }
 
     // 2) Прогоняем через FIR по каждой полосе / каналу
     for (int ch = 0; ch < numCh; ++ch)
     {
-        for (int band = 0; band < config.numBands; ++band)
+        for (int band = 0; band < config.numBands && band < 6; ++band)
         {
+            if (bandBuffers[band] == nullptr)
+                continue;
+                
+            // Safety check: ensure filter coefficients are set
+            if (firFilters[ch][band].coefficients == nullptr)
+                continue;
+                
             juce::dsp::AudioBlock<float> block(
                 bandBuffers[band]->getArrayOfWritePointers() + ch,
                 1,
@@ -427,10 +439,14 @@ void AnalyzerFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
     if (numCh == 0)
         return;
 
+    // Safety check: ensure filters are prepared
+    if (config.numBands == 0 || config.sampleRate <= 0.0)
+        return;
+
     for (int ch = 0; ch < numCh; ++ch)
     {
         const float* src = input.getReadPointer(ch);
-        for (int band = 0; band < config.numBands; ++band)
+        for (int band = 0; band < config.numBands && band < 6; ++band)
         {
             auto* dstBuffer = bandBuffers[band];
             if (dstBuffer == nullptr)
@@ -442,10 +458,14 @@ void AnalyzerFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
 
     for (int ch = 0; ch < numCh; ++ch)
     {
-        for (int band = 0; band < config.numBands; ++band)
+        for (int band = 0; band < config.numBands && band < 6; ++band)
         {
             auto* dstBuffer = bandBuffers[band];
             if (dstBuffer == nullptr)
+                continue;
+
+            // Safety check: ensure filter coefficients are set
+            if (firFilters[ch][band].coefficients == nullptr)
                 continue;
 
             juce::dsp::AudioBlock<float> block(

@@ -70,7 +70,10 @@ public:
     smoothSmooth.setCurrentAndTargetValue(smoothSmooth.getTargetValue());
   }
 
-  int getLatencySamples() const { return filterBank.getLatencySamples(); }
+  int getLatencySamples() const { 
+    if (sampleRate <= 0.0) return 0; // Not prepared yet
+    return filterBank.getLatencySamples(); 
+  }
   float getToneShapingLatencySamples() const {
     return toneShapingLatencyBaseSamples;
   }
@@ -81,6 +84,12 @@ public:
   float process(juce::dsp::AudioBlock<float> &ioBlock,
                 const ParameterSet &params,
                 const std::array<float, kNumBands> &netModulations) {
+    // Safety check: ensure engine is prepared
+    if (sampleRate <= 0.0 || currentMaxBlockSize == 0) {
+      ioBlock.clear();
+      return 0.0f;
+    }
+    
     const int numSamples = (int)ioBlock.getNumSamples();
     const int numChannels = (int)ioBlock.getNumChannels();
 
@@ -189,8 +198,8 @@ public:
   }
 
 private:
-  double sampleRate = 44100.0;
-  size_t currentMaxBlockSize = 1024; // Will be set in prepare()
+  double sampleRate = 0.0; // 0 means not prepared
+  size_t currentMaxBlockSize = 0; // 0 means not prepared
 
   // DSP
   PlaybackFilterBank filterBank;

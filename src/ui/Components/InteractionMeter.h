@@ -7,6 +7,11 @@
 class InteractionMeter : public juce::Component, private juce::Timer
 {
 public:
+    InteractionMeter(juce::AudioProcessorValueTreeState& apvtsRef) : apvts(&apvtsRef)
+    {
+        startTimerHz(30);
+    }
+
     InteractionMeter() : apvts(nullptr)
     {
         startTimerHz(30);

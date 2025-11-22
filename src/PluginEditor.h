@@ -3,21 +3,22 @@
 #include "PluginProcessor.h"
 #include "ui/CoheraLookAndFeel.h"
 #include "ui/Components/NetworkBrain.h"
+#include "ui/Components/ReactorKnob.h"
 #include "ui/ControlGroup.h"
-#include <functional>
 #include "ui/SpectrumVisor.h"
-#include "ui/components/ReactorKnob.h"
+#include "ui/visuals/BioScanner.h"
 #include "ui/visuals/CosmicDust.h"
 #include "ui/visuals/GlitchOverlay.h"
 #include "ui/visuals/HeadsUpDisplay.h"
 #include "ui/visuals/HorizonGrid.h"
+#include "ui/visuals/NebulaShaper.h"
 #include "ui/visuals/NeuralLink.h"
+#include "ui/visuals/PlasmaCore.h"
+#include "ui/visuals/ScreenShaker.h"
 #include "ui/visuals/TechDecor.h"
 #include "ui/visuals/TextureOverlay.h"
-#include "ui/visuals/NebulaShaper.h"
-#include "ui/visuals/ScreenShaker.h"
-#include "ui/visuals/BioScanner.h"
-#include "ui/visuals/PlasmaCore.h"
+#include <functional>
+#include <memory>
 #include <juce_gui_basics/juce_gui_basics.h>
 // #include "ui/Components/InteractionMeter.h"
 
@@ -55,8 +56,11 @@ private:
 
   // Controls
   juce::ComboBox groupSelector, roleSelector, mathModeSelector, netModeSelector,
-      netSatSelector, qualitySelector;
+      netSatSelector,
+      qualitySelector; // , scaleSelector; // TODO: Scaling disabled
   juce::TextButton cascadeButton;
+
+  // float currentScale = 1.0f; // TODO: Scaling disabled
 
   // Saturation Knobs
   ReactorKnob driveSlider;
@@ -72,8 +76,7 @@ private:
 
   // Attachments
   std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment>
-      groupAttachment, roleAttachment, mathModeAttachment,
-      qualityAttachment;
+      groupAttachment, roleAttachment, mathModeAttachment, qualityAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
       driveAttachment, dynamicsAttachment, outputAttachment, focusAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
@@ -93,13 +96,13 @@ private:
   CosmicDust cosmicDust;
   HorizonGrid horizonGrid;
   HeadsUpDisplay hud;
-    TextureOverlay textureOverlay;
+  TextureOverlay textureOverlay;
   NeuralLink neuralLink;
-  NebulaShaper nebulaShaper { audioProcessor }; // Cosmic particle visualizer
-    TechDecor techDecor;
-    BioScanner bioScanner;
-    GlitchOverlay glitchOverlay;
-    PlasmaCore plasmaCore; // Central plasma energy core
+  std::unique_ptr<NebulaShaper> nebulaShaper; // Cosmic particle visualizer
+  TechDecor techDecor;
+  BioScanner bioScanner;
+  GlitchOverlay glitchOverlay;
+  PlasmaCore plasmaCore; // Central plasma energy core
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
       CoheraSaturatorAudioProcessorEditor)

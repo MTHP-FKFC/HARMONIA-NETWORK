@@ -103,7 +103,10 @@ public:
                          juce::AudioBuffer<float>* bandBuffers[],
                          int numSamples);
 
-    int getLatencySamples() const noexcept { return latencySamples; }
+    int getLatencySamples() const noexcept { 
+        if (config.sampleRate <= 0.0 || config.numBands == 0) return 0;
+        return latencySamples; 
+    }
 
 private:
     FilterBankConfig config;
@@ -132,7 +135,10 @@ public:
                          juce::AudioBuffer<float>* bandBuffers[],
                          int numSamples);
 
-    int getLatencySamples() const noexcept { return latencySamples; }
+    int getLatencySamples() const noexcept { 
+        if (config.sampleRate <= 0.0 || config.numBands == 0) return 0;
+        return latencySamples; 
+    }
 
 private:
     FilterBankConfig config;

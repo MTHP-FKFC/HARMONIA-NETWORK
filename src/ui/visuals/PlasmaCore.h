@@ -100,48 +100,6 @@ protected:
 
         // 5. ОПРАВА (RIM) - Fallout Style
         drawMetalRims(g, bounds);
-
-        // 1. СТЕКЛЯННЫЙ СОСУД (CONTAINMENT VESSEL)
-        drawGlassContainer(g, bounds);
-
-        // Клиппинг, чтобы плазма не вылезала за рамки стекла
-        g.saveState();
-        g.reduceClipRegion(bounds.reduced(4.0f).toNearestInt());
-
-        // 2. ЯДРО ПЛАЗМЫ (3 НИТИ)
-        // Рисуем 3 нити: L, R и Центральная (Сумма)
-
-        // A. Left Strand (Cyan/Blue)
-        drawPlasmaStrand(g, cx - 4.0f, h, std::max(state.leftSignal, 0.35f),
-                         CoheraUI::kCyanNeon, -1.0f);
-
-        // B. Right Strand (Magenta/Orange)
-        drawPlasmaStrand(g, cx + 4.0f, h, std::max(state.rightSignal, 0.35f),
-                         CoheraUI::kOrangeNeon, 1.0f);
-
-        // C. Central Core (White/Gold - Fusion)
-        // Если сигналы совпадают (моно) или уровень высок - появляется ядро
-        float monoSum = (state.leftSignal + state.rightSignal) * 0.5f;
-        if (monoSum > 0.1f) {
-            drawCoreStrand(g, cx, h, monoSum);
-        }
-
-        drawPulseNodes(g, cx, h);
-
-        // 3. СЕТЕВАЯ ИНТЕРФЕРЕНЦИЯ (Глитчи)
-        if (state.netModulation > 0.05f) {
-            drawNetworkArcs(g, cx, h);
-        }
-
-        // 4. GLOBAL HEAT OVERLOAD (Белая вспышка)
-        if (state.globalHeat > 0.01f) {
-            drawOverloadFlash(g, bounds);
-        }
-
-        g.restoreState();
-
-        // 5. ОПРАВА (RIM) - Fallout Style
-        drawMetalRims(g, bounds);
     }
 
 private:

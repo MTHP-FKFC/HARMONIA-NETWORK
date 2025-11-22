@@ -1,4 +1,5 @@
 #pragma once
+#include "../JuceHeader.h"
 #include "../utils/TrackAudioFifo.h"
 
 // Размер FFT (чем больше, тем точнее низ, но медленнее)
@@ -12,9 +13,16 @@ public:
       : forwardFFT(fftOrder),
         window(fftSize, juce::dsp::WindowingFunction<float>::hann),
         sampleRate(44100.0f), audioFifo(1, 4096) // 1 channel, enough buffer
-  {}
+  {
+    recalculateIndices();
+  }
 
-  void setSampleRate(float newSampleRate) { sampleRate = newSampleRate; }
+  void setSampleRate(float newSampleRate) {
+    if (sampleRate != newSampleRate) {
+      sampleRate = newSampleRate;
+      recalculateIndices();
+    }
+  }
 
   void prepare() { std::fill(scopeData.begin(), scopeData.end(), 0.0f); }
 
@@ -23,8 +31,7 @@ public:
     audioFifo.push(buffer);
   }
 
-  // Deprecated single sample push (for compatibility if needed, but
-  // inefficient)
+  // Deprecated single sample push
   void pushSample(float sample) {
     // Not implemented efficiently, use pushBlock
   }
@@ -47,14 +54,9 @@ public:
       // 2. FFT
       forwardFFT.performFrequencyOnlyForwardTransform(fftData.data());
 
-      // 3. Маппинг в Scope
+      // 3. Маппинг в Scope (Optimized with Look-Up Table)
       for (int i = 0; i < scopeSize; ++i) {
-        float minFreq = 20.0f;
-        float maxFreq = 20000.0f;
-        float normalizedPos = (float)i / (float)(scopeSize - 1);
-        float freq = minFreq * std::pow(maxFreq / minFreq, normalizedPos);
-        int fftIdx = (int)((freq / (sampleRate / 2.0f)) * (fftSize / 2.0f));
-        fftIdx = juce::jlimit(0, (int)(fftSize / 2) - 1, fftIdx);
+        int fftIdx = fftIndices[i];
 
         float level = fftData[(size_t)fftIdx];
         float levelDb = juce::Decibels::gainToDecibels(level) -
@@ -79,6 +81,17 @@ public:
   bool isDataReady() const { return audioFifo.getNumReady() >= fftSize; }
 
 private:
+  void recalculateIndices() {
+    for (int i = 0; i < scopeSize; ++i) {
+      float minFreq = 20.0f;
+      float maxFreq = 20000.0f;
+      float normalizedPos = (float)i / (float)(scopeSize - 1);
+      float freq = minFreq * std::pow(maxFreq / minFreq, normalizedPos);
+      int fftIdx = (int)((freq / (sampleRate / 2.0f)) * (fftSize / 2.0f));
+      fftIndices[i] = juce::jlimit(0, (int)(fftSize / 2) - 1, fftIdx);
+    }
+  }
+
   juce::dsp::FFT forwardFFT;
   juce::dsp::WindowingFunction<float> window;
   float sampleRate;
@@ -86,4 +99,5 @@ private:
   Cohera::TrackAudioFifo audioFifo; // Lock-free SPSC FIFO
   std::array<float, fftSize * 2> fftData;
   std::array<float, scopeSize> scopeData;
+  std::array<int, scopeSize> fftIndices; // Look-Up Table for Log Mapping
 };

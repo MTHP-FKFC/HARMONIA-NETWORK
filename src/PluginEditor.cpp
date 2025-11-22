@@ -51,16 +51,49 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
       std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
           p.getAPVTS(), "quality", qualitySelector);
 
+  // Scale Selector (New)
+  /*
+  shakerContainer.addAndMakeVisible(scaleSelector);
+  scaleSelector.addItemList({"75%", "100%", "125%", "150%", "200%"}, 1);
+  scaleSelector.setSelectedId(2); // 100% default
+  scaleSelector.onChange = [this] {
+    float scales[] = {0.75f, 1.0f, 1.25f, 1.50f, 2.0f};
+    int id = scaleSelector.getSelectedId();
+    if (id > 0 && id <= 5) {
+      currentScale = scales[id - 1];
+
+      // 1. Расширяем лимиты, чтобы новый размер влез
+      setResizeLimits(600, 400, 3000, 2000);
+      setResizable(true, true);
+
+      int newWidth = juce::roundToInt(900 * currentScale);
+      int newHeight = juce::roundToInt(650 * currentScale);
+
+      // 2. Пробуем изменить размер окна напрямую (для Standalone)
+      if (auto* topLevel = getTopLevelComponent()) {
+          topLevel->setSize(newWidth, newHeight);
+      }
+
+      // 3. Меняем размер редактора (для VST/AU)
+      setSize(newWidth, newHeight);
+
+      // 4. Фиксируем размер (но оставляем лимиты широкими на всякий случай)
+      setResizable(false, false);
+    }
+  };
+  */
+
   // --- VISOR ---
   shakerContainer.addAndMakeVisible(spectrumVisor);
   // BioScanner - оптимизирован и включен обратно
   shakerContainer.addAndMakeVisible(bioScanner);
 
   // --- COSMIC NEBULA SHAPER (Transfer Function Overlay) ---
-  shakerContainer.addAndMakeVisible(nebulaShaper);
+  nebulaShaper = std::make_unique<NebulaShaper>(audioProcessor);
+  shakerContainer.addAndMakeVisible(*nebulaShaper);
 
   // --- ENERGY LINK ---
-  shakerContainer.addAndMakeVisible(energyLink);
+  // shakerContainer.addAndMakeVisible(energyLink);
 
   // --- PLASMA CORE (Central Energy Reactor) ---
   shakerContainer.addAndMakeVisible(plasmaCore);
@@ -81,7 +114,8 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
           // === DIVINE SERIES ===
           "Golden Ratio", "Euler Tube", "Pi Fold", "Fibonacci", "Super Ellipse",
           // === COSMIC PHYSICS ===
-          "Lorentz Force", "Riemann Zeta", "Mandelbrot Set", "Quantum Well", "Planck Limit",
+          "Lorentz Force", "Riemann Zeta", "Mandelbrot Set", "Quantum Well",
+          "Planck Limit",
           // === CLASSIC SERIES ===
           "Analog Tape", "Vintage Console", "Diode Class A", "Tube Driver",
           "Digital Fuzz", "Bit Decimator", "Rectifier"},
@@ -155,10 +189,10 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   setupKnob(smoothSlider, "tone_smooth", "SMOOTH", CoheraUI::kOrangeNeon);
 
   // --- NETWORK BRAIN (Right) ---
-  shakerContainer.addAndMakeVisible(netGroup);
+  // shakerContainer.addAndMakeVisible(netGroup);
 
   // Network Mode Selector
-  shakerContainer.addAndMakeVisible(netModeSelector);
+  // shakerContainer.addAndMakeVisible(netModeSelector);
   netModeSelector.addItemList(
       juce::StringArray{"Unmasking (Duck)", "Ghost (Follow)", "Gated (Reverse)",
                         "Stereo Bloom", "Sympathetic"},
@@ -167,7 +201,7 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   // netModeAttachment temporarily disabled
 
   // Net Saturation Selector
-  shakerContainer.addAndMakeVisible(netSatSelector);
+  // shakerContainer.addAndMakeVisible(netSatSelector);
   netSatSelector.addItemList(
       {"Clean Gain", "Drive Boost", "Rectify", "Bit Crush"}, 1);
   // netSatAttachment temporarily disabled
@@ -231,13 +265,12 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   startTimerHz(30);
 
   // Базовый размер
+  // currentScale = 1.0f; // Initialize currentScale
   setSize(900, 650);
-  setResizable(true, true);
-  setResizeLimits(600, 400, 1920, 1080);
+  setResizable(false, false); // Disable resize, use scale selector
 }
 
 CoheraSaturatorAudioProcessorEditor::~CoheraSaturatorAudioProcessorEditor() {
-  stopTimer();
   setLookAndFeel(nullptr);
   lookAndFeel.reset();
 }
@@ -262,39 +295,9 @@ void CoheraSaturatorAudioProcessorEditor::setupKnob(juce::Slider &s,
 }
 
 void CoheraSaturatorAudioProcessorEditor::paint(juce::Graphics &g) {
-  auto area = getLocalBounds().toFloat();
-
-  // 1. Базовый темный фон
+  // Фон уже рисуется компонентами (CosmicDust, TechDecor)
+  // Но на всякий случай зальем черным, чтобы не было артефактов при ресайзе
   g.fillAll(CoheraUI::kBackground);
-
-  // 2. Радиальный градиент (Vignette) - Свет в центре, тьма по краям
-  // Создает фокус на центре интерфейса
-  juce::ColourGradient vignette(CoheraUI::kBackground.brighter(0.05f),
-                                area.getCentreX(), area.getCentreY(),
-                                juce::Colours::black, 0, 0, true);
-
-  g.setGradientFill(vignette);
-  g.fillAll();
-
-  // 3. Top Bar с тенью
-  g.setColour(CoheraUI::kPanel);
-  g.fillRect(0, 0, getWidth(), 50);
-
-  // Тень под шапкой
-  juce::ColourGradient shadow(juce::Colours::black.withAlpha(0.5f), 0, 50,
-                              juce::Colours::transparentBlack, 0, 60, false);
-  g.setGradientFill(shadow);
-  g.fillRect(0, 50, getWidth(), 10);
-
-  // Логотип с легким свечением
-  g.setColour(CoheraUI::kTextBright);
-  g.setFont(juce::Font("Verdana", 20.0f, juce::Font::bold));
-  g.drawText("COHERA", 20, 0, 200, 50, juce::Justification::centredLeft);
-
-  // Вторая часть логотипа другим весом шрифта
-  g.setColour(CoheraUI::kOrangeNeon);
-  g.setFont(juce::Font("Verdana", 20.0f, juce::Font::plain));
-  g.drawText("SATURATOR", 110, 0, 200, 50, juce::Justification::centredLeft);
 }
 
 void CoheraSaturatorAudioProcessorEditor::paintOverChildren(juce::Graphics &g) {
@@ -304,13 +307,28 @@ void CoheraSaturatorAudioProcessorEditor::paintOverChildren(juce::Graphics &g) {
     juce::Colour flashColor = CoheraUI::kOrangeNeon.withAlpha(flashAlpha);
 
     auto center = getLocalBounds().getCentre().toFloat();
-    juce::ColourGradient flash(juce::Colours::transparentWhite,
-                               center.x, center.y,
-                               flashColor, 0.0f, getWidth() * 0.7f, true);
+    juce::ColourGradient flash(juce::Colours::transparentWhite, center.x,
+                               center.y, flashColor, 0.0f, getWidth() * 0.7f,
+                               true);
 
     g.setGradientFill(flash);
     g.fillAll();
   }
+
+  // Логотип с легким свечением
+  g.setColour(CoheraUI::kTextBright);
+  // FUTURA BOLD + KERNING
+  g.setFont(juce::Font("Futura", 24.0f, juce::Font::bold)
+                .withExtraKerningFactor(0.2f));
+  g.drawText("COHERA", 20, 0, 200, 50, juce::Justification::centredLeft);
+
+  // Вторая часть логотипа другим весом шрифта
+  g.setColour(CoheraUI::kOrangeNeon);
+  // FUTURA PLAIN + KERNING
+  g.setFont(juce::Font("Futura", 24.0f, juce::Font::plain)
+                .withExtraKerningFactor(0.2f));
+  // Сдвигаем правее (140px), так как шрифт шире из-за кернинга
+  g.drawText("SATURATOR", 140, 0, 200, 50, juce::Justification::centredLeft);
 }
 
 // Timer callback для обновления живых визуализаторов
@@ -374,7 +392,6 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
     if (auto *cascadeParam = apvts.getRawParameterValue("cascade")) {
       cascade = *cascadeParam > 0.5f;
     }
-
   }
 
   // Собираем данные для Плазмы
@@ -396,7 +413,8 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
 
   // 3. Сеть (берем из параметра net_sens)
   if (auto *netSensParam = apvts.getRawParameterValue("net_sens")) {
-    plasmaState.netModulation = *netSensParam / 100.0f; // Нормализуем от 0..100 к 0..1
+    plasmaState.netModulation =
+        *netSensParam / 100.0f; // Нормализуем от 0..100 к 0..1
   } else {
     plasmaState.netModulation = 0.0f;
   }
@@ -406,25 +424,35 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
   // Или добавляем спец. детектор перегруза.
   // Используем outputRMS > 0.9 как "Heat Flash"
   float outPeak = audioProcessor.getOutputRMS();
-  plasmaState.globalHeat = (outPeak > 0.8f) ? (outPeak - 0.8f) * 5.0f : 0.0f; // Вспышка только на пиках
+  plasmaState.globalHeat = (outPeak > 0.8f) ? (outPeak - 0.8f) * 5.0f
+                                            : 0.0f; // Вспышка только на пиках
 
   // Отправляем в ядро
   plasmaCore.updateState(plasmaState);
 }
 
 void CoheraSaturatorAudioProcessorEditor::resized() {
-  auto bounds = getLocalBounds();
-  shakerContainer.setBounds(bounds);
-  techDecor.setBounds(bounds);
-  textureOverlay.setBounds(bounds);
-  glitchOverlay.setBounds(bounds);
+  // ВАЖНО: При изменении размера окна мы НЕ меняем верстку.
+  // Мы просто обновляем масштаб контейнера.
+  // Верстка всегда происходит в координатах 900x650.
+
+  // 1. Устанавливаем bounds контейнера в БАЗОВЫЙ размер
+  shakerContainer.setBounds(0, 0, 900, 650);
+
+  // Применяем трансформ
+  // shakerContainer.setTransform(juce::AffineTransform::scale(currentScale));
+  shakerContainer.setTransform(juce::AffineTransform::identity);
+
+  techDecor.setBounds(shakerContainer.getLocalBounds());
+  textureOverlay.setBounds(shakerContainer.getLocalBounds());
+  glitchOverlay.setBounds(shakerContainer.getLocalBounds());
   // CosmicDust отключен для производительности
   // cosmicDust.setBounds(bounds);
   // HorizonGrid отключен для производительности
   // horizonGrid.setBounds(bounds);
   // HeadsUpDisplay отключен для производительности
   // hud.setBounds(bounds);
-  textureOverlay.generateTexture(getWidth(), getHeight());
+  textureOverlay.generateTexture(900, 650); // Generate for base size
 
   // 1. Контейнер занимает ВЕСЬ экран.
   // Мы будем двигать его Transform, а не Bounds.
@@ -438,12 +466,15 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
   // ==============================================================================
   // 🔝 HEADER & VISOR (35% высоты)
   // ==============================================================================
-  auto topSection = area.removeFromTop(static_cast<int>(getHeight() * 0.38f));
+  auto topSection = area.removeFromTop(
+      static_cast<int>(650 * 0.38f)); // Use fixed height base
 
   // Top Bar (Selectors) - 40px height fixed inside proportional area
   auto topBar = topSection.removeFromTop(40);
 
-  // Right Align selectors: Role -> Group -> Quality
+  // Right Align selectors: Scale -> Role -> Group -> Quality
+  // scaleSelector.setBounds(topBar.removeFromRight(70)); // Scale
+  topBar.removeFromRight(10); // Spacer
   roleSelector.setBounds(topBar.removeFromRight(100));
   topBar.removeFromRight(10); // Spacer
   groupSelector.setBounds(topBar.removeFromRight(80));
@@ -458,7 +489,8 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
   bioScanner.setBounds(spectrumVisor.getBounds());
 
   // Cosmic Nebula Shaper - Transfer Function Overlay
-  nebulaShaper.setBounds(topSection);
+  if (nebulaShaper)
+    nebulaShaper->setBounds(topSection);
 
   area.removeFromTop(16); // Spacer между Визором и Панелями
 
@@ -466,7 +498,7 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
   // 🦶 FOOTER (18% высоты) - Снизу вверх
   // ==============================================================================
   auto footerHeight =
-      static_cast<int>(getHeight() * 0.20f); // Увеличено для больших Mojo ручек
+      static_cast<int>(650 * 0.20f); // Увеличено для больших Mojo ручек
   auto footerArea = area.removeFromBottom(footerHeight);
   layoutFooter(footerArea);
 
@@ -493,7 +525,7 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
   // Заполняем внутренности групп (с учетом отступа под заголовок группы)
   // Отступ сверху 30px под текст "SATURATION CORE"
   layoutSaturation(leftPanel.reduced(12, 12).withTrimmedTop(25));
-  layoutNetwork(rightPanel.reduced(12, 12).withTrimmedTop(25));
+  // layoutNetwork(rightPanel.reduced(12, 12).withTrimmedTop(25));
 }
 
 // --- ХЕЛПЕР: Раскладка Сатурации ---
@@ -576,7 +608,8 @@ void CoheraSaturatorAudioProcessorEditor::layoutNetwork(
   auto knobArea = area.reduced(5, 0);
 
   juce::FlexBox netFlex;
-  netFlex.justifyContent = juce::FlexBox::JustifyContent::spaceAround; // Равномерное распределение
+  netFlex.justifyContent =
+      juce::FlexBox::JustifyContent::spaceAround; // Равномерное распределение
 
   // Все три ручки в одном ряду (temporarily disabled - sliders not declared)
   // netFlex.items.add(juce::FlexItem(netSensSlider)
