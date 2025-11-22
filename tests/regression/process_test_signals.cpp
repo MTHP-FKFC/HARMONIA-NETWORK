@@ -36,11 +36,11 @@ processWithPlugin(CoheraSaturatorAudioProcessor &processor,
       if (presetFile.loadFileAsData(presetData)) {
         processor.setStateInformation(presetData.getData(),
                                       static_cast<int>(presetData.getSize()));
-        std::cout << "  Loaded preset: " << presetFile.getFileName()
-                  << std::endl;
+        // std::cout << "  Loaded preset: " << presetFile.getFileName() <<
+        // std::endl;
       }
     } else {
-      std::cout << "  Using default preset (file not found)" << std::endl;
+      // std::cout << "  Using default preset (file not found)" << std::endl;
     }
   }
 
@@ -55,7 +55,6 @@ processWithPlugin(CoheraSaturatorAudioProcessor &processor,
   juce::MidiBuffer midiBuffer;
 
   int totalSamples = output.getNumSamples();
-  int processedSamples = 0;
 
   for (int pos = 0; pos < totalSamples; pos += blockSize) {
     int samplesToProcess = juce::jmin(blockSize, totalSamples - pos);
@@ -67,26 +66,19 @@ processWithPlugin(CoheraSaturatorAudioProcessor &processor,
 
     // Process block
     processor.processBlock(block, midiBuffer);
-
-    processedSamples += samplesToProcess;
-
-    // Progress indicator (every 10%)
-    int progress = (processedSamples * 100) / totalSamples;
-    if (progress % 10 == 0 && pos > 0) {
-      std::cout << "  Progress: " << progress << "%" << std::flush << "\r";
-    }
   }
-
-  std::cout << "  Progress: 100%    " << std::endl;
 
   processor.releaseResources();
   return output;
 }
 
 int main(int argc, char *argv[]) {
-  std::cout << "🎛️  Cohera Saturator - Test Signal Processor" << std::endl;
+  std::cout << "🎛️  Cohera Saturator - Headless DSP Processor" << std::endl;
   std::cout << "=============================================" << std::endl;
   std::cout << std::endl;
+
+  // Initialize JUCE (needed for some modules, even headless)
+  juce::ScopedJuceInitialiser_GUI juceInit;
 
   // Test cases: input file -> preset file
   struct TestCase {
@@ -96,23 +88,59 @@ int main(int argc, char *argv[]) {
   };
 
   std::vector<TestCase> testCases = {
-      {"tests/regression/reference_audio/sine_440hz_default.wav",
+      // === DRUMS ===
+      {"tests/regression/reference_audio/kick_default.wav",
        "tests/regression/presets/default.xml",
-       "tests/regression/reference_audio/sine_440hz_default_processed.wav"},
-      {"tests/regression/reference_audio/sine_sweep_extreme_drive.wav",
+       "tests/regression/reference_audio/kick_default_processed.wav"},
+      {"tests/regression/reference_audio/kick_extreme.wav",
        "tests/regression/presets/extreme_drive.xml",
-       "tests/regression/reference_audio/"
-       "sine_sweep_extreme_drive_processed.wav"},
-      {"tests/regression/reference_audio/white_noise_network.wav",
-       "tests/regression/presets/network_active.xml",
-       "tests/regression/reference_audio/white_noise_network_processed.wav"},
-      {"tests/regression/reference_audio/kick_full_mojo.wav",
+       "tests/regression/reference_audio/kick_extreme_processed.wav"},
+      {"tests/regression/reference_audio/kick_mojo.wav",
        "tests/regression/presets/full_mojo.xml",
-       "tests/regression/reference_audio/kick_full_mojo_processed.wav"},
-      {"tests/regression/reference_audio/commercial_mix_default.wav",
+       "tests/regression/reference_audio/kick_mojo_processed.wav"},
+
+      {"tests/regression/reference_audio/snare_default.wav",
        "tests/regression/presets/default.xml",
-       "tests/regression/reference_audio/"
-       "commercial_mix_default_processed.wav"}};
+       "tests/regression/reference_audio/snare_default_processed.wav"},
+      {"tests/regression/reference_audio/snare_extreme.wav",
+       "tests/regression/presets/extreme_drive.xml",
+       "tests/regression/reference_audio/snare_extreme_processed.wav"},
+      {"tests/regression/reference_audio/snare_network.wav",
+       "tests/regression/presets/network_active.xml",
+       "tests/regression/reference_audio/snare_network_processed.wav"},
+
+      {"tests/regression/reference_audio/hihat_default.wav",
+       "tests/regression/presets/default.xml",
+       "tests/regression/reference_audio/hihat_default_processed.wav"},
+      {"tests/regression/reference_audio/hihat_extreme.wav",
+       "tests/regression/presets/extreme_drive.xml",
+       "tests/regression/reference_audio/hihat_extreme_processed.wav"},
+      {"tests/regression/reference_audio/hihat_mojo.wav",
+       "tests/regression/presets/full_mojo.xml",
+       "tests/regression/reference_audio/hihat_mojo_processed.wav"},
+
+      // === BASS ===
+      {"tests/regression/reference_audio/bass_default.wav",
+       "tests/regression/presets/default.xml",
+       "tests/regression/reference_audio/bass_default_processed.wav"},
+      {"tests/regression/reference_audio/bass_extreme.wav",
+       "tests/regression/presets/extreme_drive.xml",
+       "tests/regression/reference_audio/bass_extreme_processed.wav"},
+      {"tests/regression/reference_audio/bass_network.wav",
+       "tests/regression/presets/network_active.xml",
+       "tests/regression/reference_audio/bass_network_processed.wav"},
+
+      // === GUITAR ===
+      {"tests/regression/reference_audio/guitar_default.wav",
+       "tests/regression/presets/default.xml",
+       "tests/regression/reference_audio/guitar_default_processed.wav"},
+      {"tests/regression/reference_audio/guitar_extreme.wav",
+       "tests/regression/presets/extreme_drive.xml",
+       "tests/regression/reference_audio/guitar_extreme_processed.wav"},
+      {"tests/regression/reference_audio/guitar_mojo.wav",
+       "tests/regression/presets/full_mojo.xml",
+       "tests/regression/reference_audio/guitar_mojo_processed.wav"},
+  };
 
   // Create processor instance
   CoheraSaturatorAudioProcessor processor;
@@ -120,21 +148,20 @@ int main(int argc, char *argv[]) {
   int successCount = 0;
   int totalCount = static_cast<int>(testCases.size());
 
+  std::cout << "Processing " << totalCount << " files..." << std::endl;
+
   for (const auto &testCase : testCases) {
     std::cout << "Processing: " << juce::File(testCase.inputFile).getFileName()
-              << std::endl;
+              << "..." << std::flush;
 
     try {
       // Load input audio
       auto inputSignal = SignalGenerator::loadFromWav(testCase.inputFile);
 
       if (inputSignal.getNumSamples() == 0) {
-        std::cout << "  ❌ FAILED (could not load input file)" << std::endl;
+        std::cout << " ❌ FAILED (load error)" << std::endl;
         continue;
       }
-
-      std::cout << "  Loaded: " << inputSignal.getNumSamples() << " samples, "
-                << inputSignal.getNumChannels() << " channels" << std::endl;
 
       // Process through plugin
       auto outputSignal =
@@ -145,30 +172,23 @@ int main(int argc, char *argv[]) {
                                               48000.0);
 
       if (saved) {
-        std::cout << "  ✅ Saved: "
-                  << juce::File(testCase.outputFile).getFileName() << std::endl;
+        std::cout << " ✅ OK" << std::endl;
         successCount++;
       } else {
-        std::cout << "  ❌ FAILED (save error)" << std::endl;
+        std::cout << " ❌ FAILED (save error)" << std::endl;
       }
     } catch (const std::exception &e) {
-      std::cout << "  ❌ FAILED (" << e.what() << ")" << std::endl;
+      std::cout << " ❌ FAILED (" << e.what() << ")" << std::endl;
     }
-
-    std::cout << std::endl;
   }
 
+  std::cout << std::endl;
   std::cout << "=============================================" << std::endl;
   std::cout << "Results: " << successCount << "/" << totalCount
             << " files processed" << std::endl;
 
   if (successCount == totalCount) {
     std::cout << "✅ All reference files generated successfully!" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Next steps:" << std::endl;
-    std::cout << "1. Verify processed files sound correct" << std::endl;
-    std::cout << "2. Commit reference files to git" << std::endl;
-    std::cout << "3. Create regression test runner" << std::endl;
     return 0;
   } else {
     std::cout << "❌ Some files failed to process" << std::endl;
