@@ -170,6 +170,188 @@ public:
   }
 
   /**
+   * Generate snare drum
+   *
+   * @param durationSeconds Duration (including decay)
+   * @param amplitudeDB Peak amplitude
+   * @param sampleRate Sample rate
+   * @return Stereo audio buffer
+   */
+  static juce::AudioBuffer<float>
+  generateSnareDrum(float durationSeconds = 1.0f, float amplitudeDB = -6.0f,
+                    double sampleRate = 48000.0) {
+    int numSamples = static_cast<int>(durationSeconds * sampleRate);
+    juce::AudioBuffer<float> buffer(2, numSamples);
+
+    float amplitude = juce::Decibels::decibelsToGain(amplitudeDB);
+
+    // Snare = tone (200Hz) + noise burst
+    float toneFreq = 200.0f;
+    float phase = 0.0f;
+    float phaseIncrement = juce::MathConstants<float>::twoPi * toneFreq /
+                           static_cast<float>(sampleRate);
+
+    juce::Random random;
+
+    for (int i = 0; i < numSamples; ++i) {
+      float t = static_cast<float>(i) / sampleRate;
+
+      // Fast decay envelope
+      float envelope = std::exp(-t * 15.0f);
+
+      // Tone component (40%)
+      float tone = std::sin(phase) * 0.4f;
+
+      // Noise component (60%)
+      float noise = (random.nextFloat() * 2.0f - 1.0f) * 0.6f;
+
+      float sample = (tone + noise) * amplitude * envelope;
+      buffer.setSample(0, i, sample);
+      buffer.setSample(1, i, sample);
+
+      phase += phaseIncrement;
+      if (phase >= juce::MathConstants<float>::twoPi)
+        phase -= juce::MathConstants<float>::twoPi;
+    }
+
+    return buffer;
+  }
+
+  /**
+   * Generate hi-hat
+   *
+   * @param durationSeconds Duration
+   * @param amplitudeDB Peak amplitude
+   * @param sampleRate Sample rate
+   * @return Stereo audio buffer
+   */
+  static juce::AudioBuffer<float> generateHiHat(float durationSeconds = 0.5f,
+                                                float amplitudeDB = -12.0f,
+                                                double sampleRate = 48000.0) {
+    int numSamples = static_cast<int>(durationSeconds * sampleRate);
+    juce::AudioBuffer<float> buffer(2, numSamples);
+
+    float amplitude = juce::Decibels::decibelsToGain(amplitudeDB);
+    juce::Random random;
+
+    for (int i = 0; i < numSamples; ++i) {
+      float t = static_cast<float>(i) / sampleRate;
+
+      // Very fast decay
+      float envelope = std::exp(-t * 25.0f);
+
+      // High-frequency noise (band-limited)
+      float noise = (random.nextFloat() * 2.0f - 1.0f);
+
+      // Simple high-pass (emphasize highs)
+      static float lastSample = 0.0f;
+      float highPassed = noise - lastSample * 0.95f;
+      lastSample = noise;
+
+      float sample = highPassed * amplitude * envelope;
+      buffer.setSample(0, i, sample);
+      buffer.setSample(1, i, sample);
+    }
+
+    return buffer;
+  }
+
+  /**
+   * Generate bass (sine wave, low frequency)
+   *
+   * @param frequency Bass frequency (e.g., 55Hz for A1)
+   * @param durationSeconds Duration
+   * @param amplitudeDB Amplitude
+   * @param sampleRate Sample rate
+   * @return Stereo audio buffer
+   */
+  static juce::AudioBuffer<float> generateBass(float frequency = 55.0f, // A1
+                                               float durationSeconds = 4.0f,
+                                               float amplitudeDB = -6.0f,
+                                               double sampleRate = 48000.0) {
+    int numSamples = static_cast<int>(durationSeconds * sampleRate);
+    juce::AudioBuffer<float> buffer(2, numSamples);
+
+    float amplitude = juce::Decibels::decibelsToGain(amplitudeDB);
+    float phase = 0.0f;
+    float phaseIncrement = juce::MathConstants<float>::twoPi * frequency /
+                           static_cast<float>(sampleRate);
+
+    for (int i = 0; i < numSamples; ++i) {
+      float t = static_cast<float>(i) / sampleRate;
+
+      // Gentle ADSR envelope
+      float envelope = 1.0f;
+      if (t < 0.01f) {
+        // Attack (10ms)
+        envelope = t / 0.01f;
+      } else if (t > durationSeconds - 0.1f) {
+        // Release (100ms)
+        envelope = (durationSeconds - t) / 0.1f;
+      }
+
+      // Pure sine for bass
+      float sample = std::sin(phase) * amplitude * envelope;
+      buffer.setSample(0, i, sample);
+      buffer.setSample(1, i, sample);
+
+      phase += phaseIncrement;
+      if (phase >= juce::MathConstants<float>::twoPi)
+        phase -= juce::MathConstants<float>::twoPi;
+    }
+
+    return buffer;
+  }
+
+  /**
+   * Generate pink noise (guitar-like texture)
+   *
+   * Pink noise has equal energy per octave (more natural than white noise)
+   *
+   * @param durationSeconds Duration
+   * @param amplitudeDB Amplitude
+   * @param sampleRate Sample rate
+   * @return Stereo audio buffer
+   */
+  static juce::AudioBuffer<float>
+  generatePinkNoise(float durationSeconds = 4.0f, float amplitudeDB = -12.0f,
+                    double sampleRate = 48000.0) {
+    int numSamples = static_cast<int>(durationSeconds * sampleRate);
+    juce::AudioBuffer<float> buffer(2, numSamples);
+
+    float amplitude = juce::Decibels::decibelsToGain(amplitudeDB);
+
+    // Voss-McCartney algorithm for pink noise
+    for (int ch = 0; ch < 2; ++ch) {
+      juce::Random random(ch + 1); // Different seed per channel
+
+      // State variables for pink noise filter
+      float b0 = 0.0f, b1 = 0.0f, b2 = 0.0f, b3 = 0.0f, b4 = 0.0f, b5 = 0.0f,
+            b6 = 0.0f;
+
+      for (int i = 0; i < numSamples; ++i) {
+        float white = random.nextFloat() * 2.0f - 1.0f;
+
+        // Paul Kellet's refined method
+        b0 = 0.99886f * b0 + white * 0.0555179f;
+        b1 = 0.99332f * b1 + white * 0.0750759f;
+        b2 = 0.96900f * b2 + white * 0.1538520f;
+        b3 = 0.86650f * b3 + white * 0.3104856f;
+        b4 = 0.55000f * b4 + white * 0.5329522f;
+        b5 = -0.7616f * b5 - white * 0.0168980f;
+
+        float pink = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362f;
+        b6 = white * 0.115926f;
+
+        float sample = pink * amplitude * 0.11f; // Normalize
+        buffer.setSample(ch, i, sample);
+      }
+    }
+
+    return buffer;
+  }
+
+  /**
    * Save audio buffer to WAV file
    *
    * @param buffer Audio buffer to save

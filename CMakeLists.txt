@@ -284,3 +284,26 @@ set_target_properties(GenerateTestSignals PROPERTIES
 
 # Print helpful message
 message(STATUS "Test signal generator configured: ${CMAKE_BINARY_DIR}/tests/generate_test_signals")
+
+# Realistic Instrument Signal Generator
+add_executable(GenerateInstrumentSignals
+    tests/regression/generate_instrument_signals.cpp
+    tests/regression/SignalGenerator.h
+)
+
+target_include_directories(GenerateInstrumentSignals PRIVATE 
+    tests/regression
+)
+
+target_link_libraries(GenerateInstrumentSignals PRIVATE
+    juce::juce_audio_utils
+    juce::juce_audio_formats
+    juce::juce_core
+)
+
+set_target_properties(GenerateInstrumentSignals PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    OUTPUT_NAME "generate_instrument_signals"
+)
+
+message(STATUS "Instrument signal generator configured: ${CMAKE_BINARY_DIR}/tests/generate_instrument_signals")
