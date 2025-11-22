@@ -255,3 +255,32 @@ target_link_libraries(IndustryStandardTest PRIVATE
 set_target_properties(IndustryStandardTest PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
 )
+
+# ============================================================================
+# REGRESSION TEST SUITE (Week 0A)
+# ============================================================================
+
+# Test Signal Generator (Headless - No Plugin Dependencies)
+# Generates test audio signals for regression testing
+add_executable(GenerateTestSignals
+    tests/regression/generate_test_signals.cpp
+    tests/regression/SignalGenerator.h
+)
+
+target_include_directories(GenerateTestSignals PRIVATE 
+    tests/regression
+)
+
+target_link_libraries(GenerateTestSignals PRIVATE
+    juce::juce_audio_utils
+    juce::juce_audio_formats  # For WAV file I/O
+    juce::juce_core
+)
+
+set_target_properties(GenerateTestSignals PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    OUTPUT_NAME "generate_test_signals"
+)
+
+# Print helpful message
+message(STATUS "Test signal generator configured: ${CMAKE_BINARY_DIR}/tests/generate_test_signals")

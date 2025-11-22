@@ -10,8 +10,10 @@
  */
 
 #pragma once
-#include <JuceHeader.h>
 #include <cmath>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_core/juce_core.h>
 
 namespace Cohera {
 namespace Testing {
@@ -181,11 +183,14 @@ public:
     juce::File outputFile(filepath);
     outputFile.deleteFile(); // Remove if exists
 
-    if (auto *outputStream = outputFile.createOutputStream()) {
+    auto outputStream = outputFile.createOutputStream();
+
+    if (outputStream != nullptr) {
       juce::WavAudioFormat wavFormat;
 
       std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-          outputStream, sampleRate, buffer.getNumChannels(),
+          outputStream.release(), // Transfer ownership to writer
+          sampleRate, buffer.getNumChannels(),
           32, // 32-bit float
           {}, 0));
 

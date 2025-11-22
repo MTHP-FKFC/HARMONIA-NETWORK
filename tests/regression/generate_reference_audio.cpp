@@ -10,12 +10,13 @@
  *   ./generate_reference_audio
  *
  * Output:
- *   tests/regression/reference_audio/*.wav
+ *   tests/regression/reference_audio/ (WAV files)
  */
 
-#include "../../src/PluginProcessor.h"
+#include "../src/PluginProcessor.h"
 #include "SignalGenerator.h"
 #include <JuceHeader.h>
+#include <iostream>
 
 using namespace Cohera::Testing;
 
