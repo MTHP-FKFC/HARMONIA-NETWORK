@@ -399,3 +399,96 @@ set_target_properties(ProcessTestSignals PROPERTIES
 )
 
 message(STATUS "Headless processor configured: ${CMAKE_BINARY_DIR}/tests/process_test_signals")
+
+# ============================================================================
+# REGRESSION TEST RUNNER
+# ============================================================================
+# Validates current plugin output against reference audio files
+add_executable(TestAudioRegression
+    tests/regression/test_audio_regression.cpp
+    tests/regression/SignalGenerator.h
+    tests/regression/AudioComparator.h
+    
+    # Core Plugin
+    src/PluginProcessor.cpp src/PluginProcessor.h
+    src/PluginEditor.cpp    src/PluginEditor.h
+    src/CoheraTypes.h
+
+    # Parameters
+    src/parameters/ParameterSet.h
+    src/parameters/ParameterManager.h
+
+    # Engine
+    src/engine/SaturationEngine.h
+    src/engine/TransientEngine.h
+    src/engine/AnalogModelingEngine.h
+    src/engine/BandProcessingEngine.h
+    src/engine/FilterBankEngine.h
+    src/engine/MixEngine.h
+    src/engine/ProcessingEngine.h
+
+    # Network
+    src/network/NetworkController.h
+    src/network/NetworkManager.h
+
+    # DSP Module
+    src/dsp/FilterBank.cpp  src/dsp/FilterBank.h
+    src/dsp/Waveshaper.h
+    src/dsp/MathSaturator.h
+    src/dsp/DCBlocker.h
+    src/dsp/Envelope.h
+    src/dsp/DynamicsRestorer.h
+    src/dsp/InteractionEngine.h
+    src/dsp/MSMatrix.h
+    src/dsp/PsychoAcousticGain.h
+    src/dsp/SidechainNormalizer.h
+    src/dsp/AutoGainStage.h
+    src/dsp/TransientDetector.h
+    src/dsp/TransientSplitter.h
+    src/dsp/VoltageRegulator.h
+    src/dsp/ThermalModel.h
+    src/dsp/StereoVariance.h
+    src/dsp/NoiseBreather.h
+    src/dsp/DeltaMonitor.h
+    src/dsp/StereoFocus.h
+    src/dsp/HarmonicEntropy.h
+    src/FIR/fir_coeffs_multi_sr.h
+    src/FIR/fir_minphase_128.h
+    src/analyzer/AnalyzerPipelineConfig.h
+
+    # UI Module
+    src/ui/CoheraLookAndFeel.h
+    src/ui/components/SaturationCore.h
+    src/ui/components/NetworkBrain.h
+    src/ui/visuals/BioScanner.h
+    src/ui/visuals/GlitchOverlay.h
+    src/ui/visuals/TechDecor.h
+    src/ui/SimpleFFT.h
+    src/ui/Components/SpectrumVisor.h
+    src/ui/Components/TopBar.h
+)
+
+target_include_directories(TestAudioRegression PRIVATE 
+    src
+    tests/regression
+)
+
+target_link_libraries(TestAudioRegression PRIVATE
+    juce::juce_audio_utils
+    juce::juce_audio_processors
+    juce::juce_audio_formats
+    juce::juce_dsp
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+)
+
+set_target_properties(TestAudioRegression PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+    OUTPUT_NAME "test_audio_regression"
+)
+
+message(STATUS "Regression test runner configured: ${CMAKE_BINARY_DIR}/tests/test_audio_regression")
