@@ -65,10 +65,15 @@ public:
       preFilters[ch].reset();
       postFilters[ch].reset();
     }
+
+    smoothTighten.setCurrentAndTargetValue(smoothTighten.getTargetValue());
+    smoothSmooth.setCurrentAndTargetValue(smoothSmooth.getTargetValue());
   }
 
   int getLatencySamples() const { return filterBank.getLatencySamples(); }
-  float getToneShapingLatencySamples() const { return toneShapingLatencyBaseSamples; }
+  float getToneShapingLatencySamples() const {
+    return toneShapingLatencyBaseSamples;
+  }
 
   // Основной процесс: Вход -> Фильтр -> Сплит -> Обработка -> Сумма -> Фильтр
   // -> Выход ioBlock: входной сигнал, который будет перезаписан результатом
@@ -106,15 +111,13 @@ public:
 
     // --- 2. SPLIT INTO BANDS ---
     // Создаем AudioBuffer обертку для FilterBank (он принимает AudioBuffer)
-    // Для эффективности используем zero-copy обертку
-    juce::AudioBuffer<float> inputWrapper(numChannels, numSamples);
+    // Для эффективности используем zero-copy обертку, ссылаясь на данные
+    // ioBlock
+    float *channelData[2]; // Max 2 channels supported
+    for (int ch = 0; ch < numChannels; ++ch)
+      channelData[ch] = ioBlock.getChannelPointer(ch);
 
-    // Копируем данные из AudioBlock в AudioBuffer (не идеально, но безопасно)
-    for (int ch = 0; ch < numChannels; ++ch) {
-      juce::FloatVectorOperations::copy(inputWrapper.getWritePointer(ch),
-                                        ioBlock.getChannelPointer(ch),
-                                        numSamples);
-    }
+    juce::AudioBuffer<float> inputWrapper(channelData, numChannels, numSamples);
 
     // Разделяем на полосы
     filterBank.splitIntoBands(inputWrapper, bandBufferPtrs.data(), numSamples);
@@ -144,7 +147,8 @@ public:
       // Обновляем Gain Reduction для UI (RMS уровень полосы после обработки)
       float bandRMS = 0.0f;
       for (int ch = 0; ch < numChannels; ++ch) {
-          bandRMS += subBlock.getChannelPointer(ch)[0] * subBlock.getChannelPointer(ch)[0];
+        bandRMS += subBlock.getChannelPointer(ch)[0] *
+                   subBlock.getChannelPointer(ch)[0];
       }
       bandRMS = std::sqrt(bandRMS / numChannels);
       // Нормализуем относительно входного уровня (примерно)
@@ -166,9 +170,10 @@ public:
     }
 
     // --- 4.5 PHYSICAL COMPENSATION ---
-    // Исторически тут был множитель 0.35, но после перевода на новую архитектуру
-    // сумма полос уже приблизительно совпадает по уровню с Dry сигналом, поэтому
-    // дополнительное ослабление только портило импульсный отклик.
+    // Исторически тут был множитель 0.35, но после перевода на новую
+    // архитектуру сумма полос уже приблизительно совпадает по уровню с Dry
+    // сигналом, поэтому дополнительное ослабление только портило импульсный
+    // отклик.
 
     // --- 5. TONE SHAPING (POST-FILTER / SMOOTH) ---
     for (int i = 0; i < numSamples; ++i) {
@@ -200,19 +205,20 @@ private:
   std::array<juce::dsp::StateVariableTPTFilter<float>, 2> preFilters;
   std::array<juce::dsp::StateVariableTPTFilter<float>, 2> postFilters;
 
-  juce::SmoothedValue<float> smoothTighten;
-  juce::SmoothedValue<float> smoothSmooth;
+  juce::LinearSmoothedValue<float> smoothTighten;
+  juce::LinearSmoothedValue<float> smoothSmooth;
 
   // Gain Reduction для UI метров (обновляется в process)
-  std::array<float, 6> currentGR { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+  std::array<float, 6> currentGR{1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 
-  // Derived from measuring the TPT pre/post filters plus band DC-blockers in isolation.
-  // The processing runs at 4x rate, but once downsampled it behaves like an extra ~25.5 samples of latency.
+  // Derived from measuring the TPT pre/post filters plus band DC-blockers in
+  // isolation. The processing runs at 4x rate, but once downsampled it behaves
+  // like an extra ~25.5 samples of latency.
   static constexpr float toneShapingLatencyBaseSamples = 25.5f;
 
 public:
-  const std::array<float, 6>& getGainReductionValues() const {
-      return currentGR;
+  const std::array<float, 6> &getGainReductionValues() const {
+    return currentGR;
   }
 };
 
