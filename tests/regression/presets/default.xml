@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<CoheraSaturatorPreset version="1.30">
+  <PARAM id="drive_master" value="50.0"/>
+  <PARAM id="math_mode" value="0.0"/>
+  <PARAM id="mix" value="100.0"/>
+  <PARAM id="output_gain" value="0.0"/>
+  <PARAM id="dynamics" value="0.0"/>
+  <PARAM id="tone_tighten" value="0.0"/>
+  <PARAM id="tone_smooth" value="0.0"/>
+  <PARAM id="punch" value="0.0"/>
+  <PARAM id="focus" value="0.0"/>
+  <PARAM id="heat" value="0.0"/>
+  <PARAM id="analog_drift" value="0.0"/>
+  <PARAM id="variance" value="0.0"/>
+  <PARAM id="entropy" value="0.0"/>
+  <PARAM id="noise" value="0.0"/>
+  <PARAM id="cascade" value="0.0"/>
+  <PARAM id="delta" value="0.0"/>
+  <PARAM id="quality" value="1.0"/>
+  <PARAM id="group_id" value="0.0"/>
+  <PARAM id="role" value="2.0"/>
+  <PARAM id="net_mode" value="0.0"/>
+  <PARAM id="net_sens" value="0.0"/>
+  <PARAM id="net_depth" value="0.0"/>
+  <PARAM id="net_smooth" value="50.0"/>
+</CoheraSaturatorPreset>
