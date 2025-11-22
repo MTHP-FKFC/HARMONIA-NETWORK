@@ -6,13 +6,28 @@
 class SpectrumVisor : public juce::Component, private juce::Timer {
 public:
   SpectrumVisor(SimpleFFT &fftToUse, juce::AudioProcessorValueTreeState &apvts)
-
       : fft(fftToUse), apvts(apvts) {
-    // 30 FPS достаточно для плавности
-    startTimerHz(30);
+    // 60 FPS для плавной анимации (после оптимизаций у нас есть запас)
+    startTimerHz(60);
+
+#if JUCE_DEBUG
+    // В Debug режиме включаем профилирование
+    enableProfiling = true;
+#endif
   }
 
-  ~SpectrumVisor() override { stopTimer(); }
+  ~SpectrumVisor() override {
+    stopTimer();
+
+#if JUCE_DEBUG
+    if (enableProfiling && frameCount > 0) {
+      DBG("SpectrumVisor Performance Stats:");
+      DBG("  Frames: " << frameCount);
+      DBG("  Avg Paint Time: " << juce::String(avgPaintTime, 3) << " ms");
+      DBG("  Max Paint Time: " << juce::String(maxPaintTime, 3) << " ms");
+    }
+#endif
+  }
 
   void timerCallback() override {
     // Запускаем математику FFT (это быстро)
@@ -21,6 +36,10 @@ public:
   }
 
   void paint(juce::Graphics &g) override {
+#if JUCE_DEBUG
+    auto startTime = juce::Time::getMillisecondCounterHiRes();
+#endif
+
     auto area = getLocalBounds().toFloat();
     auto w = area.getWidth();
     auto h = area.getHeight();
@@ -78,6 +97,18 @@ public:
     if (!isRef) {
       drawGhostCurve(g, w, h);
     }
+
+#if JUCE_DEBUG
+    if (enableProfiling) {
+      auto endTime = juce::Time::getMillisecondCounterHiRes();
+      auto paintTime = endTime - startTime;
+
+      // Обновляем статистику
+      frameCount++;
+      avgPaintTime = (avgPaintTime * (frameCount - 1) + paintTime) / frameCount;
+      maxPaintTime = juce::jmax(maxPaintTime, paintTime);
+    }
+#endif
   }
 
   // Хелпер для сетки (Log scale mapping)
@@ -138,4 +169,12 @@ private:
   // Reusable paths to avoid allocations in paint
   juce::Path spectrumPath;
   juce::Path ghostPath;
+
+// Performance profiling (Debug only)
+#if JUCE_DEBUG
+  bool enableProfiling = false;
+  int frameCount = 0;
+  double avgPaintTime = 0.0;
+  double maxPaintTime = 0.0;
+#endif
 };
