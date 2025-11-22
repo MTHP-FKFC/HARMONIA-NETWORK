@@ -10,18 +10,6 @@
 // Наши компоненты
 #include "FilterBankEngine.h"
 #include "MixEngine.h"
-#pragma once
-
-#include <juce_dsp/juce_dsp.h>
-#include <vector>
-#include <cmath>
-#include <atomic>
-#include "../CoheraTypes.h"
-#include "../parameters/ParameterSet.h"
-
-// Наши компоненты
-#include "FilterBankEngine.h"
-#include "MixEngine.h"
 #include "../network/NetworkController.h"
 
 namespace Cohera {

@@ -31,13 +31,25 @@ public:
             param->setValueNotifyingHost(73.5f / 100.0f); // normalized value
         if (auto* param = apvts->getParameter("mix"))
             param->setValueNotifyingHost(42.1f / 100.0f);
+        // Устанавливаем math_mode через setValueNotifyingHost
+        // AudioParameterChoice использует нормализацию: index / (numChoices - 1)
+        // Для 17 элементов (0-16): index / 16
+        // Vintage Console находится на индексе 11
         if (auto* param = apvts->getParameter("math_mode"))
-            param->setValueNotifyingHost(5.0f / 11.0f); // choice parameter (0-11 range), set to Vintage Console
+        {
+            // Устанавливаем индекс 11 (Vintage Console) через нормализованное значение
+            param->setValueNotifyingHost(11.0f / 16.0f);
+        }
         if (auto* param = apvts->getParameter("tone_tighten"))
             param->setValueNotifyingHost((350.0f - 10.0f) / (1000.0f - 10.0f)); // normalized
 
         // Даем время параметрам примениться
         juce::Thread::sleep(10);
+        
+        // Проверяем, что math_mode установился правильно перед сохранением
+        float mathModeBeforeSave = (float)*apvts->getRawParameterValue("math_mode");
+        int mathModeIndexBeforeSave = (int)std::round(mathModeBeforeSave);
+        expect(mathModeIndexBeforeSave == 11, "Math mode should be set to 11 (Vintage Console) before save (got " + juce::String(mathModeIndexBeforeSave) + ")");
 
         // 4. Сохраняем состояние
         juce::MemoryBlock stateData;
@@ -49,6 +61,9 @@ public:
         if (xmlState)
         {
             DBG("Saved state XML: " + xmlState->toString());
+            // Проверяем значение math_mode перед сохранением
+            float savedMathMode = (float)*apvts->getRawParameterValue("math_mode");
+            DBG("Math mode before save: " + juce::String(savedMathMode));
         }
 
         // 5. Создаем НОВЫЙ процессор
@@ -69,7 +84,16 @@ public:
         // 8. Проверяем, что параметры восстановились (с небольшой tolerance для floating point)
         expect(abs((float)*apvts2->getRawParameterValue("drive_master") - 73.5f) < 0.1f, "Drive parameter recalled");
         expect(abs((float)*apvts2->getRawParameterValue("mix") - 42.0f) < 0.1f, "Mix parameter recalled");
-        expect(abs((float)*apvts2->getRawParameterValue("math_mode") - 5.0f) < 0.1f, "Algorithm mode recalled");
+        
+        // Для AudioParameterChoice нужно проверить индекс правильно
+        // getRawParameterValue возвращает индекс как float, но может быть округление
+        // Используем округление для правильной проверки индекса
+        float loadedMathModeRaw = (float)*apvts2->getRawParameterValue("math_mode");
+        int loadedMathModeIndex = (int)std::round(loadedMathModeRaw);
+        
+        // Проверяем, что индекс правильный (11 = Vintage Console)
+        expect(loadedMathModeIndex == 11, "Algorithm mode recalled (index " + juce::String(loadedMathModeIndex) + " should be 11)");
+        
         expect(abs((float)*apvts2->getRawParameterValue("tone_tighten") - 350.0f) < 300.0f, "Filter parameter recalled (skewed range tolerance)");
     }
 };

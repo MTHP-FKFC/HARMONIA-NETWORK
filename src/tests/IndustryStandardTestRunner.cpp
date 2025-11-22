@@ -4,6 +4,7 @@
 
 // Include our Industry Standard tests
 #include "IndustryStandardTests.cpp"
+#include "SaturationDiagnostics.cpp"
 
 int main(int argc, char* argv[])
 {
