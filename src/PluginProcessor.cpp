@@ -249,6 +249,14 @@ void CoheraSaturatorAudioProcessor::processBlock(
     juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midiMessages) {
   juce::ScopedNoDenormals noDenormals;
 
+  // Try to lock process. If we can't, it means state is loading.
+  // Mute output and return to avoid race conditions.
+  juce::GenericScopedTryLock<juce::CriticalSection> lock(processLock);
+  if (!lock.isLocked()) {
+    buffer.clear();
+    return;
+  }
+
   // Исходные размеры
   const int originalNumSamples = buffer.getNumSamples();
   const int numCh = juce::jmin(buffer.getNumChannels(), 2);
@@ -307,11 +315,19 @@ void CoheraSaturatorAudioProcessor::getStateInformation(
 
 void CoheraSaturatorAudioProcessor::setStateInformation(const void *data,
                                                         int sizeInBytes) {
+  // Lock processing to prevent race conditions during state load
+  const juce::ScopedLock lock(processLock);
+
   std::unique_ptr<juce::XmlElement> xmlState(
       getXmlFromBinary(data, sizeInBytes));
-  if (xmlState.get() != nullptr)
-    if (xmlState->hasTagName(apvts.state.getType()))
+  if (xmlState.get() != nullptr) {
+    if (xmlState->hasTagName(apvts.state.getType())) {
       apvts.replaceState(juce::ValueTree::fromXml(*xmlState));
+
+      // Reset DSP engine to prevent audio glitches with new parameters
+      processingEngine.reset();
+    }
+  }
 }
 
 juce::AudioProcessorEditor *CoheraSaturatorAudioProcessor::createEditor() {
