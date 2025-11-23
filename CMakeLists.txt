@@ -9,6 +9,9 @@ add_subdirectory(/Users/macos/JUCE JUCE)
 # Используем legacy parameter IDs чтобы избежать конфликтов VST2/VST3
 add_compile_definitions(JUCE_FORCE_USE_LEGACY_PARAM_IDS=1)
 
+# Option to build tests (Default ON for development, set OFF for release)
+option(BUILD_TESTS "Build test suites" ON)
+
 # 2. Создаем цель плагина
 juce_add_plugin(Cohera_Saturator
     COMPANY_NAME "CoheraAudio"
@@ -123,8 +126,11 @@ target_link_libraries(Cohera_Saturator PRIVATE
     juce::juce_events
 )
 
-# Create lightweight test executable (only DSP logic, no UI)
-add_executable(Cohera_Tests
+if(BUILD_TESTS)
+    message(STATUS "Configuring Test Suites...")
+
+    # Create lightweight test executable (only DSP logic, no UI)
+    add_executable(Cohera_Tests
     src/tests/TestRunner.cpp
     src/tests/TestHelpers.h
     src/tests/TestAudioGenerator.h
@@ -553,3 +559,4 @@ set_target_properties(TestAudioRegression PROPERTIES
 )
 
 message(STATUS "Regression test runner configured: ${CMAKE_BINARY_DIR}/tests/test_audio_regression")
+endif()
