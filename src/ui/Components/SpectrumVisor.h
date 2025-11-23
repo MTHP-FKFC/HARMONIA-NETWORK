@@ -7,36 +7,41 @@ class SpectrumVisor : public juce::Component, private juce::Timer {
 public:
   SpectrumVisor(SimpleFFT &fftToUse, juce::AudioProcessorValueTreeState &apvts)
       : fft(fftToUse), apvts(apvts) {
-    // 60 FPS для плавной анимации (после оптимизаций у нас есть запас)
-    startTimerHz(60);
-
-#if JUCE_DEBUG
-    // В Debug режиме включаем профилирование
-    enableProfiling = true;
-#endif
+    // Не стартуем таймер здесь - только когда visible
   }
 
   ~SpectrumVisor() override {
     stopTimer();
 
-#if JUCE_DEBUG
-    if (enableProfiling && frameCount > 0) {
+#ifndef NDEBUG
+    if (frameCount > 0) {
       DBG("SpectrumVisor Performance Stats:");
       DBG("  Frames: " << frameCount);
-      DBG("  Avg Paint Time: " << juce::String(avgPaintTime, 3) << " ms");
-      DBG("  Max Paint Time: " << juce::String(maxPaintTime, 3) << " ms");
+      DBG("  Avg: " << juce::String(avgPaintTime, 3) << " ms");
+      DBG("  Min: " << juce::String(minPaintTime, 3) << " ms");
+      DBG("  Max: " << juce::String(maxPaintTime, 3) << " ms");
+      DBG("  P95: " << juce::String(p95PaintTime, 3) << " ms");
+      DBG("  Frame drops: " << frameDrops);
     }
 #endif
   }
 
+  void visibilityChanged() override { updateTimerState(); }
+
+  void parentHierarchyChanged() override { updateTimerState(); }
+
   void timerCallback() override {
-    // Запускаем математику FFT (это быстро)
-    fft.process(0.85f); // Decay factor
+    fft.process(0.85f);
     repaint();
   }
 
+  void resized() override {
+    Component::resized();
+    updateGradient();
+  }
+
   void paint(juce::Graphics &g) override {
-#if JUCE_DEBUG
+#ifndef NDEBUG
     auto startTime = juce::Time::getMillisecondCounterHiRes();
 #endif
 
@@ -50,7 +55,6 @@ public:
 
     // 2. Сетка (Grid)
     g.setColour(juce::Colours::white.withAlpha(0.05f));
-    // Рисуем линии на 100, 1000, 10000 Гц
     float freqPoints[] = {100.0f, 1000.0f, 10000.0f};
     for (float freq : freqPoints) {
       float x = mapFreqToX(freq, w);
@@ -65,55 +69,65 @@ public:
     const auto &data = fft.getScopeData();
 
     spectrumPath.clear();
-    spectrumPath.startNewSubPath(0, h); // Старт в левом нижнем углу
+    spectrumPath.startNewSubPath(0, h);
 
     for (int i = 0; i < (int)data.size(); ++i) {
       float x = juce::jmap((float)i, 0.0f, (float)data.size(), 0.0f, w);
-      float y =
-          juce::jmap(data[i], 0.0f, 1.0f, h, 0.0f); // 0 = низ экрана, 1 = верх
-
+      float y = juce::jmap(data[i], 0.0f, 1.0f, h, 0.0f);
       spectrumPath.lineTo(x, y);
     }
 
-    // Замыкаем путь вниз
     spectrumPath.lineTo(w, h);
     spectrumPath.closeSubPath();
 
-    // Рисуем заливку (Gradient)
-    // Сверху (громко) - Оранжевый, Снизу (тихо) - Прозрачный
-    juce::ColourGradient grad(
-        juce::Colour::fromRGB(255, 140, 0).withAlpha(0.6f), 0, 0,
-        juce::Colour::fromRGB(255, 140, 0).withAlpha(0.0f), 0, h, false);
-    g.setGradientFill(grad);
+    // Используем cached gradient
+    g.setGradientFill(cachedSpectrumGradient);
     g.fillPath(spectrumPath);
 
     // Рисуем контур
     g.setColour(juce::Colour::fromRGB(255, 200, 100));
     g.strokePath(spectrumPath, juce::PathStrokeType(1.5f));
 
-    // 4. GHOST SPECTRUM (Reference) - "Линия"
-    // Рисуем только если мы Listener (чтобы видеть, под кого прогибаемся)
+    // 4. Ghost Spectrum
     bool isRef = *apvts.getRawParameterValue("role") > 0.5f;
     if (!isRef) {
       drawGhostCurve(g, w, h);
     }
 
-#if JUCE_DEBUG
-    if (enableProfiling) {
-      auto endTime = juce::Time::getMillisecondCounterHiRes();
-      auto paintTime = endTime - startTime;
+#ifndef NDEBUG
+    auto endTime = juce::Time::getMillisecondCounterHiRes();
+    auto paintTime = endTime - startTime;
 
-      // Обновляем статистику
-      frameCount++;
-      avgPaintTime = (avgPaintTime * (frameCount - 1) + paintTime) / frameCount;
+    frameCount++;
+
+    // Running statistics
+    if (frameCount == 1) {
+      minPaintTime = maxPaintTime = avgPaintTime = paintTime;
+    } else {
+      minPaintTime = juce::jmin(minPaintTime, paintTime);
       maxPaintTime = juce::jmax(maxPaintTime, paintTime);
+      avgPaintTime = (avgPaintTime * (frameCount - 1) + paintTime) / frameCount;
+    }
+
+    // Frame drop detection
+    if (paintTime > 16.67) {
+      frameDrops++;
+    }
+
+    // P95 calculation (simplified - store last 100 samples)
+    paintTimeSamples[sampleIndex % 100] = paintTime;
+    sampleIndex++;
+
+    if (frameCount % 100 == 0) {
+      std::vector<double> sorted(paintTimeSamples.begin(),
+                                 paintTimeSamples.end());
+      std::sort(sorted.begin(), sorted.end());
+      p95PaintTime = sorted[95];
     }
 #endif
   }
 
-  // Хелпер для сетки (Log scale mapping)
   float mapFreqToX(float freq, float w) {
-    // 20Hz ... 20000Hz
     return w * (std::log10(freq / 20.0f) / std::log10(20000.0f / 20.0f));
   }
 
@@ -124,39 +138,27 @@ public:
     ghostPath.clear();
     bool first = true;
 
-    // У нас 6 полос. Мы знаем их примерные центры (логарифмически).
-    // 0: Sub (~60Hz), 1: Low (~150Hz), 2: Mid (~400Hz), 3: HM (~1.5k), 4: Hi
-    // (~4k), 5: Air (~10k) Эти координаты (0.0-1.0 по X) подобраны эмпирически
-    // под Log шкалу
     float bandXPositions[6] = {0.15f, 0.3f, 0.45f, 0.6f, 0.75f, 0.9f};
 
     for (int i = 0; i < 6; ++i) {
-      // Получаем энергию полосы референса (0..1)
       float energy = net.getBandSignal(group, i);
-
-      // Мапим на экран
       float x = w * bandXPositions[i];
-      // Чуть усиливаем визуально, чтобы было видно
       float y = h - (energy * h * 0.9f);
 
       if (first) {
-        ghostPath.startNewSubPath(0, h); // Старт слева внизу
+        ghostPath.startNewSubPath(0, h);
         ghostPath.lineTo(x, y);
         first = false;
       } else {
-        // Рисуем кривые (Rounded)
         ghostPath.lineTo(x, y);
       }
     }
-    ghostPath.lineTo(w, h); // Финиш справа внизу
+    ghostPath.lineTo(w, h);
 
-    // Рисуем "Призрака" (Мятный цвет - Network)
     g.setColour(juce::Colour::fromRGB(0, 255, 200).withAlpha(0.4f));
-    // Пунктирная линия или просто толстая полупрозрачная
     g.strokePath(ghostPath,
                  juce::PathStrokeType(2.0f, juce::PathStrokeType::curved));
 
-    // Заливка под призраком (очень слабая)
     g.setColour(juce::Colour::fromRGB(0, 255, 200).withAlpha(0.1f));
     ghostPath.closeSubPath();
     g.fillPath(ghostPath);
@@ -166,15 +168,43 @@ private:
   SimpleFFT &fft;
   juce::AudioProcessorValueTreeState &apvts;
 
-  // Reusable paths to avoid allocations in paint
+  // Reusable paths
   juce::Path spectrumPath;
   juce::Path ghostPath;
 
-// Performance profiling (Debug only)
-#if JUCE_DEBUG
-  bool enableProfiling = false;
+  // Cached gradient (updated on resize)
+  juce::ColourGradient cachedSpectrumGradient;
+
+// Enhanced performance metrics
+#ifndef NDEBUG
   int frameCount = 0;
+  int frameDrops = 0;
+  int sampleIndex = 0;
+  double minPaintTime = 0.0;
   double avgPaintTime = 0.0;
   double maxPaintTime = 0.0;
+  double p95PaintTime = 0.0;
+  std::array<double, 100> paintTimeSamples{};
 #endif
+
+  // Smart timer management
+  void updateTimerState() {
+    if (isVisible() && isShowing()) {
+      if (!isTimerRunning()) {
+        startTimerHz(60);
+      }
+    } else {
+      if (isTimerRunning()) {
+        stopTimer();
+      }
+    }
+  }
+
+  // Update gradient on resize
+  void updateGradient() {
+    auto h = getHeight();
+    cachedSpectrumGradient = juce::ColourGradient(
+        juce::Colour::fromRGB(255, 140, 0).withAlpha(0.6f), 0, 0,
+        juce::Colour::fromRGB(255, 140, 0).withAlpha(0.0f), 0, h, false);
+  }
 };

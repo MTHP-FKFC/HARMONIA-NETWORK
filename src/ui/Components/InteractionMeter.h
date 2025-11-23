@@ -8,16 +8,23 @@ class InteractionMeter : public juce::Component, private juce::Timer {
 public:
   InteractionMeter(juce::AudioProcessorValueTreeState &apvtsRef)
       : apvts(&apvtsRef) {
-    startTimerHz(60); // Upgraded to 60 FPS
+    // Не стартуем таймер - только когда visible
   }
 
   InteractionMeter() : apvts(nullptr) {
-    startTimerHz(60); // Upgraded to 60 FPS
+    // Не стартуем таймер
   }
 
   ~InteractionMeter() override { stopTimer(); }
 
-  void timerCallback() override { repaint(); }
+  void visibilityChanged() override { updateTimerState(); }
+
+  void parentHierarchyChanged() override { updateTimerState(); }
+
+  void timerCallback() override {
+    updateModulation();
+    repaint();
+  }
 
   void setAPVTS(juce::AudioProcessorValueTreeState &newApvts) {
     apvts = &newApvts;
@@ -33,32 +40,21 @@ public:
     g.drawRoundedRectangle(area, 4.0f, 1.0f);
 
     // Данные
-    float modulation = 0.0f;
     juce::Colour barColor = CoheraUI::kCyanNeon;
 
     if (apvts != nullptr) {
-      // Логика цвета (Зависит от режима)
       int mode = (int)*apvts->getRawParameterValue("mode");
-      bool isReduction = (mode == 0); // Unmasking = Reduction (вниз)
-
+      bool isReduction = (mode == 0);
       barColor = isReduction ? CoheraUI::kCyanNeon : CoheraUI::kOrangeNeon;
     }
 
-    // Рисуем Бар
-    // Для демонстрации всегда показываем немного активности
-    if (modulation < 0.1f) {
-      // Оптимизация: кэшируем время и используем быстрый sin
-      auto currentTime = juce::Time::getMillisecondCounterHiRes() * 0.001;
-      modulation = 0.3f + 0.1f * std::sin(currentTime);
-    }
+    // Используем cached modulation
+    float barHeight = area.getHeight() * cachedModulation;
 
-    float barHeight = area.getHeight() * modulation;
+    // Рисуем бар только если достаточно большой
+    if (barHeight > 0.5f) {
+      auto barRect = area.removeFromTop(barHeight);
 
-    // Сверху вниз (Gain Reduction style)
-    auto barRect = area.removeFromTop(barHeight);
-
-    // Gradient Fill - оптимизировано
-    if (barHeight > 0.5f) { // Не рисуем если слишком мало
       juce::ColourGradient grad(barColor, barRect.getCentreX(), barRect.getY(),
                                 barColor.darker(0.5f), barRect.getCentreX(),
                                 barRect.getBottom(), false);
@@ -77,9 +73,36 @@ public:
 private:
   juce::AudioProcessorValueTreeState *apvts;
 
-  // Cached colors and fonts to avoid recreating every frame
+  // Cached colors and fonts
   const juce::Colour bgColor = CoheraUI::kPanel.darker(0.5f);
   const juce::Colour borderColor = CoheraUI::kTextDim.withAlpha(0.1f);
   const juce::Colour labelColor = CoheraUI::kTextDim;
-  const juce::Font labelFont = juce::Font("Verdana", 9.0f, juce::Font::plain);
+  const juce::Font labelFont{"Verdana", 9.0f, juce::Font::plain};
+
+  // Cached animation state
+  float cachedModulation = 0.3f;
+  double lastUpdateTime = 0.0;
+
+  // Smart timer management
+  void updateTimerState() {
+    if (isVisible() && isShowing()) {
+      if (!isTimerRunning()) {
+        startTimerHz(60);
+      }
+    } else {
+      if (isTimerRunning()) {
+        stopTimer();
+      }
+    }
+  }
+
+  // Optimize sin calculation (cache result)
+  void updateModulation() {
+    auto currentTime = juce::Time::getMillisecondCounterHiRes() * 0.001;
+
+    if (currentTime - lastUpdateTime > 0.016) { // ~60Hz
+      cachedModulation = 0.3f + 0.1f * std::sin(currentTime);
+      lastUpdateTime = currentTime;
+    }
+  }
 };
