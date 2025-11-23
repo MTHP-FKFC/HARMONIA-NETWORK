@@ -158,7 +158,7 @@ public:
                 for (int i = start; i <= end; ++i)
                     std::cerr << i << ": " << buffer.getSample(0, i) << "\n";
             }
-            expect(std::abs(outPeak - latency) <= 20, "Impulse response peak within reasonable range of reported latency");
+            expectEquals(outPeak, latency, "Peak aligns perfectly with reported latency");
 
             // Проверяем амплитуду пика. Из-за фильтрации (звона) она будет < 1.0,
             // но энергия должна быть сохранена (с учетом компенсации 0.35 в движке)

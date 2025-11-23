@@ -20,10 +20,10 @@ namespace Cohera {
 
 class TrackAudioFifo {
 public:
-  TrackAudioFifo(int numChannels, int numSamples) {
-    // Ensure buffer size is power of 2 for efficiency
-    fifo.setTotalSize(numSamples);
-
+  TrackAudioFifo(int numChannels, int numSamples) 
+    : fifo(numSamples)  // CRITICAL: Initialize with correct size
+  {
+    // Ensure FIFO and buffer sizes match exactly
     buffer.setSize(numChannels, numSamples);
   }
 
@@ -37,6 +37,10 @@ public:
 
     int start1, size1, start2, size2;
     fifo.prepareToWrite(numSamples, start1, size1, start2, size2);
+
+    // Safety check: ensure indices don't exceed buffer bounds
+    jassert(start1 + size1 <= buffer.getNumSamples());
+    jassert(start2 + size2 <= buffer.getNumSamples());
 
     for (int ch = 0; ch < numChannels; ++ch) {
       if (ch >= buffer.getNumChannels())
@@ -64,6 +68,10 @@ public:
     int start1, size1, start2, size2;
     fifo.prepareToRead(numSamples, start1, size1, start2, size2);
 
+    // Safety check: ensure indices don't exceed buffer bounds
+    jassert(start1 + size1 <= buffer.getNumSamples());
+    jassert(start2 + size2 <= buffer.getNumSamples());
+
     for (int ch = 0; ch < numChannels; ++ch) {
       if (ch >= buffer.getNumChannels())
         break;
@@ -78,6 +86,7 @@ public:
   }
 
   // Pull all available samples into a std::vector (useful for visualization)
+  // WARNING: This allocates memory and should ONLY be called from UI/analysis thread
   void pullToVector(std::vector<float> &destination, int channel) {
     int available = fifo.getNumReady();
     if (available == 0)
@@ -86,8 +95,14 @@ public:
     int start1, size1, start2, size2;
     fifo.prepareToRead(available, start1, size1, start2, size2);
 
+    // Safety check: ensure indices don't exceed buffer bounds
+    jassert(start1 + size1 <= buffer.getNumSamples());
+    jassert(start2 + size2 <= buffer.getNumSamples());
+
     if (channel < buffer.getNumChannels()) {
-      // Append to vector
+      // Reserve capacity to avoid multiple reallocations
+      destination.reserve(destination.size() + available);
+      
       const float *readPtr = buffer.getReadPointer(channel);
 
       if (size1 > 0)
@@ -105,7 +120,7 @@ public:
   int getFreeSpace() const { return fifo.getFreeSpace(); }
 
 private:
-  juce::AbstractFifo fifo{1024};
+  juce::AbstractFifo fifo;  // Initialized in constructor with correct size
   juce::AudioBuffer<float> buffer;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackAudioFifo)

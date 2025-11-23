@@ -1,10 +1,18 @@
 #pragma once
 
-#include <random>
+#include <cstdint>
+#include <juce_dsp/juce_dsp.h>
+
+namespace Cohera {
 
 class NoiseBreather
 {
 public:
+    NoiseBreather() {
+        // Seed с уникальным значением
+        rngState = 0xDEADBEEF;
+    }
+    
     void prepare(double sampleRate)
     {
         // Фильтр для "розового" оттенка шума (High Cut)
@@ -23,6 +31,21 @@ public:
         // Release (шум всплывает медленно): 500ms
         releaseCoeff = std::exp(-1.0f / (0.5f * (float)sampleRate));
     }
+    
+    // Быстрый ГСЧ (Xorshift32) - lock-free, constant-time
+    // Возвращает float -1.0 ... 1.0
+    float nextRandom()
+    {
+        uint32_t x = rngState;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        rngState = x;
+        
+        // Маппинг uint32 в float 0..1
+        float f = (float)x * 2.3283064365386963e-10f; 
+        return f * 2.0f - 1.0f; // -1..1
+    }
 
     // signalLevel: текущая громкость музыки (для сайдчейна)
     // amount: громкость шума (0..1)
@@ -30,8 +53,8 @@ public:
     {
         if (amount <= 0.001f) return 0.0f;
 
-        // 1. Генерируем Белый Шум
-        float white = (random.nextFloat() * 2.0f) - 1.0f;
+        // 1. Генерируем Белый Шум (Xorshift вместо juce::Random)
+        float white = nextRandom();
 
         // 2. Красим шум (Bandpass: убираем гул и песок)
         float colored = hpf.processSample(lpf.processSample(white));
@@ -59,7 +82,7 @@ public:
     }
 
 private:
-    juce::Random random;
+    uint32_t rngState = 987654321; // Xorshift32 state
     juce::dsp::IIR::Filter<float> lpf;
     juce::dsp::IIR::Filter<float> hpf;
 
@@ -67,3 +90,5 @@ private:
     float attackCoeff = 0.0f;
     float releaseCoeff = 0.0f;
 };
+
+} // namespace Cohera

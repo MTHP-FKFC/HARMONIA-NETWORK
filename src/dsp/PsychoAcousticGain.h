@@ -39,7 +39,8 @@ public:
 
         integratedDry = 0.0f;
         integratedWet = 0.0f;
-
+        lastValidGain = 1.0f; // Reset memory to prevent jumps
+        
         // Коэффициент интеграции для RMS (Loudness window ~400ms)
         // Это дает "Momentary Loudness"
         integrationCoeff = 1.0f - std::exp(-1.0f / (0.4f * (float)fs));
@@ -66,19 +67,21 @@ public:
         integratedWet += (wetPow - integratedWet) * integrationCoeff;
 
         // 5. Вычисляем целевой гейн
-        // Избегаем деления на ноль
-        float targetGain = 1.0f;
-
-        // Порог тишины (-70dB)
-        if (integratedWet > 0.0000001f && integratedDry > 0.0000001f)
+        // По умолчанию держим последний валидный гейн (защита от скачков)
+        float targetGain = lastValidGain;
+        
+        // Порог тишины (-60dB approx)
+        if (integratedWet > 1e-6f && integratedDry > 1e-6f)
         {
             // Gain = sqrt(DryEnergy / WetEnergy)
-            targetGain = std::sqrt(integratedDry / integratedWet);
+            float rawGain = std::sqrt(integratedDry / integratedWet);
+            
+            // Safety Clamps (-20dB to +12dB)
+            targetGain = juce::jlimit(0.1f, 4.0f, rawGain);
+            
+            // Запоминаем как валидный
+            lastValidGain = targetGain;
         }
-
-        // Safety limits: не даем гейну улетать в бесконечность в паузах
-        // Разрешаем компенсацию от -24dB (x0.06) до +12dB (x4.0)
-        targetGain = juce::jlimit(0.06f, 4.0f, targetGain);
 
         // 6. Сглаживаем изменение гейна (чтобы не было "дребезга")
         smoothedGain.setTargetValue(targetGain);
@@ -95,6 +98,9 @@ private:
     float integratedDry = 0.0f;
     float integratedWet = 0.0f;
     float integrationCoeff = 0.01f;
-
+    
+    // Memory to prevent jumps in silence
+    float lastValidGain = 1.0f;
+    
     juce::LinearSmoothedValue<float> smoothedGain;
 };

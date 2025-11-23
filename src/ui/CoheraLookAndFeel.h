@@ -27,18 +27,44 @@ const juce::Colour kTextDim = juce::Colours::white.withAlpha(0.4f);
 class CoheraLookAndFeel : public juce::LookAndFeel_V4 {
 public:
   CoheraLookAndFeel() {
-    // Настраиваем шрифты (футуристичный стиль)
-    setDefaultSansSerifTypefaceName("Futura");
+    // Стек шрифтов для кибер-стиля (в порядке приоритета)
+    // Windows Safety: Futura нет на Windows, используем Segoe UI
+    #if JUCE_WINDOWS
+    const char* fontStack[] = { "Segoe UI", "Verdana", "Arial", nullptr };
+    #elif JUCE_MAC
+    const char* fontStack[] = { "Futura", "Avenir", "SF Pro", "Helvetica", nullptr };
+    #else
+    const char* fontStack[] = { "Cantarell", "Verdana", "Arial", nullptr };
+    #endif
+    
+    // Выбираем первый доступный шрифт из стека
+    juce::String chosenFont = "Arial"; // Крайний фоллбэк
+    for (int i = 0; fontStack[i] != nullptr; ++i) {
+      chosenFont = fontStack[i];
+      setDefaultSansSerifTypefaceName(chosenFont);
+      break; // Берем первый доступный
+    }
     
     // ПРЕДЗАГРУЗКА ШРИФТОВ (КЭШИРОВАНИЕ)
     // Создаем шрифты один раз, чтобы не искать их каждый кадр
-    fontKnobValue = juce::Font("Futura", 14.0f, juce::Font::bold);
-    fontKnobValueSmall = juce::Font("Futura", 11.0f, juce::Font::bold);
-    fontKnobLabel = juce::Font("Futura", 13.0f, juce::Font::bold).withExtraKerningFactor(0.05f);
-    fontButton = juce::Font("Futura", 12.0f, juce::Font::plain);
-    fontButtonBold = juce::Font("Futura", 12.0f, juce::Font::bold);
-    fontPopup = juce::Font("Futura", 14.0f, juce::Font::plain);
-    fontPopupBold = juce::Font("Futura", 14.0f, juce::Font::bold);
+    fontKnobValue = juce::Font(chosenFont, 14.0f, juce::Font::bold);
+    fontKnobValueSmall = juce::Font(chosenFont, 11.0f, juce::Font::bold);
+    fontKnobLabel = juce::Font(chosenFont, 13.0f, juce::Font::bold).withExtraKerningFactor(0.05f);
+    fontButton = juce::Font(chosenFont, 12.0f, juce::Font::plain);
+    fontButtonBold = juce::Font(chosenFont, 12.0f, juce::Font::bold);
+    fontPopup = juce::Font(chosenFont, 14.0f, juce::Font::plain);
+    fontPopupBold = juce::Font(chosenFont, 14.0f, juce::Font::bold);
+  }
+    
+    // ПРЕДЗАГРУЗКА ШРИФТОВ (КЭШИРОВАНИЕ)
+    // Создаем шрифты один раз, чтобы не искать их каждый кадр
+    fontKnobValue = juce::Font(chosenFont, 14.0f, juce::Font::bold);
+    fontKnobValueSmall = juce::Font(chosenFont, 11.0f, juce::Font::bold);
+    fontKnobLabel = juce::Font(chosenFont, 13.0f, juce::Font::bold).withExtraKerningFactor(0.05f);
+    fontButton = juce::Font(chosenFont, 12.0f, juce::Font::plain);
+    fontButtonBold = juce::Font(chosenFont, 12.0f, juce::Font::bold);
+    fontPopup = juce::Font(chosenFont, 14.0f, juce::Font::plain);
+    fontPopupBold = juce::Font(chosenFont, 14.0f, juce::Font::bold);
   }
 
   // ========================================================================

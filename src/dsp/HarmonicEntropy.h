@@ -1,12 +1,17 @@
 #pragma once
 
 #include <cmath>
-#include <random>
+#include <cstdint>
+
+namespace Cohera {
 
 class HarmonicEntropy
 {
 public:
-    HarmonicEntropy() : rng(std::random_device{}()) {}
+    HarmonicEntropy() {
+        // Seed с уникальным значением при старте
+        state = 0xCAFEBABE;
+    }
 
     void prepare(double sampleRate)
     {
@@ -25,6 +30,22 @@ public:
         currentDrift = 0.0f;
         targetDrift = 0.0f;
     }
+    
+    // Быстрый ГСЧ (Xorshift32) - lock-free, constant-time
+    // Возвращает float -1.0 ... 1.0
+    float nextRandom()
+    {
+        uint32_t x = state;
+        x ^= x << 13;
+        x ^= x >> 17;
+        x ^= x << 5;
+        state = x;
+        
+        // Маппинг uint32 в float 0..1
+        // (x * (1.0 / 4294967296.0))
+        float f = (float)x * 2.3283064365386963e-10f; 
+        return f * 2.0f - 1.0f; // -1..1
+    }
 
     // amount: 0.0 ... 1.0 (сила энтропии)
     // Возвращает значение смещения (DC Offset), которое нужно добавить к сигналу
@@ -35,15 +56,14 @@ public:
         // Обновляем цель случайным образом каждые ~5-10 мс (чтобы создать шум)
         if (++stepsSinceLastUpdate > updateInterval)
         {
-            // Генерируем случайное число от -1 до 1
-            std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-            float noise = dist(rng);
+            float noise = nextRandom();
 
             // Random Walk: новая цель зависит от предыдущей (чтобы не скакало резко)
             targetDrift = targetDrift * 0.5f + noise * 0.5f;
 
             // Случайный интервал обновления для уменьшения периодичности
-            updateInterval = 200 + (int)(dist(rng) * 100); // ~200-300 сэмплов
+            // Используем битовые маски для скорости вместо деления/умножения
+            updateInterval = 200 + (state & 127); // 200..327 samples
             stepsSinceLastUpdate = 0;
         }
 
@@ -65,5 +85,7 @@ private:
     int stepsSinceLastUpdate = 0;
     int updateInterval = 256;
 
-    std::mt19937 rng;
+    uint32_t state = 123456789; // Xorshift32 state
 };
+
+} // namespace Cohera

@@ -39,9 +39,10 @@ CoheraSaturatorAudioProcessor::createParameterLayout() {
   juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
   // Drive: от 0% до 100% (внутри замапим это на 0..24 dB или больше)
+  // Golden Init: 20% чтобы пользователь сразу услышал теплоту
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       "drive_master", "Drive",
-      juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 0.0f));
+      juce::NormalisableRange<float>(0.0f, 100.0f, 0.1f), 20.0f));
 
   // Mix: 0% (Dry) .. 100% (Wet)
   layout.add(std::make_unique<juce::AudioParameterFloat>(
