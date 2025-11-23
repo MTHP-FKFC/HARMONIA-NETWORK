@@ -129,25 +129,25 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "UI Files" FILES ${COHE
 # ==============================================================================
 # 3. Cohera_Saturator Plugin
 # ==============================================================================
-juce_add_plugin(Cohera_Saturator
-    COMPANY_NAME "CoheraAudio"
-    BUNDLE_ID "com.coheraaudio.coherasaturator"
+juce_add_plugin(HARMONIA_NETWORK
+    COMPANY_NAME "HARMONIA_NETWORK"
+    BUNDLE_ID "com.harmonianetwork.plugin"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
     FORMATS AU VST3 Standalone
-    PRODUCT_NAME "Cohera Saturator"
-    plugin_name "Cohera Saturator"
+    PRODUCT_NAME "HARMONIA NETWORK"
+    plugin_name "HARMONIA NETWORK"
     AU_MAIN_TYPE kAudioUnitType_Effect
-    PLUGIN_MANUFACTURER_CODE Cohr
-    PLUGIN_CODE Csat
+    PLUGIN_MANUFACTURER_CODE HNET
+    PLUGIN_CODE HNET
 )
 
-target_sources(Cohera_Saturator PRIVATE ${COHERA_PLUGIN_SOURCES})
+target_sources(HARMONIA_NETWORK PRIVATE ${COHERA_PLUGIN_SOURCES})
 
-target_link_libraries(Cohera_Saturator PRIVATE
+target_link_libraries(HARMONIA_NETWORK PRIVATE
     cohera_core
     juce::juce_audio_utils
     juce::juce_audio_processors
@@ -158,7 +158,7 @@ target_link_libraries(Cohera_Saturator PRIVATE
     juce::juce_events
 )
 
-target_compile_features(Cohera_Saturator PRIVATE cxx_std_20)
+target_compile_features(HARMONIA_NETWORK PRIVATE cxx_std_20)
 
 # ==============================================================================
 # 4. Tests
