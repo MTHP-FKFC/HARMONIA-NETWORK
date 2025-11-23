@@ -8,13 +8,13 @@ public:
     ReactorKnob()
         : rmsSource([](){ return 0.0f; })
     {
-        startTimerHz(60); // 60 FPS анимация
+        // Таймер запустится в visibilityChanged()
     }
 
     ReactorKnob(std::function<float()> rmsGetter)
         : rmsSource(rmsGetter)
     {
-        startTimerHz(60); // 60 FPS анимация
+        // Таймер запустится в visibilityChanged()
     }
 
     void setRMSGetter(std::function<float()> getter) {
@@ -22,14 +22,25 @@ public:
     }
 
     ~ReactorKnob() override { stopTimer(); }
+    
+    void visibilityChanged() override {
+        if (isVisible()) 
+            startTimerHz(30); // 30 FPS достаточно для ручки
+        else 
+            stopTimer();
+    }
 
     void timerCallback() override
     {
-        // Плавное затухание и атака для визуализации
         float target = rmsSource();
+        // Idle optimization - не обновляем если ничего не меняется
+        float diff = std::abs(currentLevel - target);
+        if (diff < 0.001f && std::abs(currentLevel - lastPaintedLevel) < 0.001f) return;
+
         // Сглаживаем движение света
         currentLevel = currentLevel * 0.8f + target * 0.2f;
 
+        // Перерисовываем только если изменилось значимо
         if (std::abs(currentLevel - lastPaintedLevel) > 0.01f) {
             lastPaintedLevel = currentLevel;
             repaint();

@@ -12,7 +12,7 @@ rm -rf *
 
 # Configure with CMake in Release mode
 echo "⚙️  Configuring CMake for Release build..."
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -DCMAKE_BUILD_TYPE=Release -DJUCE_DIR="/Users/macos/JUCE" ..
 
 # Get number of CPU cores for parallel build
 CPU_CORES=$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)
@@ -20,19 +20,15 @@ echo "🚀 Building with $CPU_CORES CPU cores..."
 
 # Build all plugin formats at once
 echo "🎛️  Building all plugin formats..."
-make Cohera_Saturator -j$CPU_CORES
-
-# Build VST3 specifically (sometimes it doesn't build with the main target)
-echo "🔧 Building VST3 specifically..."
-make Cohera_Saturator_VST3 -j$CPU_CORES
+make HARMONIA_NETWORK_All -j$CPU_CORES
 
 if [ $? -eq 0 ]; then
     echo ""
     echo "✅ ALL PLUGINS BUILT SUCCESSFULLY!"
     echo "📦 Available formats:"
-    echo "   • Standalone: build/Cohera_Saturator_artefacts/Release/Standalone/"
-    echo "   • AU: build/Cohera_Saturator_artefacts/Release/AU/"
-    echo "   • VST3: build/Cohera_Saturator_artefacts/Release/VST3/"
+    echo "   • Standalone: build/HARMONIA_NETWORK_artefacts/Standalone/"
+    echo "   • AU: build/HARMONIA_NETWORK_artefacts/AU/"
+    echo "   • VST3: build/HARMONIA_NETWORK_artefacts/VST3/"
     echo ""
     echo "🚀 Run './install_release_plugins.sh' to install plugins system-wide"
 else

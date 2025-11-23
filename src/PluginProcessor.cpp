@@ -89,9 +89,10 @@ CoheraSaturatorAudioProcessor::createParameterLayout() {
   // === EMPHASIS FILTERS (Tone Shaping) ===
 
   // Tighten (Pre HPF): 10 Hz (выкл) ... 1000 Hz
+  // Golden Init: 40Hz чтобы убрать муть с низа
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       "tone_tighten", "Tighten (Pre HPF)",
-      juce::NormalisableRange<float>(10.0f, 1000.0f, 1.0f, 0.5f), 10.0f));
+      juce::NormalisableRange<float>(10.0f, 1000.0f, 1.0f, 0.5f), 40.0f));
 
   // Smooth (Post LPF): 22000 Hz (выкл) ... 2000 Hz
   layout.add(std::make_unique<juce::AudioParameterFloat>(

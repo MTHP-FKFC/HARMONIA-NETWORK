@@ -6,9 +6,14 @@ class InteractionMeter : public juce::Component, private juce::Timer
 {
 public:
     InteractionMeter(juce::AudioProcessorValueTreeState& s) : apvts(s) {
-        startTimerHz(30);
+        // Таймер стартуем по видимости
     }
     ~InteractionMeter() { stopTimer(); }
+    
+    void visibilityChanged() override {
+        if (isVisible()) startTimerHz(30);
+        else stopTimer();
+    }
 
     void timerCallback() override { repaint(); }
 

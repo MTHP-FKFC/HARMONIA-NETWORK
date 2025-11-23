@@ -70,12 +70,12 @@ protected:
         // A. Left Strand (Cyan/Blue)
         float leftSig = std::max(state.leftSignal, 0.35f); // Минимальная видимость
         drawPlasmaStrand(g, cx - 4.0f, bounds.getBottom(), leftSig,
-                         CoheraUI::kCyanNeon, -1.0f);
+                         CoheraUI::kCyanNeon, -1.0f, leftPath);
 
         // B. Right Strand (Magenta/Orange)
         float rightSig = std::max(state.rightSignal, 0.35f); // Минимальная видимость
         drawPlasmaStrand(g, cx + 4.0f, bounds.getBottom(), rightSig,
-                         CoheraUI::kOrangeNeon, 1.0f);
+                         CoheraUI::kOrangeNeon, 1.0f, rightPath);
 
         // C. Central Core (White/Gold - Fusion)
         // Всегда виден, но ярче при сигнале
@@ -103,6 +103,11 @@ protected:
     }
 
 private:
+    // --- CACHED PATHS FOR OPTIMIZATION ---
+    juce::Path leftPath;
+    juce::Path rightPath;
+    juce::Path corePath;
+    
     // --- RENDERERS ---
 
     void drawGlassContainer(juce::Graphics& g, juce::Rectangle<float> r)
@@ -124,14 +129,14 @@ private:
         g.fillRect(r.getRight() - 7, r.getY() + 10, 1.0f, r.getHeight() - 20);
     }
 
-    void drawPlasmaStrand(juce::Graphics& g, float cx, float h, float signal, juce::Colour baseCol, float side)
+    void drawPlasmaStrand(juce::Graphics& g, float cx, float h, float signal, juce::Colour baseCol, float side, juce::Path& path)
     {
         if (signal < 0.01f) return;
 
         float visibility = juce::jlimit(0.2f, 1.0f, signal);
 
-        juce::Path p;
-        p.startNewSubPath(cx, 0);
+        path.clear();
+        path.startNewSubPath(cx, 0);
 
         // Параметры формы
         float amplitude = w_cache * (0.08f + visibility * 0.12f + state.driveLevel * 0.05f);
@@ -141,7 +146,7 @@ private:
         // Magnetic Bulge (раздутие в центре от громкости)
         // Добавляем низкочастотное "пузо"
 
-        for (float y = 0; y <= h; y += 5.0f)
+        for (float y = 0; y <= h; y += 8.0f)
         {
             // Основная волна
             float wave = std::sin(y * freq - time * 2.0f * side);
@@ -161,17 +166,17 @@ private:
             // Добавляем джиттер от сети
             x += jitter * window * 0.5f;
 
-            p.lineTo(x, y);
+            path.lineTo(x, y);
         }
 
         // Добавляем мягкий glow
         float glowAlpha = juce::jlimit(0.2f, 1.0f, 0.35f + signal * 0.5f + state.driveLevel * 0.3f);
         g.setColour(baseCol.withAlpha(glowAlpha));
-        g.strokePath(p, juce::PathStrokeType(5.0f + signal * 4.0f, juce::PathStrokeType::curved)); // Широкий ореол
+        g.strokePath(path, juce::PathStrokeType(5.0f + signal * 4.0f, juce::PathStrokeType::curved)); // Широкий ореол
 
         // Отрисовка Core
         g.setColour(baseCol.brighter(0.8f).withAlpha(0.95f));
-        g.strokePath(p, juce::PathStrokeType(2.0f + visibility * 0.5f, juce::PathStrokeType::curved));
+        g.strokePath(path, juce::PathStrokeType(2.0f + visibility * 0.5f, juce::PathStrokeType::curved));
     }
 
     void drawCoreStrand(juce::Graphics& g, float cx, float h, float signal)

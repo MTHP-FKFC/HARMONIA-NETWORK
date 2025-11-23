@@ -8,6 +8,9 @@ public:
     GlitchOverlay() : AbstractVisualizer(60)
     {
         setInterceptsMouseClicks(false, false);
+        // Предварительно выделяем память для глитч-координат
+        glitchY.reserve(10);
+        glitchH.reserve(10);
     }
 
 protected:
@@ -18,6 +21,18 @@ protected:
 
         if (activeGlitchDuration > 0)
             --activeGlitchDuration;
+            
+        // Вычисляем глитч-координаты здесь, а не в paint()
+        if (currentEnergy > 0.9f || activeGlitchDuration > 0) {
+            glitchY.clear();
+            glitchH.clear();
+            
+            int numStrips = 5;
+            for (int i = 0; i < numStrips; ++i) {
+                glitchY.push_back(random.nextFloat() * getHeight());
+                glitchH.push_back(random.nextFloat() * 20.0f + 2.0f);
+            }
+        }
     }
 
     void paint(juce::Graphics& g) override
@@ -33,11 +48,11 @@ protected:
 
         if (intensity > 0.1f)
         {
-            int numStrips = 5;
-            for (int i = 0; i < numStrips; ++i)
+            // Используем предвычисленные координаты из updatePhysics()
+            for (int i = 0; i < (int)glitchY.size() && i < (int)glitchH.size(); ++i)
             {
-                float y = random.nextFloat() * h;
-                float stripH = random.nextFloat() * 20.0f + 2.0f;
+                float y = glitchY[i];
+                float stripH = glitchH[i];
 
                 g.setColour(juce::Colours::cyan.withAlpha(0.3f * intensity));
                 g.fillRect(-shift, y, w, stripH);
@@ -59,4 +74,8 @@ protected:
 private:
     int activeGlitchDuration = 0;
     juce::Random random;
+    
+    // Кэшированные координаты глитчей для оптимизации
+    std::vector<float> glitchY;
+    std::vector<float> glitchH;
 };

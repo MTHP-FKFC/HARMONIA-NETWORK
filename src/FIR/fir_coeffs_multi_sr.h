@@ -14,7 +14,7 @@ namespace FirCoeffs {
 namespace SR44100 {
 
 // Low-pass kernel for 125 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kLp0 = {
+constexpr std::array<float, 256> kLp0 = {
       0.00001868f,   0.00002294f,   0.00002772f,   0.00003306f,   0.00003899f,   0.00004556f,   0.00005281f,   0.00006078f
 ,
       0.00006951f,   0.00007906f,   0.00008947f,   0.00010078f,   0.00011305f,   0.00012632f,   0.00014064f,   0.00015607f
@@ -81,7 +81,7 @@ const std::array<float, 256> kLp0 = {
 };
 
 // Low-pass kernel for 300 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kLp1 = {
+constexpr std::array<float, 256> kLp1 = {
      -0.00001125f,  -0.00001413f,  -0.00001742f,  -0.00002114f,  -0.00002532f,  -0.00002997f,  -0.00003513f,  -0.00004082f
 ,
      -0.00004704f,  -0.00005382f,  -0.00006116f,  -0.00006908f,  -0.00007757f,  -0.00008664f,  -0.00009629f,  -0.00010649f
@@ -148,7 +148,7 @@ const std::array<float, 256> kLp1 = {
 };
 
 // Low-pass kernel for 800 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kLp2 = {
+constexpr std::array<float, 256> kLp2 = {
       0.00001367f,   0.00001722f,   0.00002106f,   0.00002509f,   0.00002919f,   0.00003322f,   0.00003703f,   0.00004043f
 ,
       0.00004321f,   0.00004515f,   0.00004604f,   0.00004563f,   0.00004369f,   0.00003999f,   0.00003431f,   0.00002645f
@@ -215,7 +215,7 @@ const std::array<float, 256> kLp2 = {
 };
 
 // Low-pass kernel for 2500 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kLp3 = {
+constexpr std::array<float, 256> kLp3 = {
       0.00001467f,   0.00001577f,   0.00001407f,   0.00000893f,   0.00000021f,  -0.00001154f,  -0.00002503f,  -0.00003835f
 ,
      -0.00004910f,  -0.00005474f,  -0.00005305f,  -0.00004254f,  -0.00002286f,   0.00000489f,   0.00003804f,   0.00007253f
@@ -282,7 +282,7 @@ const std::array<float, 256> kLp3 = {
 };
 
 // Low-pass kernel for 5000 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kLp4 = {
+constexpr std::array<float, 256> kLp4 = {
       0.00000406f,   0.00001498f,   0.00002116f,   0.00001668f,   0.00000042f,  -0.00002168f,  -0.00003812f,  -0.00003740f
 ,
      -0.00001498f,   0.00002207f,   0.00005629f,   0.00006744f,   0.00004368f,  -0.00000976f,  -0.00006968f,  -0.00010420f
@@ -349,7 +349,7 @@ const std::array<float, 256> kLp4 = {
 };
 
 // High-pass kernel for 125 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kHp0 = {
+constexpr std::array<float, 256> kHp0 = {
      -0.00001868f,  -0.00002294f,  -0.00002772f,  -0.00003306f,  -0.00003899f,  -0.00004556f,  -0.00005281f,  -0.00006078f
 ,
      -0.00006951f,  -0.00007906f,  -0.00008947f,  -0.00010078f,  -0.00011305f,  -0.00012632f,  -0.00014064f,  -0.00015607f
@@ -416,7 +416,7 @@ const std::array<float, 256> kHp0 = {
 };
 
 // High-pass kernel for 300 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kHp1 = {
+constexpr std::array<float, 256> kHp1 = {
       0.00001125f,   0.00001413f,   0.00001742f,   0.00002114f,   0.00002532f,   0.00002997f,   0.00003513f,   0.00004082f
 ,
       0.00004704f,   0.00005382f,   0.00006116f,   0.00006908f,   0.00007757f,   0.00008664f,   0.00009629f,   0.00010649f
@@ -483,7 +483,7 @@ const std::array<float, 256> kHp1 = {
 };
 
 // High-pass kernel for 800 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kHp2 = {
+constexpr std::array<float, 256> kHp2 = {
      -0.00001367f,  -0.00001722f,  -0.00002106f,  -0.00002509f,  -0.00002919f,  -0.00003322f,  -0.00003703f,  -0.00004043f
 ,
      -0.00004321f,  -0.00004515f,  -0.00004604f,  -0.00004563f,  -0.00004369f,  -0.00003999f,  -0.00003431f,  -0.00002645f
@@ -550,7 +550,7 @@ const std::array<float, 256> kHp2 = {
 };
 
 // High-pass kernel for 2500 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kHp3 = {
+constexpr std::array<float, 256> kHp3 = {
      -0.00001467f,  -0.00001577f,  -0.00001407f,  -0.00000893f,  -0.00000021f,   0.00001154f,   0.00002503f,   0.00003835f
 ,
       0.00004910f,   0.00005474f,   0.00005305f,   0.00004254f,   0.00002286f,  -0.00000489f,  -0.00003804f,  -0.00007253f
@@ -617,7 +617,7 @@ const std::array<float, 256> kHp3 = {
 };
 
 // High-pass kernel for 5000 Hz cutoff @ 44100 Hz
-const std::array<float, 256> kHp4 = {
+constexpr std::array<float, 256> kHp4 = {
      -0.00000406f,  -0.00001498f,  -0.00002116f,  -0.00001668f,  -0.00000042f,   0.00002168f,   0.00003812f,   0.00003740f
 ,
       0.00001498f,  -0.00002207f,  -0.00005629f,  -0.00006744f,  -0.00004368f,   0.00000976f,   0.00006968f,   0.00010420f
@@ -689,7 +689,7 @@ const std::array<float, 256> kHp4 = {
 namespace SR48000 {
 
 // Low-pass kernel for 125 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kLp0 = {
+constexpr std::array<float, 256> kLp0 = {
       0.00002277f,   0.00002781f,   0.00003342f,   0.00003964f,   0.00004652f,   0.00005409f,   0.00006239f,   0.00007147f
 ,
       0.00008138f,   0.00009214f,   0.00010383f,   0.00011647f,   0.00013011f,   0.00014481f,   0.00016061f,   0.00017757f
@@ -756,7 +756,7 @@ const std::array<float, 256> kLp0 = {
 };
 
 // Low-pass kernel for 300 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kLp1 = {
+constexpr std::array<float, 256> kLp1 = {
      -0.00001483f,  -0.00001815f,  -0.00002182f,  -0.00002587f,  -0.00003031f,  -0.00003513f,  -0.00004034f,  -0.00004596f
 ,
      -0.00005197f,  -0.00005838f,  -0.00006518f,  -0.00007235f,  -0.00007988f,  -0.00008775f,  -0.00009594f,  -0.00010441f
@@ -823,7 +823,7 @@ const std::array<float, 256> kLp1 = {
 };
 
 // Low-pass kernel for 800 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kLp2 = {
+constexpr std::array<float, 256> kLp2 = {
       0.00001047f,   0.00001128f,   0.00001163f,   0.00001140f,   0.00001048f,   0.00000873f,   0.00000604f,   0.00000230f
 ,
      -0.00000260f,  -0.00000874f,  -0.00001620f,  -0.00002501f,  -0.00003520f,  -0.00004676f,  -0.00005963f,  -0.00007373f
@@ -890,7 +890,7 @@ const std::array<float, 256> kLp2 = {
 };
 
 // Low-pass kernel for 2500 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kLp3 = {
+constexpr std::array<float, 256> kLp3 = {
      -0.00001145f,  -0.00000946f,  -0.00000485f,   0.00000246f,   0.00001206f,   0.00002305f,   0.00003406f,   0.00004334f
 ,
       0.00004901f,   0.00004928f,   0.00004278f,   0.00002880f,   0.00000760f,  -0.00001949f,  -0.00005003f,  -0.00008059f
@@ -957,7 +957,7 @@ const std::array<float, 256> kLp3 = {
 };
 
 // Low-pass kernel for 5000 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kLp4 = {
+constexpr std::array<float, 256> kLp4 = {
       0.00001452f,   0.00001607f,   0.00000944f,  -0.00000490f,  -0.00002198f,  -0.00003366f,  -0.00003211f,  -0.00001412f
 ,
       0.00001597f,   0.00004647f,   0.00006245f,   0.00005247f,   0.00001513f,  -0.00003797f,  -0.00008497f,  -0.00010225f
@@ -1024,7 +1024,7 @@ const std::array<float, 256> kLp4 = {
 };
 
 // High-pass kernel for 125 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kHp0 = {
+constexpr std::array<float, 256> kHp0 = {
      -0.00002277f,  -0.00002781f,  -0.00003342f,  -0.00003964f,  -0.00004652f,  -0.00005409f,  -0.00006239f,  -0.00007147f
 ,
      -0.00008138f,  -0.00009214f,  -0.00010383f,  -0.00011647f,  -0.00013011f,  -0.00014481f,  -0.00016061f,  -0.00017757f
@@ -1091,7 +1091,7 @@ const std::array<float, 256> kHp0 = {
 };
 
 // High-pass kernel for 300 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kHp1 = {
+constexpr std::array<float, 256> kHp1 = {
       0.00001483f,   0.00001815f,   0.00002182f,   0.00002587f,   0.00003031f,   0.00003513f,   0.00004034f,   0.00004596f
 ,
       0.00005197f,   0.00005838f,   0.00006518f,   0.00007235f,   0.00007988f,   0.00008775f,   0.00009594f,   0.00010441f
@@ -1158,7 +1158,7 @@ const std::array<float, 256> kHp1 = {
 };
 
 // High-pass kernel for 800 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kHp2 = {
+constexpr std::array<float, 256> kHp2 = {
      -0.00001047f,  -0.00001128f,  -0.00001163f,  -0.00001140f,  -0.00001048f,  -0.00000873f,  -0.00000604f,  -0.00000230f
 ,
       0.00000260f,   0.00000874f,   0.00001620f,   0.00002501f,   0.00003520f,   0.00004676f,   0.00005963f,   0.00007373f
@@ -1225,7 +1225,7 @@ const std::array<float, 256> kHp2 = {
 };
 
 // High-pass kernel for 2500 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kHp3 = {
+constexpr std::array<float, 256> kHp3 = {
       0.00001145f,   0.00000946f,   0.00000485f,  -0.00000246f,  -0.00001206f,  -0.00002305f,  -0.00003406f,  -0.00004334f
 ,
      -0.00004901f,  -0.00004928f,  -0.00004278f,  -0.00002880f,  -0.00000760f,   0.00001949f,   0.00005003f,   0.00008059f
@@ -1292,7 +1292,7 @@ const std::array<float, 256> kHp3 = {
 };
 
 // High-pass kernel for 5000 Hz cutoff @ 48000 Hz
-const std::array<float, 256> kHp4 = {
+constexpr std::array<float, 256> kHp4 = {
      -0.00001452f,  -0.00001607f,  -0.00000944f,   0.00000490f,   0.00002198f,   0.00003366f,   0.00003211f,   0.00001412f
 ,
      -0.00001597f,  -0.00004647f,  -0.00006245f,  -0.00005247f,  -0.00001513f,   0.00003797f,   0.00008497f,   0.00010225f
@@ -1364,7 +1364,7 @@ const std::array<float, 256> kHp4 = {
 namespace SR88200 {
 
 // Low-pass kernel for 125 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kLp0 = {
+constexpr std::array<float, 256> kLp0 = {
       0.00004104f,   0.00004946f,   0.00005867f,   0.00006871f,   0.00007962f,   0.00009144f,   0.00010421f,   0.00011797f
 ,
       0.00013275f,   0.00014861f,   0.00016557f,   0.00018369f,   0.00020299f,   0.00022353f,   0.00024533f,   0.00026845f
@@ -1431,7 +1431,7 @@ const std::array<float, 256> kLp0 = {
 };
 
 // Low-pass kernel for 300 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kLp1 = {
+constexpr std::array<float, 256> kLp1 = {
       0.00000860f,   0.00001091f,   0.00001358f,   0.00001666f,   0.00002019f,   0.00002419f,   0.00002872f,   0.00003381f
 ,
       0.00003951f,   0.00004587f,   0.00005293f,   0.00006074f,   0.00006935f,   0.00007882f,   0.00008920f,   0.00010055f
@@ -1498,7 +1498,7 @@ const std::array<float, 256> kLp1 = {
 };
 
 // Low-pass kernel for 800 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kLp2 = {
+constexpr std::array<float, 256> kLp2 = {
       0.00001232f,   0.00001432f,   0.00001630f,   0.00001822f,   0.00002003f,   0.00002168f,   0.00002309f,   0.00002422f
 ,
       0.00002499f,   0.00002531f,   0.00002512f,   0.00002433f,   0.00002285f,   0.00002059f,   0.00001744f,   0.00001333f
@@ -1565,7 +1565,7 @@ const std::array<float, 256> kLp2 = {
 };
 
 // Low-pass kernel for 2500 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kLp3 = {
+constexpr std::array<float, 256> kLp3 = {
      -0.00000972f,  -0.00000918f,  -0.00000752f,  -0.00000454f,  -0.00000010f,   0.00000586f,   0.00001334f,   0.00002223f
 ,
       0.00003233f,   0.00004331f,   0.00005474f,   0.00006607f,   0.00007666f,   0.00008580f,   0.00009272f,   0.00009662f
@@ -1632,7 +1632,7 @@ const std::array<float, 256> kLp3 = {
 };
 
 // Low-pass kernel for 5000 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kLp4 = {
+constexpr std::array<float, 256> kLp4 = {
       0.00001467f,   0.00001577f,   0.00001407f,   0.00000893f,   0.00000021f,  -0.00001154f,  -0.00002503f,  -0.00003835f
 ,
      -0.00004910f,  -0.00005474f,  -0.00005305f,  -0.00004254f,  -0.00002286f,   0.00000489f,   0.00003804f,   0.00007253f
@@ -1699,7 +1699,7 @@ const std::array<float, 256> kLp4 = {
 };
 
 // High-pass kernel for 125 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kHp0 = {
+constexpr std::array<float, 256> kHp0 = {
      -0.00004104f,  -0.00004946f,  -0.00005867f,  -0.00006871f,  -0.00007962f,  -0.00009144f,  -0.00010421f,  -0.00011797f
 ,
      -0.00013275f,  -0.00014861f,  -0.00016557f,  -0.00018369f,  -0.00020299f,  -0.00022353f,  -0.00024533f,  -0.00026845f
@@ -1766,7 +1766,7 @@ const std::array<float, 256> kHp0 = {
 };
 
 // High-pass kernel for 300 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kHp1 = {
+constexpr std::array<float, 256> kHp1 = {
      -0.00000860f,  -0.00001091f,  -0.00001358f,  -0.00001666f,  -0.00002019f,  -0.00002419f,  -0.00002872f,  -0.00003381f
 ,
      -0.00003951f,  -0.00004587f,  -0.00005293f,  -0.00006074f,  -0.00006935f,  -0.00007882f,  -0.00008920f,  -0.00010055f
@@ -1833,7 +1833,7 @@ const std::array<float, 256> kHp1 = {
 };
 
 // High-pass kernel for 800 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kHp2 = {
+constexpr std::array<float, 256> kHp2 = {
      -0.00001232f,  -0.00001432f,  -0.00001630f,  -0.00001822f,  -0.00002003f,  -0.00002168f,  -0.00002309f,  -0.00002422f
 ,
      -0.00002499f,  -0.00002531f,  -0.00002512f,  -0.00002433f,  -0.00002285f,  -0.00002059f,  -0.00001744f,  -0.00001333f
@@ -1900,7 +1900,7 @@ const std::array<float, 256> kHp2 = {
 };
 
 // High-pass kernel for 2500 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kHp3 = {
+constexpr std::array<float, 256> kHp3 = {
       0.00000972f,   0.00000918f,   0.00000752f,   0.00000454f,   0.00000010f,  -0.00000586f,  -0.00001334f,  -0.00002223f
 ,
      -0.00003233f,  -0.00004331f,  -0.00005474f,  -0.00006607f,  -0.00007666f,  -0.00008580f,  -0.00009272f,  -0.00009662f
@@ -1967,7 +1967,7 @@ const std::array<float, 256> kHp3 = {
 };
 
 // High-pass kernel for 5000 Hz cutoff @ 88200 Hz
-const std::array<float, 256> kHp4 = {
+constexpr std::array<float, 256> kHp4 = {
      -0.00001467f,  -0.00001577f,  -0.00001407f,  -0.00000893f,  -0.00000021f,   0.00001154f,   0.00002503f,   0.00003835f
 ,
       0.00004910f,   0.00005474f,   0.00005305f,   0.00004254f,   0.00002286f,  -0.00000489f,  -0.00003804f,  -0.00007253f
@@ -2039,7 +2039,7 @@ const std::array<float, 256> kHp4 = {
 namespace SR96000 {
 
 // Low-pass kernel for 125 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kLp0 = {
+constexpr std::array<float, 256> kLp0 = {
       0.00004239f,   0.00005106f,   0.00006053f,   0.00007085f,   0.00008205f,   0.00009417f,   0.00010726f,   0.00012135f
 ,
       0.00013648f,   0.00015269f,   0.00017002f,   0.00018852f,   0.00020822f,   0.00022916f,   0.00025138f,   0.00027491f
@@ -2106,7 +2106,7 @@ const std::array<float, 256> kLp0 = {
 };
 
 // Low-pass kernel for 300 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kLp1 = {
+constexpr std::array<float, 256> kLp1 = {
       0.00001348f,   0.00001674f,   0.00002044f,   0.00002463f,   0.00002934f,   0.00003460f,   0.00004047f,   0.00004699f
 ,
       0.00005419f,   0.00006212f,   0.00007085f,   0.00008040f,   0.00009083f,   0.00010220f,   0.00011455f,   0.00012793f
@@ -2173,7 +2173,7 @@ const std::array<float, 256> kLp1 = {
 };
 
 // Low-pass kernel for 800 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kLp2 = {
+constexpr std::array<float, 256> kLp2 = {
       0.00000568f,   0.00000600f,   0.00000608f,   0.00000588f,   0.00000534f,   0.00000441f,   0.00000304f,   0.00000115f
 ,
      -0.00000130f,  -0.00000439f,  -0.00000819f,  -0.00001275f,  -0.00001814f,  -0.00002444f,  -0.00003170f,  -0.00003999f
@@ -2240,7 +2240,7 @@ const std::array<float, 256> kLp2 = {
 };
 
 // Low-pass kernel for 2500 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kLp3 = {
+constexpr std::array<float, 256> kLp3 = {
       0.00001339f,   0.00001723f,   0.00002121f,   0.00002509f,   0.00002858f,   0.00003137f,   0.00003313f,   0.00003350f
 ,
       0.00003214f,   0.00002873f,   0.00002300f,   0.00001474f,   0.00000381f,  -0.00000981f,  -0.00002602f,  -0.00004458f
@@ -2307,7 +2307,7 @@ const std::array<float, 256> kLp3 = {
 };
 
 // Low-pass kernel for 5000 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kLp4 = {
+constexpr std::array<float, 256> kLp4 = {
      -0.00001145f,  -0.00000946f,  -0.00000485f,   0.00000246f,   0.00001206f,   0.00002305f,   0.00003406f,   0.00004334f
 ,
       0.00004901f,   0.00004928f,   0.00004278f,   0.00002880f,   0.00000760f,  -0.00001949f,  -0.00005003f,  -0.00008059f
@@ -2374,7 +2374,7 @@ const std::array<float, 256> kLp4 = {
 };
 
 // High-pass kernel for 125 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kHp0 = {
+constexpr std::array<float, 256> kHp0 = {
      -0.00004239f,  -0.00005106f,  -0.00006053f,  -0.00007085f,  -0.00008205f,  -0.00009417f,  -0.00010726f,  -0.00012135f
 ,
      -0.00013648f,  -0.00015269f,  -0.00017002f,  -0.00018852f,  -0.00020822f,  -0.00022916f,  -0.00025138f,  -0.00027491f
@@ -2441,7 +2441,7 @@ const std::array<float, 256> kHp0 = {
 };
 
 // High-pass kernel for 300 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kHp1 = {
+constexpr std::array<float, 256> kHp1 = {
      -0.00001348f,  -0.00001674f,  -0.00002044f,  -0.00002463f,  -0.00002934f,  -0.00003460f,  -0.00004047f,  -0.00004699f
 ,
      -0.00005419f,  -0.00006212f,  -0.00007085f,  -0.00008040f,  -0.00009083f,  -0.00010220f,  -0.00011455f,  -0.00012793f
@@ -2508,7 +2508,7 @@ const std::array<float, 256> kHp1 = {
 };
 
 // High-pass kernel for 800 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kHp2 = {
+constexpr std::array<float, 256> kHp2 = {
      -0.00000568f,  -0.00000600f,  -0.00000608f,  -0.00000588f,  -0.00000534f,  -0.00000441f,  -0.00000304f,  -0.00000115f
 ,
       0.00000130f,   0.00000439f,   0.00000819f,   0.00001275f,   0.00001814f,   0.00002444f,   0.00003170f,   0.00003999f
@@ -2575,7 +2575,7 @@ const std::array<float, 256> kHp2 = {
 };
 
 // High-pass kernel for 2500 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kHp3 = {
+constexpr std::array<float, 256> kHp3 = {
      -0.00001339f,  -0.00001723f,  -0.00002121f,  -0.00002509f,  -0.00002858f,  -0.00003137f,  -0.00003313f,  -0.00003350f
 ,
      -0.00003214f,  -0.00002873f,  -0.00002300f,  -0.00001474f,  -0.00000381f,   0.00000981f,   0.00002602f,   0.00004458f
@@ -2642,7 +2642,7 @@ const std::array<float, 256> kHp3 = {
 };
 
 // High-pass kernel for 5000 Hz cutoff @ 96000 Hz
-const std::array<float, 256> kHp4 = {
+constexpr std::array<float, 256> kHp4 = {
       0.00001145f,   0.00000946f,   0.00000485f,  -0.00000246f,  -0.00001206f,  -0.00002305f,  -0.00003406f,  -0.00004334f
 ,
      -0.00004901f,  -0.00004928f,  -0.00004278f,  -0.00002880f,  -0.00000760f,   0.00001949f,   0.00005003f,   0.00008059f

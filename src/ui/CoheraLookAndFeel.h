@@ -55,17 +55,6 @@ public:
     fontPopup = juce::Font(chosenFont, 14.0f, juce::Font::plain);
     fontPopupBold = juce::Font(chosenFont, 14.0f, juce::Font::bold);
   }
-    
-    // ПРЕДЗАГРУЗКА ШРИФТОВ (КЭШИРОВАНИЕ)
-    // Создаем шрифты один раз, чтобы не искать их каждый кадр
-    fontKnobValue = juce::Font(chosenFont, 14.0f, juce::Font::bold);
-    fontKnobValueSmall = juce::Font(chosenFont, 11.0f, juce::Font::bold);
-    fontKnobLabel = juce::Font(chosenFont, 13.0f, juce::Font::bold).withExtraKerningFactor(0.05f);
-    fontButton = juce::Font(chosenFont, 12.0f, juce::Font::plain);
-    fontButtonBold = juce::Font(chosenFont, 12.0f, juce::Font::bold);
-    fontPopup = juce::Font(chosenFont, 14.0f, juce::Font::plain);
-    fontPopupBold = juce::Font(chosenFont, 14.0f, juce::Font::bold);
-  }
 
   // ========================================================================
   // 🎛️ ULTRA-REALISTIC KNOB DRAWING WITH INTEGRATED LABELS
