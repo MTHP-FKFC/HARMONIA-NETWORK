@@ -11,14 +11,8 @@ if (JUCE_DIR)
     message(STATUS "Using JUCE from: ${JUCE_DIR}")
     add_subdirectory(${JUCE_DIR} JUCE)
 else()
-    # Fallback: Try default location
-    set(DEFAULT_JUCE_PATH "/Users/macos/JUCE")
-    if (EXISTS "${DEFAULT_JUCE_PATH}")
-        message(STATUS "JUCE_DIR not set, using default: ${DEFAULT_JUCE_PATH}")
-        add_subdirectory(${DEFAULT_JUCE_PATH} JUCE)
-    else()
-        message(FATAL_ERROR "JUCE not found. Please set JUCE_DIR cache variable.")
-    endif()
+    message(FATAL_ERROR "JUCE not found. Please set JUCE_DIR to the JUCE source path.\n"
+                       "Example: cmake -B build -S . -DJUCE_DIR=/path/to/JUCE")
 endif()
 
 # Use legacy parameter IDs to avoid VST2/VST3 conflicts
@@ -33,8 +27,21 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ==============================================================================
-# 2. cohera_core Library (DSP, Engine, Network, Parameters)
+# 2. Source Groups (Reusable Lists)
 # ==============================================================================
+
+# UI Sources - Only used in plugin and UI-dependent tests
+set(COHERA_UI_SOURCES
+    src/ui/CoheraLookAndFeel.h
+    src/ui/components/NetworkBrain.h
+    src/ui/visuals/BioScanner.h
+    src/ui/visuals/GlitchOverlay.h
+    src/ui/visuals/TechDecor.h
+    src/ui/SimpleFFT.h
+    src/ui/Components/SpectrumVisor.h
+)
+
+# Core DSP Sources - Used everywhere
 set(COHERA_CORE_SOURCES
     # DSP
     src/dsp/FilterBank.cpp
@@ -54,7 +61,6 @@ set(COHERA_CORE_SOURCES
     src/dsp/ThermalModel.h
     src/dsp/StereoVariance.h
     src/dsp/NoiseBreather.h
-
     src/dsp/StereoFocus.h
     src/dsp/HarmonicEntropy.h
     src/dsp/Waveshaper.h
@@ -88,6 +94,17 @@ set(COHERA_CORE_SOURCES
     src/CoheraTypes.h
 )
 
+# Plugin Sources (Core + UI + Plugin files)
+set(COHERA_PLUGIN_SOURCES
+    ${COHERA_CORE_SOURCES}
+    ${COHERA_UI_SOURCES}
+    src/Main.cpp
+    src/PluginProcessor.cpp
+    src/PluginProcessor.h
+    src/PluginEditor.cpp
+    src/PluginEditor.h
+)
+
 add_library(cohera_core STATIC ${COHERA_CORE_SOURCES})
 
 target_include_directories(cohera_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -104,6 +121,10 @@ if (MSVC)
 else()
     target_compile_options(cohera_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+# IDE folder grouping for better organization
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "Source Files" FILES ${COHERA_CORE_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/src PREFIX "UI Files" FILES ${COHERA_UI_SOURCES})
 
 # ==============================================================================
 # 3. Cohera_Saturator Plugin
@@ -124,22 +145,7 @@ juce_add_plugin(Cohera_Saturator
     PLUGIN_CODE Csat
 )
 
-target_sources(Cohera_Saturator PRIVATE
-    src/Main.cpp
-    src/PluginProcessor.cpp src/PluginProcessor.h
-    src/PluginEditor.cpp    src/PluginEditor.h
-    
-    # UI Components
-    src/ui/CoheraLookAndFeel.h
-
-    src/ui/components/NetworkBrain.h
-    src/ui/visuals/BioScanner.h
-    src/ui/visuals/GlitchOverlay.h
-    src/ui/visuals/TechDecor.h
-    src/ui/SimpleFFT.h
-    src/ui/Components/SpectrumVisor.h
-
-)
+target_sources(Cohera_Saturator PRIVATE ${COHERA_PLUGIN_SOURCES})
 
 target_link_libraries(Cohera_Saturator PRIVATE
     cohera_core
@@ -186,17 +192,6 @@ if (COHERA_BUILD_TESTS)
     add_executable(StressTest
         tests/stress_test.cpp
         src/PluginProcessor.cpp src/PluginProcessor.h
-        src/PluginEditor.cpp src/PluginEditor.h
-        # UI sources needed for PluginEditor
-        src/ui/CoheraLookAndFeel.h
-    
-        src/ui/components/NetworkBrain.h
-        src/ui/visuals/BioScanner.h
-        src/ui/visuals/GlitchOverlay.h
-        src/ui/visuals/TechDecor.h
-        src/ui/SimpleFFT.h
-        src/ui/Components/SpectrumVisor.h
-    
     )
 
     target_include_directories(StressTest PRIVATE src)
@@ -206,11 +201,6 @@ if (COHERA_BUILD_TESTS)
         juce::juce_audio_processors
         juce::juce_dsp
         juce::juce_core
-        juce::juce_data_structures
-        juce::juce_events
-        juce::juce_gui_basics
-        juce::juce_gui_extra
-        juce::juce_graphics
     )
     
     set_target_properties(StressTest PROPERTIES
@@ -242,17 +232,6 @@ if (COHERA_BUILD_TESTS)
         tests/regression/process_test_signals.cpp
         tests/regression/SignalGenerator.h
         src/PluginProcessor.cpp src/PluginProcessor.h
-        src/PluginEditor.cpp src/PluginEditor.h
-        # UI sources needed for PluginEditor
-        src/ui/CoheraLookAndFeel.h
-    
-        src/ui/components/NetworkBrain.h
-        src/ui/visuals/BioScanner.h
-        src/ui/visuals/GlitchOverlay.h
-        src/ui/visuals/TechDecor.h
-        src/ui/SimpleFFT.h
-        src/ui/Components/SpectrumVisor.h
-    
     )
     target_include_directories(ProcessTestSignals PRIVATE src tests/regression)
     target_link_libraries(ProcessTestSignals PRIVATE
@@ -262,11 +241,6 @@ if (COHERA_BUILD_TESTS)
         juce::juce_audio_formats
         juce::juce_dsp
         juce::juce_core
-        juce::juce_data_structures
-        juce::juce_events
-        juce::juce_graphics
-        juce::juce_gui_basics
-        juce::juce_gui_extra
     )
     set_target_properties(ProcessTestSignals PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
 
@@ -276,17 +250,6 @@ if (COHERA_BUILD_TESTS)
         tests/regression/SignalGenerator.h
         tests/regression/AudioComparator.h
         src/PluginProcessor.cpp src/PluginProcessor.h
-        src/PluginEditor.cpp src/PluginEditor.h
-        # UI sources needed for PluginEditor
-        src/ui/CoheraLookAndFeel.h
-    
-        src/ui/components/NetworkBrain.h
-        src/ui/visuals/BioScanner.h
-        src/ui/visuals/GlitchOverlay.h
-        src/ui/visuals/TechDecor.h
-        src/ui/SimpleFFT.h
-        src/ui/Components/SpectrumVisor.h
-    
     )
     target_include_directories(TestAudioRegression PRIVATE src tests/regression)
     target_link_libraries(TestAudioRegression PRIVATE
@@ -296,11 +259,6 @@ if (COHERA_BUILD_TESTS)
         juce::juce_audio_formats
         juce::juce_dsp
         juce::juce_core
-        juce::juce_data_structures
-        juce::juce_events
-        juce::juce_graphics
-        juce::juce_gui_basics
-        juce::juce_gui_extra
     )
     set_target_properties(TestAudioRegression PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
 

@@ -1,0 +1,108 @@
+name: CI/CD & Release Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - 'v*' # Срабатывает, когда ты ставишь тег (v0.1.0, v1.0.0 и т.д.)
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: write # Разрешаем роботу создавать релизы
+
+jobs:
+  # ===========================================================================
+  # 1. СБОРКА И ТЕСТЫ (Работает на Windows, Mac, Linux одновременно)
+  # ===========================================================================
+  build_and_test:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Checkout JUCE
+      uses: actions/checkout@v4
+      with:
+        repository: juce-framework/JUCE
+        path: JUCE
+        ref: master
+
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libasound2-dev libx11-dev libxinerama-dev libxext-dev libfreetype6-dev libwebkit2gtk-4.0-dev libglu1-mesa-dev
+
+    - name: Configure CMake
+      shell: bash
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DJUCE_DIR=${{ github.workspace }}/JUCE \
+          -DCOHERA_BUILD_TESTS=ON
+
+    - name: Build All
+      run: cmake --build build --config Release --parallel 4
+
+    - name: Run Unit Tests
+      shell: bash
+      run: |
+        cd build/tests
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          ./Release/Cohera_Tests.exe
+        else
+          ./Cohera_Tests
+        fi
+
+    # --- ПОДГОТОВКА ФАЙЛОВ ДЛЯ СКАЧИВАНИЯ ---
+    
+    - name: Collect Plugin Files (Clean Up)
+      shell: bash
+      run: |
+        mkdir -p production_build
+        # Ищем и копируем только готовые плагины
+        find build -name "*.vst3" -exec cp -r {} production_build/ \; 2>/dev/null || :
+        find build -name "*.component" -exec cp -r {} production_build/ \; 2>/dev/null || :
+        
+        # Если это Windows, то VST3 часто лежит как папка. Запакуем для удобства? 
+        # GitHub Artifacts и так зипует, но мы берем только нужные файлы.
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Cohera_Saturator-${{ matrix.os }}
+        path: production_build/*
+        if-no-files-found: error
+
+  # ===========================================================================
+  # 2. СОЗДАНИЕ РЕЛИЗА (Только если поставлен тег v...)
+  # ===========================================================================
+  create_release:
+    needs: build_and_test # Ждем, пока соберутся все 3 системы
+    if: startsWith(github.ref, 'refs/tags/v') # Запускаем ТОЛЬКО на тегах
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_files
+
+      - name: Create Release & Upload Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          # Файлы лежат в папках по именам артефактов, берем их все
+          files: |
+            release_files/Cohera_Saturator-macos-latest/*
+            release_files/Cohera_Saturator-windows-latest/*
+            release_files/Cohera_Saturator-ubuntu-latest/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true # Автоматически напишет список изменений!
