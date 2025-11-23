@@ -13,7 +13,7 @@
 
 // Test includes
 #include "CoheraTypes.h"
-#include "dsp/DeltaMonitor.h"
+
 #include "dsp/DynamicsRestorer.h"
 #include "dsp/HarmonicEntropy.h"
 #include "dsp/NoiseBreather.h"
@@ -233,7 +233,7 @@ private:
   juce::SmoothedValue<float> smoothedNoise;
 
   // === PROFESSIONAL TOOLS ===
-  DeltaMonitor deltaMonitor;                // Delta monitoring
+
   StereoFocus stereoFocus;                  // M/S focus control
   juce::SmoothedValue<float> smoothedFocus; // Focus parameter smoothing
 

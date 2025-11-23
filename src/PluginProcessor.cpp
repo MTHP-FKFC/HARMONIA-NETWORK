@@ -9,15 +9,7 @@ using namespace Cohera;
 #include "dsp/Waveshaper.h"
 
 // Include test files for in-plugin testing
-#include "tests/BasicSignalFlowTest.cpp"
-#include "tests/ComprehensiveParameterTests.cpp"
-#include "tests/DAWSimulationTest.cpp"
-#include "tests/DeadCodeHunter.cpp"
-#include "tests/EngineIntegrationTests.cpp"
-#include "tests/IndustryStandardTests.cpp"
-#include "tests/RealWorldScenarios.cpp"
-#include "tests/TestAudioGenerator.h"
-#include "tests/TestHelpers.h"
+// (Tests are now built as separate executables)
 
 CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
@@ -28,15 +20,6 @@ CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 #endif
       apvts(*this, nullptr, "PARAMETERS", createParameterLayout()),
       paramManager(apvts) {
-  // Запуск интеграционных тестов в Debug режиме
-#if JUCE_DEBUG
-  std::cout << "=== RUNNING COHERA SATURATOR INTEGRATION TESTS ==="
-            << std::endl;
-  juce::UnitTestRunner runner;
-  runner.setPassesAreLogged(true); // Включаем вывод успешных тестов
-  runner.runAllTests();
-  std::cout << "=== TESTS COMPLETED ===" << std::endl;
-#endif
 
   // Новая архитектура инициализирована в конструкторе
 }

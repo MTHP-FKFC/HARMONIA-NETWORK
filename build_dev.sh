@@ -6,18 +6,17 @@
 echo "🛠️  Starting Development Build..."
 
 # 1. Create build directory if needed
-if [ ! -d "build" ]; then
-    mkdir build
-fi
-cd build
+# (cmake -B build will create it automatically, but we can keep explicit check if desired)
+
 
 # 2. Configure CMake
 # - CMAKE_BUILD_TYPE=Debug: Debug symbols enabled, optimizations disabled (usually)
 # - BUILD_TESTS=ON: Build test executables
 echo "⚙️  Configuring CMake (Debug Mode)..."
-cmake .. \
+cmake -S . -B build \
     -DCMAKE_BUILD_TYPE=Debug \
-    -DBUILD_TESTS=ON \
+    -DCOHERA_BUILD_TESTS=ON \
+    -DJUCE_DIR="/Users/macos/JUCE" \
     -G "Unix Makefiles"
 
 if [ $? -ne 0 ]; then
@@ -27,7 +26,7 @@ fi
 
 # 3. Build All Targets
 echo "🔨 Building All Targets..."
-cmake --build . --target all -j8
+cmake --build build --target all -j8
 
 if [ $? -ne 0 ]; then
     echo "❌ Build failed!"

@@ -11,16 +11,14 @@ if [ -d "build_release" ]; then
     rm -rf build_release
 fi
 
-mkdir build_release
-cd build_release
-
 # 2. Configure CMake
 # - CMAKE_BUILD_TYPE=Release: Optimizations enabled (-O3), debug info disabled
 # - BUILD_TESTS=OFF: Skip building test executables
 echo "⚙️  Configuring CMake (Release Mode)..."
-cmake .. \
+cmake -S . -B build_release \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTS=OFF \
+    -DCOHERA_BUILD_TESTS=OFF \
+    -DJUCE_DIR="/Users/macos/JUCE" \
     -G "Unix Makefiles"
 
 if [ $? -ne 0 ]; then
@@ -30,7 +28,7 @@ fi
 
 # 3. Build Plugin Targets
 echo "🔨 Building Plugin Targets..."
-cmake --build . --target Cohera_Saturator -j8
+cmake --build build_release --target Cohera_Saturator -j8
 
 if [ $? -ne 0 ]; then
     echo "❌ Build failed!"

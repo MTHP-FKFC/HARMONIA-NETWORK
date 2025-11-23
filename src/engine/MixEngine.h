@@ -43,7 +43,7 @@ public:
     smoothMix.setCurrentAndTargetValue(smoothMix.getTargetValue());
     smoothGain.setCurrentAndTargetValue(smoothGain.getTargetValue());
     smoothFocus.setCurrentAndTargetValue(smoothFocus.getTargetValue());
-    
+
     // Сбрасываем флаг инициализации
     gainInitialized = false;
   }
@@ -80,8 +80,8 @@ public:
   // вход. Результат пишется в wetBlock (in-place output).
   void process(juce::dsp::AudioBlock<float> &wetBlock,
                const juce::AudioBuffer<float> &dryInputBuffer,
-               float targetMixAmount, float targetOutputGain,
-               float targetFocus) {
+               float targetMixAmount, float targetOutputGain, float targetFocus,
+               bool deltaListen) {
     size_t numSamples = wetBlock.getNumSamples();
     size_t numChannels = wetBlock.getNumChannels();
 
@@ -89,24 +89,25 @@ public:
     smoothMix.setTargetValue(targetMixAmount);
     smoothGain.setTargetValue(targetOutputGain);
     smoothFocus.setTargetValue(targetFocus);
-    
+
     // Инициализируем smoothGain при первом вызове или при большом изменении
     // Это важно для тестов, где параметры меняются быстро
     if (!gainInitialized) {
-        smoothGain.setCurrentAndTargetValue(targetOutputGain);
-        gainInitialized = true;
-        lastOutputGain = targetOutputGain;
-    } else if (std::abs(smoothGain.getCurrentValue() - targetOutputGain) > 0.1f) {
-        // Если изменение больше 10%, быстро устанавливаем новое значение
-        // Это помогает в тестах, где параметры меняются резко
-        smoothGain.setCurrentAndTargetValue(targetOutputGain);
+      smoothGain.setCurrentAndTargetValue(targetOutputGain);
+      gainInitialized = true;
+      lastOutputGain = targetOutputGain;
+    } else if (std::abs(smoothGain.getCurrentValue() - targetOutputGain) >
+               0.1f) {
+      // Если изменение больше 10%, быстро устанавливаем новое значение
+      // Это помогает в тестах, где параметры меняются резко
+      smoothGain.setCurrentAndTargetValue(targetOutputGain);
     }
-    
+
     // Если output gain изменился значительно, сбрасываем PsychoAcousticGain
     // чтобы он не компенсировал изменения output gain
     if (std::abs(lastOutputGain - targetOutputGain) > 0.01f) {
-        psychoGain.reset();
-        lastOutputGain = targetOutputGain;
+      psychoGain.reset();
+      lastOutputGain = targetOutputGain;
     }
 
     // Ensure buffer is large enough (should be handled by prepare, but safety
@@ -157,9 +158,18 @@ public:
       wetL *= compensation;
       wetR *= compensation;
 
-      // 3. MIX (Линейный)
-      float outL = dryL * (1.0f - mix) + wetL * mix;
-      float outR = dryR * (1.0f - mix) + wetR * mix;
+      // 3. MIX (Линейный или Delta)
+      float outL, outR;
+
+      if (deltaListen) {
+        // Delta: слышим разницу между обработанным и исходным
+        outL = wetL - dryL;
+        outR = wetR - dryR;
+      } else {
+        // Normal Mix
+        outL = dryL * (1.0f - mix) + wetL * mix;
+        outR = dryR * (1.0f - mix) + wetR * mix;
+      }
 
       // 4. SAFETY LIMITER (Hard Limit at ±1.0 to prevent explosion)
       if (outL > 1.0f)
@@ -220,7 +230,7 @@ private:
   juce::LinearSmoothedValue<float> smoothMix{1.0f};
   juce::LinearSmoothedValue<float> smoothGain{1.0f};
   juce::LinearSmoothedValue<float> smoothFocus{0.0f};
-  
+
   // Флаг для инициализации smoothGain
   bool gainInitialized = false;
   float lastOutputGain = 1.0f;
