@@ -382,16 +382,19 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
   auto &apvts = audioProcessor.getAPVTS();
   if (auto *driveParam = apvts.getRawParameterValue("drive_master")) {
     float drive = *driveParam;
+    (void)drive; // TODO: Use for transfer function display
 
     Cohera::SaturationMode mathMode = Cohera::SaturationMode::GoldenRatio;
     if (auto *mathModeParam = apvts.getRawParameterValue("math_mode")) {
       mathMode = static_cast<Cohera::SaturationMode>((int)*mathModeParam);
     }
+    (void)mathMode; // TODO: Use for transfer function display
 
     bool cascade = false;
     if (auto *cascadeParam = apvts.getRawParameterValue("cascade")) {
       cascade = *cascadeParam > 0.5f;
     }
+    (void)cascade; // TODO: Use for transfer function display
   }
 
   // Собираем данные для Плазмы

@@ -40,6 +40,19 @@ public:
     updateGradient();
   }
 
+  // Public API to explicitly control timer (e.g., when first created visible)
+  void updateTimerState() {
+    if (isVisible() && isShowing()) {
+      if (!isTimerRunning()) {
+        startTimerHz(60);
+      }
+    } else {
+      if (isTimerRunning()) {
+        stopTimer();
+      }
+    }
+  }
+
   void paint(juce::Graphics &g) override {
 #ifndef NDEBUG
     auto startTime = juce::Time::getMillisecondCounterHiRes();
@@ -114,15 +127,13 @@ public:
       frameDrops++;
     }
 
-    // P95 calculation (simplified - store last 100 samples)
+    // Store sample for P95 calculation
     paintTimeSamples[sampleIndex % 100] = paintTime;
     sampleIndex++;
 
-    if (frameCount % 100 == 0) {
-      std::vector<double> sorted(paintTimeSamples.begin(),
-                                 paintTimeSamples.end());
-      std::sort(sorted.begin(), sorted.end());
-      p95PaintTime = sorted[95];
+    // Calculate P95 every 100 frames (improved to handle first batch)
+    if (frameCount % 100 == 0 || (frameCount < 100 && frameCount % 10 == 0)) {
+      calculateP95();
     }
 #endif
   }
@@ -185,20 +196,21 @@ private:
   double maxPaintTime = 0.0;
   double p95PaintTime = 0.0;
   std::array<double, 100> paintTimeSamples{};
-#endif
+  std::vector<double> sortBuffer; // Reusable buffer for sorting
 
-  // Smart timer management
-  void updateTimerState() {
-    if (isVisible() && isShowing()) {
-      if (!isTimerRunning()) {
-        startTimerHz(60);
-      }
-    } else {
-      if (isTimerRunning()) {
-        stopTimer();
-      }
+  void calculateP95() {
+    int validSamples = juce::jmin(frameCount, 100);
+    sortBuffer.assign(paintTimeSamples.begin(),
+                      paintTimeSamples.begin() + validSamples);
+
+    if (validSamples > 0) {
+      int p95Index = (int)(validSamples * 0.95f);
+      std::nth_element(sortBuffer.begin(), sortBuffer.begin() + p95Index,
+                       sortBuffer.end());
+      p95PaintTime = sortBuffer[p95Index];
     }
   }
+#endif
 
   // Update gradient on resize
   void updateGradient() {
