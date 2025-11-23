@@ -19,9 +19,11 @@ CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
               .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
 #endif
       apvts(*this, nullptr, "PARAMETERS", createParameterLayout()),
-      paramManager(apvts) {
+      paramManager(apvts),
+      processingEngine(NetworkManager::getInstance()) {
 
   // Новая архитектура инициализирована в конструкторе
+  // ProcessingEngine получает NetworkManager через Dependency Injection
 }
 
 CoheraSaturatorAudioProcessor::~CoheraSaturatorAudioProcessor() {
@@ -213,13 +215,18 @@ void CoheraSaturatorAudioProcessor::prepareToPlay(double sampleRate,
   analyzer.prepare();
   analyzer.setSampleRate((float)sampleRate);
 
-  // 4. Сообщаем хосту новую задержку (целое значение, как требует JUCE)
+  // 4. CRITICAL FIX: Pre-allocate buffers to avoid heap allocations in processBlock
+  // Allocate with 2x safety margin for variable block sizes
+  dryBuffer.setSize(2, samplesPerBlock * 2, false, true, false);
+  monoBuffer.setSize(1, samplesPerBlock * 2, false, true, false);
+
+  // 5. Сообщаем хосту новую задержку (целое значение, как требует JUCE)
   const int hostLatency = juce::roundToInt(processingEngine.getLatency());
   setLatencySamples(hostLatency);
   juce::Logger::writeToLog("Host latency updated: " +
                            juce::String(hostLatency));
 
-  // 5. Очистка "хвостов" (опционально, но полезно при смене треков)
+  // 6. Очистка "хвостов" (опционально, но полезно при смене треков)
   processingEngine.reset();
 }
 
@@ -247,9 +254,17 @@ void CoheraSaturatorAudioProcessor::processBlock(
   // Новая архитектура - получаем параметры и обрабатываем
   auto params = paramManager.getCurrentParams();
 
-  // Делаем копию для Dry сигнала (критично для MixEngine)
-  juce::AudioBuffer<float> dryBuffer;
-  dryBuffer.makeCopyOf(buffer);
+  // CRITICAL FIX: Reuse pre-allocated buffer (no heap allocation!)
+  // Safety check: ensure buffer is large enough
+  if (dryBuffer.getNumSamples() < originalNumSamples) {
+    juce::Logger::writeToLog("WARNING: Block size exceeded prepared size!");
+    dryBuffer.setSize(2, originalNumSamples, false, false, true);
+  }
+  
+  // Copy data into pre-allocated buffer
+  for (int ch = 0; ch < numCh; ++ch) {
+    dryBuffer.copyFrom(ch, 0, buffer, ch, 0, originalNumSamples);
+  }
 
   // Обрабатываем через ProcessingEngine
   processingEngine.processBlockWithDry(buffer, dryBuffer, params);
@@ -268,8 +283,14 @@ void CoheraSaturatorAudioProcessor::processBlock(
     }
   }
 
+  // CRITICAL FIX: Reuse pre-allocated monoBuffer (no heap allocation!)
+  // Safety check: ensure buffer is large enough
+  if (monoBuffer.getNumSamples() < originalNumSamples) {
+    juce::Logger::writeToLog("WARNING: Mono buffer size exceeded prepared size!");
+    monoBuffer.setSize(1, originalNumSamples, false, false, true);
+  }
+  
   // Кормим анализатор выходным сигналом (блочно и безопасно)
-  juce::AudioBuffer<float> monoBuffer(1, originalNumSamples);
   if (numCh > 1) {
     monoBuffer.copyFrom(0, 0, buffer, 0, 0, originalNumSamples);
     monoBuffer.addFrom(0, 0, buffer, 1, 0, originalNumSamples);
@@ -281,9 +302,12 @@ void CoheraSaturatorAudioProcessor::processBlock(
 
   // Измеряем output RMS для визуализации
   float outputRms = 0.0f;
-  for (int ch = 0; ch < buffer.getNumChannels(); ++ch)
-    outputRms += buffer.getRMSLevel(ch, 0, buffer.getNumSamples());
-  outputRms /= buffer.getNumChannels();
+  const int numChannels = buffer.getNumChannels();
+  if (numChannels > 0) {
+    for (int ch = 0; ch < numChannels; ++ch)
+      outputRms += buffer.getRMSLevel(ch, 0, buffer.getNumSamples());
+    outputRms /= numChannels;
+  }
   outputRMS.store(outputRms);
 }
 

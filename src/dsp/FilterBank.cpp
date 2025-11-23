@@ -57,6 +57,10 @@ void PlaybackFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
                                          juce::AudioBuffer<float>* bandBuffers[],
                                          int numSamples)
 {
+    // CRITICAL FIX: Validate bandBuffers array pointer first
+    if (bandBuffers == nullptr)
+        return;
+    
     const int numCh = juce::jmin(input.getNumChannels(), config.numChannels);
     if (numCh == 0)
         return;
@@ -99,10 +103,16 @@ void PlaybackFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
             if (firFilters[ch][band].coefficients == nullptr)
                 continue;
 
+            // CRITICAL FIX: Validate numSamples to prevent integer overflow
+            const size_t safeNumSamples = std::min(
+                (size_t)numSamples,
+                (size_t)bandBuffers[band]->getNumSamples()
+            );
+            
             juce::dsp::AudioBlock<float> block(
                 bandBuffers[band]->getArrayOfWritePointers() + ch,
                 1,
-                (size_t) numSamples
+                safeNumSamples
             );
             juce::dsp::ProcessContextReplacing<float> ctx(block);
             firFilters[ch][band].process (ctx);
@@ -371,6 +381,10 @@ void AnalyzerFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
                                          juce::AudioBuffer<float>* bandBuffers[],
                                          int numSamples)
 {
+    // CRITICAL FIX: Validate bandBuffers array pointer first
+    if (bandBuffers == nullptr)
+        return;
+    
     // Аналогичная реализация
     const int numCh = juce::jmin(input.getNumChannels(), config.numChannels);
     if (numCh == 0)

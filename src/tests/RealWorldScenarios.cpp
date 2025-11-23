@@ -3,6 +3,7 @@
 #include "TestHelpers.h"
 #include "../engine/ProcessingEngine.h"
 #include "../network/NetworkManager.h"
+#include "../network/MockNetworkManager.h"
 
 // ==============================================================================
 // SCENARIO 1: "The Fat Kick"
@@ -16,7 +17,8 @@ public:
 
     void runTest() override
     {
-        Cohera::ProcessingEngine engine;
+        Cohera::MockNetworkManager mockNet;
+        Cohera::ProcessingEngine engine(mockNet);
         double sr = 44100.0;
         engine.prepare({ sr, 1024, 2 });
 
@@ -68,8 +70,9 @@ public:
     void runTest() override
     {
         // 1. Инициализируем два движка
-        Cohera::ProcessingEngine refEngine; // Kick (Sender)
-        Cohera::ProcessingEngine listEngine; // Bass (Receiver)
+        Cohera::MockNetworkManager mockNet;
+        Cohera::ProcessingEngine refEngine(mockNet); // Kick (Sender)
+        Cohera::ProcessingEngine listEngine(mockNet); // Bass (Receiver)
 
         double sr = 44100.0;
         refEngine.prepare({ sr, 512, 2 });
@@ -131,7 +134,8 @@ public:
 
     void runTest() override
     {
-        Cohera::ProcessingEngine engine;
+        Cohera::MockNetworkManager mockNet;
+        Cohera::ProcessingEngine engine(mockNet);
         double sr = 44100.0;
         engine.prepare({ sr, 512, 2 });
 

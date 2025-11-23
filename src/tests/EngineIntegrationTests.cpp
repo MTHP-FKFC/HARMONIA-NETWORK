@@ -3,6 +3,7 @@
 #include "../engine/ProcessingEngine.h"
 #include "../engine/BandProcessingEngine.h"
 #include "../parameters/ParameterSet.h"
+#include "../network/MockNetworkManager.h"
 
 // ==============================================================================
 // TEST 0: Basic Sanity Check
@@ -110,7 +111,8 @@ public:
         beginTest("Flat Frequency Response (Summation)");
         {
             // Создаем движок
-            Cohera::ProcessingEngine engine;
+            Cohera::MockNetworkManager mockNet;
+            Cohera::ProcessingEngine engine(mockNet);
             // Используем 48k, чтобы не триггерить оверсемплинг внутри FilterBank хаков (для чистоты теста)
             // Хотя ProcessingEngine сам включит оверсемплинг.
             double sampleRate = 44100.0;
@@ -188,7 +190,8 @@ public:
             // только задержанным и скомпенсированным по уровню.
             // Если мы вычтем их (с учетом гейна), должна быть тишина.
 
-            Cohera::ProcessingEngine engine;
+            Cohera::MockNetworkManager mockNet;
+            Cohera::ProcessingEngine engine(mockNet);
             double sr = 44100.0;
             engine.prepare({ sr, 512, 2 });
 

@@ -31,7 +31,12 @@ public:
 
             case Cohera::SaturationMode::EulerTube:
                 // Sigmoid: 2/(1+e^-2x) - 1
-                out = (2.0f / (1.0f + std::exp(-2.0f * std::clamp(x, -5.f, 5.f)))) - 1.0f;
+                // CRITICAL FIX: Protect against division by very small numbers
+                {
+                    float expVal = std::exp(-2.0f * std::clamp(x, -5.f, 5.f));
+                    float denom = std::max(1.0f + expVal, 1e-6f); // Prevent division by ~0
+                    out = (2.0f / denom) - 1.0f;
+                }
                 break;
 
             case Cohera::SaturationMode::PiFold:
@@ -51,11 +56,22 @@ public:
                  break;
 
             case Cohera::SaturationMode::SuperEllipse:
+                // CRITICAL FIX: Prevent NaN from negative base in pow()
                 {
                     float n = 2.5f;
                     float s = (x > 0) ? 1.f : -1.f;
                     float ax = std::min(1.0f, std::abs(x));
-                    out = s * (1.0f - std::pow(1.0f - std::pow(ax, n), 1.0f/n));
+                    
+                    // Step 1: Compute inner power, clamp to [0,1] to prevent overflow
+                    float inner = std::pow(ax, n);
+                    inner = std::min(inner, 1.0f);
+                    
+                    // Step 2: Compute base, ensure it's non-negative
+                    float base = 1.0f - inner;
+                    base = std::max(base, 0.0f);
+                    
+                    // Step 3: Compute outer power (now safe from NaN)
+                    out = s * (1.0f - std::pow(base, 1.0f/n));
                 }
                 break;
 

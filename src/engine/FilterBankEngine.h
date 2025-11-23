@@ -92,14 +92,23 @@ public:
     
     const int numSamples = (int)ioBlock.getNumSamples();
     const int numChannels = (int)ioBlock.getNumChannels();
+    
+    // CRITICAL FIX: Validate channel count
+    if (numChannels == 0 || numChannels > 2) {
+      ioBlock.clear();
+      return 0.0f;
+    }
 
-    // ЗАЩИТА ОТ ХОСТА ИЗ АДА
-    // Если пришел блок больше, чем мы ожидали в prepare
+    // CRITICAL FIX: Clamp block size instead of expanding
+    // Expanding currentMaxBlockSize doesn't actually resize buffers!
     if ((size_t)numSamples > currentMaxBlockSize) {
-      // В реалтайме аллоцировать плохо, но лучше, чем краш.
-      // В идеале тут надо кинуть варнинг, но мы тихо расширимся.
-      // Для простоты просто продолжим - буферы уже выделены с запасом
-      currentMaxBlockSize = (size_t)numSamples;
+      juce::Logger::writeToLog(
+        "WARNING: FilterBankEngine received block size (" + juce::String(numSamples) +
+        ") larger than prepared (" + juce::String((int)currentMaxBlockSize) + ")! Clamping.");
+      
+      // Process only what we can handle safely
+      auto safeBlock = ioBlock.getSubBlock(0, currentMaxBlockSize);
+      return process(safeBlock, params, netModulations);
     }
 
     // --- 1. TONE SHAPING (PRE-FILTER / TIGHTEN) ---
@@ -119,6 +128,20 @@ public:
     }
 
     // --- 2. SPLIT INTO BANDS ---
+    // CRITICAL FIX: Validate we have valid band buffer pointers
+    bool allBuffersValid = true;
+    for (int b = 0; b < kNumBands; ++b) {
+      if (bandBufferPtrs[b] == nullptr) {
+        allBuffersValid = false;
+        break;
+      }
+    }
+    
+    if (!allBuffersValid) {
+      ioBlock.clear();
+      return 0.0f;
+    }
+    
     // Создаем AudioBuffer обертку для FilterBank (он принимает AudioBuffer)
     // Для эффективности используем zero-copy обертку, ссылаясь на данные
     // ioBlock

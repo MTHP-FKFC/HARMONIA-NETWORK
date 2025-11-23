@@ -8,15 +8,37 @@
 #include <vector>
 
 // Наши компоненты
+#include "../network/INetworkManager.h"
 #include "../network/NetworkController.h"
 #include "FilterBankEngine.h"
 #include "MixEngine.h"
 
 namespace Cohera {
 
+/**
+ * @brief Processing Engine - Core DSP pipeline
+ * 
+ * Clean Architecture:
+ * - Business Logic Layer (orchestrates DSP components)
+ * - Owns: Oversampler, FilterBankEngine, MixEngine, NetworkController
+ * - Uses Dependency Injection for NetworkManager
+ * 
+ * Signal Flow:
+ * 1. Network analysis (Reference role sends envelopes)
+ * 2. Upsample 4x (Linear Phase FIR)
+ * 3. FilterBankEngine: Split → Process 6 bands → Sum
+ * 4. Downsample to base rate
+ * 5. MixEngine: Dry/Wet blend with latency compensation
+ */
 class ProcessingEngine {
 public:
-  ProcessingEngine() {
+  /**
+   * @brief Constructor with Dependency Injection
+   * @param networkManager Network manager for inter-instance communication
+   */
+  explicit ProcessingEngine(INetworkManager& networkManager)
+      : networkController(networkManager)
+  {
     // Инициализируем Oversampler (4x, Linear Phase)
     // Используем filterHalfBandFIREquiripple для максимальной фазовой
     // линейности
@@ -179,7 +201,7 @@ private:
   std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
   FilterBankEngine filterBankEngine;
   MixEngine mixEngine;
-  NetworkController networkController;
+  NetworkController networkController; // Injected with INetworkManager
 };
 
 } // namespace Cohera

@@ -2,14 +2,42 @@
 
 #include "../CoheraTypes.h"
 #include "../parameters/ParameterSet.h"
-#include "NetworkManager.h"
+#include "INetworkManager.h"
 #include "../dsp/Envelope.h" // Используем наш существующий класс
+#include <juce_audio_processors/juce_audio_processors.h>
 
 namespace Cohera {
 
+/**
+ * @brief Network Controller - Handles inter-instance communication
+ * 
+ * Clean Architecture pattern:
+ * - Business logic for network modulation (Reference/Listener roles)
+ * - Delegates storage to INetworkManager (Dependency Injection)
+ * - No direct dependency on Singleton
+ * 
+ * Responsibilities:
+ * 1. Analyze input signal (if Reference)
+ * 2. Send band envelopes to network (if Reference)
+ * 3. Receive band envelopes from network (if Listener)
+ * 4. Smooth and scale received modulations
+ * 
+ * Thread Safety:
+ * - All operations are lock-free (uses atomic operations via INetworkManager)
+ * - Safe to call from real-time audio thread
+ */
 class NetworkController
 {
 public:
+    /**
+     * @brief Constructor with Dependency Injection
+     * @param manager Reference to network manager (can be real or mock)
+     */
+    explicit NetworkController(INetworkManager& manager)
+        : networkManager(manager)
+    {
+    }
+
     void prepare(double sampleRate)
     {
         // Envelope follower для анализа входящего сигнала (если мы Reference)
@@ -27,8 +55,14 @@ public:
         for(auto& smooth : receivedEnvelopes) smooth.setCurrentAndTargetValue(0.0f);
     }
 
-    // Возвращает массив модуляций для 6 полос (0.0 .. 1.0)
-    std::array<float, kNumBands> process(const juce::AudioBuffer<float>& inputBuffer, const ParameterSet& params)
+    /**
+     * @brief Process network communication for current block
+     * @param inputBuffer Input audio buffer (for analysis if Reference)
+     * @param params Current parameter state (role, group, depth, etc.)
+     * @return Array of 6 modulation values (0.0 .. 1.0) for each band
+     */
+    std::array<float, kNumBands> process(const juce::AudioBuffer<float>& inputBuffer, 
+                                         const ParameterSet& params)
     {
         std::array<float, kNumBands> modulations;
         modulations.fill(0.0f);
@@ -43,7 +77,7 @@ public:
             // Отправляем в сеть (во все полосы одинаковый сигнал для простоты v1.3)
             // В будущем можно сделать мультибанд-анализ
             for (int i = 0; i < kNumBands; ++i) {
-                NetworkManager::getInstance().updateBandSignal(params.groupId, i, envelope);
+                networkManager.updateBandSignal(params.groupId, i, envelope);
             }
         }
 
@@ -56,7 +90,7 @@ public:
             for (int i = 0; i < kNumBands; ++i)
             {
                 // Читаем сырое значение из атомика
-                float rawNet = NetworkManager::getInstance().getBandSignal(params.groupId, i);
+                float rawNet = networkManager.getBandSignal(params.groupId, i);
 
                 // Сглаживаем
                 receivedEnvelopes[i].setTargetValue(rawNet);
@@ -80,6 +114,8 @@ public:
     }
 
 private:
+    INetworkManager& networkManager; // Dependency Injection (interface, not Singleton!)
+    
     EnvelopeFollower inputFollower;
     std::array<juce::LinearSmoothedValue<float>, kNumBands> receivedEnvelopes;
 };

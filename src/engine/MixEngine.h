@@ -27,8 +27,10 @@ public:
     smoothGain.reset(spec.sampleRate, 0.02);
     smoothFocus.reset(spec.sampleRate, 0.02);
 
-    // Pre-allocate dry buffer to max block size to avoid allocations in process
-    delayedDryBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
+    // CRITICAL FIX: Pre-allocate dry buffer with 2x safety margin to avoid heap allocations
+    // This prevents reallocation if host sends larger blocks than expected
+    delayedDryBuffer.setSize(spec.numChannels, spec.maximumBlockSize * 2, false, true, false);
+    preparedMaxBlockSize = spec.maximumBlockSize * 2;
   }
 
   void reset() {
@@ -110,11 +112,13 @@ public:
       lastOutputGain = targetOutputGain;
     }
 
-    // Ensure buffer is large enough (should be handled by prepare, but safety
-    // check)
-    if (delayedDryBuffer.getNumSamples() < (int)numSamples) {
-      delayedDryBuffer.setSize((int)numChannels, (int)numSamples, false, false,
-                               true);
+    // CRITICAL FIX: Clamp to prepared size instead of reallocating
+    // Log warning if host violates contract
+    if ((int)numSamples > preparedMaxBlockSize) {
+      juce::Logger::writeToLog(
+        "WARNING: MixEngine received block size (" + juce::String((int)numSamples) +
+        ") larger than prepared (" + juce::String(preparedMaxBlockSize) + ")! Clamping.");
+      numSamples = (size_t)preparedMaxBlockSize;
     }
 
     // Create sub-block wrapper to avoid processing garbage data if block < max
@@ -148,17 +152,7 @@ public:
       float wetL = wetBlock.getSample(0, i);
       float wetR = (numChannels > 1) ? wetBlock.getSample(1, i) : wetL;
 
-      // 2. PSYCHOACOUSTIC MATCHING
-      // Сравниваем громкость Dry и Wet так, как это слышит ухо.
-      // Получаем множитель, который нужно применить к Wet.
-      float compensation =
-          psychoGain.processStereoSample(dryL, dryR, wetL, wetR);
-
-      // Применяем компенсацию к Wet
-      wetL *= compensation;
-      wetR *= compensation;
-
-      // 3. MIX (Линейный или Delta)
+      // 2. MIX (first! for correct gain staging)
       float outL, outR;
 
       if (deltaListen) {
@@ -171,22 +165,55 @@ public:
         outR = dryR * (1.0f - mix) + wetR * mix;
       }
 
-      // 4. SAFETY LIMITER (Hard Limit at ±1.0 to prevent explosion)
-      if (outL > 1.0f)
-        outL = 1.0f;
-      else if (outL < -1.0f)
-        outL = -1.0f;
+      // 3. PSYCHOACOUSTIC MATCHING (after mix for correct LUFS)
+      // Compare the actual mixed result to dry reference for proper loudness matching
+      float compensation =
+          psychoGain.processStereoSample(dryL, dryR, outL, outR);
 
-      if (outR > 1.0f)
-        outR = 1.0f;
-      else if (outR < -1.0f)
-        outR = -1.0f;
+      // Apply compensation to the mixed result
+      outL *= compensation;
+      outR *= compensation;
 
-      // 5. STEREO FOCUS (M/S Processing)
+      // 4. SOFT KNEE LIMITER (Professional headroom protection)
+      // Threshold: -0.1dBFS (0.989), Ratio: 10:1, Soft Knee: 0.5dB
+      auto softLimit = [](float x) -> float {
+          const float threshold = 0.989f; // -0.1dBFS
+          const float knee = 0.5f;        // 0.5dB knee width
+          const float ratio = 10.0f;      // 10:1 compression above threshold
+
+          if (x > threshold) {
+              // Soft knee: smooth transition
+              float over = x - threshold;
+              if (over < knee) {
+                  // In knee region: gradually increase compression
+                  float ratioAdj = 1.0f + (ratio - 1.0f) * (over / knee);
+                  x = threshold + over / ratioAdj;
+              } else {
+                  // Above knee: full compression
+                  x = threshold + knee / ratio + (over - knee) / ratio;
+              }
+          } else if (x < -threshold) {
+              // Same for negative values
+              float over = -x - threshold;
+              if (over < knee) {
+                  float ratioAdj = 1.0f + (ratio - 1.0f) * (over / knee);
+                  x = -threshold - over / ratioAdj;
+              } else {
+                  x = -threshold - knee / ratio - (over - knee) / ratio;
+              }
+          }
+          return x;
+      };
+
+      outL = softLimit(outL);
+      outR = softLimit(outR);
+
+      // 5. STEREO FOCUS (M/S Processing with correct orthonormal matrix)
       if (std::abs(focus) > 0.001f && numChannels > 1) {
-        // M/S Encoding
-        float mid = 0.5f * (outL + outR);
-        float side = 0.5f * (outL - outR);
+        // Orthonormal M/S Encoding (preserves energy: L² + R² = M² + S²)
+        const float SQRT2_INV = 0.7071067811865476f; // 1/√2
+        float mid = (outL + outR) * SQRT2_INV;
+        float side = (outL - outR) * SQRT2_INV;
 
         // Get multipliers based on focus (-100 = Mid only, +100 = Side only)
         auto multipliers = stereoFocus.getDriveScalars(focus * 100.0f);
@@ -195,9 +222,9 @@ public:
         mid *= multipliers.midScale;
         side *= multipliers.sideScale;
 
-        // M/S Decoding
-        outL = mid + side;
-        outR = mid - side;
+        // Orthonormal M/S Decoding
+        outL = (mid + side) * SQRT2_INV;
+        outR = (mid - side) * SQRT2_INV;
       }
 
       // 6. DC BLOCKER (последний рубеж против DC после сатурации)
@@ -205,8 +232,6 @@ public:
       outR = dcBlockerRight.process(outR);
 
       // 7. OUTPUT GAIN (в самом конце - независим от всех компенсаций)
-      // Применяем output gain ПОСЛЕ всей обработки, чтобы он был независим
-      // от PsychoAcousticGain и других компенсаций
       outL *= gain;
       outR *= gain;
 
@@ -225,6 +250,7 @@ private:
   DCBlocker dcBlockerLeft, dcBlockerRight;
   StereoFocus stereoFocus;
   float currentDelaySamples = 0.0f;
+  int preparedMaxBlockSize = 0; // CRITICAL FIX: Track prepared size for safety checks
 
   // Parameter Smoothers
   juce::LinearSmoothedValue<float> smoothMix{1.0f};
