@@ -11,9 +11,10 @@
  * Output: tests/regression/reference_audio/*_processed.wav
  */
 
-#include "../src/PluginProcessor.h"
+#include "../../src/PluginProcessor.h"
 #include "SignalGenerator.h"
 #include <iostream>
+#include <fstream>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -70,6 +71,59 @@ processWithPlugin(CoheraSaturatorAudioProcessor &processor,
 
   processor.releaseResources();
   return output;
+}
+
+/**
+ * Run thermal dynamics analysis - generates CSV data for visualization
+ */
+void runThermalAnalysis() {
+    std::cout << "🔥 Running Thermal Dynamics Analysis..." << std::endl;
+    
+    CoheraSaturatorAudioProcessor plugin;
+    
+    // Setup plugin for maximum thermal effect
+    plugin.prepareToPlay(44100.0, 512);
+    
+    std::ofstream csvFile("thermal_debug.csv");
+    csvFile << "Time,Input,Output,Temperature\n";
+    
+    float sampleRate = 44100.0f;
+    float freq = 100.0f; // 100 Hz test tone
+    
+    // Simulate 5 seconds of operation
+    for (int i = 0; i < sampleRate * 5; ++i) {
+        // Generate sine wave
+        float input = std::sin(2.0f * 3.14159f * freq * (float)i / sampleRate) * 0.8f;
+        
+        // Create buffer
+        juce::AudioBuffer<float> buffer(2, 1);
+        buffer.setSample(0, 0, input);
+        buffer.setSample(1, 0, input);
+        
+        // Process
+        juce::MidiBuffer midi;
+        plugin.processBlock(buffer, midi);
+        
+        float output = buffer.getSample(0, 0);
+        
+        // Get temperature - ЗАГЛУШКА, нужно заменить на реальный геттер!
+        // TODO: Replace with actual thermal model temperature
+        float thermalGain = std::abs(input) * 0.5f; // Simulated heating
+        static float accumulatedHeat = 0.0f;
+        accumulatedHeat += thermalGain * (1.0f / sampleRate);
+        accumulatedHeat *= 0.999f; // Cooling factor
+        float temp = accumulatedHeat * 100.0f; // Scale to 0-100 range
+        
+        csvFile << (float)i/sampleRate << "," << input << "," << output << "," << temp << "\n";
+        
+        // Print progress every second
+        if (i % (int)sampleRate == 0) {
+            std::cout << "  Processing second " << (i/(int)sampleRate + 1) << "/5..." << std::endl;
+        }
+    }
+    
+    csvFile.close();
+    std::cout << "✅ Thermal data dumped to thermal_debug.csv" << std::endl;
 }
 
 int main(int argc, char *argv[]) {

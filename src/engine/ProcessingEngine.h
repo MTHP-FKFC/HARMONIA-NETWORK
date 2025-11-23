@@ -1,207 +1,204 @@
 #pragma once
 
-#include "../CoheraTypes.h"
-#include "../parameters/ParameterSet.h"
-#include <atomic>
-#include <cmath>
 #include <juce_dsp/juce_dsp.h>
 #include <vector>
+#include <cmath>
+#include <atomic>
+#include "../CoheraTypes.h"
+#include "../parameters/ParameterSet.h"
 
 // Наши компоненты
-#include "../network/INetworkManager.h"
-#include "../network/NetworkController.h"
 #include "FilterBankEngine.h"
 #include "MixEngine.h"
+#include "../network/NetworkController.h"
+#include "../network/NetworkManager.h"
 
 namespace Cohera {
 
-/**
- * @brief Processing Engine - Core DSP pipeline
- * 
- * Clean Architecture:
- * - Business Logic Layer (orchestrates DSP components)
- * - Owns: Oversampler, FilterBankEngine, MixEngine, NetworkController
- * - Uses Dependency Injection for NetworkManager
- * 
- * Signal Flow:
- * 1. Network analysis (Reference role sends envelopes)
- * 2. Upsample 4x (Linear Phase FIR)
- * 3. FilterBankEngine: Split → Process 6 bands → Sum
- * 4. Downsample to base rate
- * 5. MixEngine: Dry/Wet blend with latency compensation
- */
-class ProcessingEngine {
+class ProcessingEngine
+{
 public:
-  /**
-   * @brief Constructor with Dependency Injection
-   * @param networkManager Network manager for inter-instance communication
-   */
-  explicit ProcessingEngine(INetworkManager& networkManager)
-      : networkController(networkManager)
-  {
-    // Инициализируем Oversampler (4x, Linear Phase)
-    // Используем filterHalfBandFIREquiripple для максимальной фазовой
-    // линейности
-    oversampler = std::make_unique<juce::dsp::Oversampling<float>>(
-        2, 2, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple,
-        true);
-    numChannels = 2;
-  }
+    ProcessingEngine()
+        : networkController(NetworkManager::getInstance())
+    {
+        // Инициализируем Oversampler (4x, Linear Phase)
+        // Используем filterHalfBandFIREquiripple для максимальной фазовой линейности
+        oversampler = std::make_unique<juce::dsp::Oversampling<float>>(2, 2, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple, true);
+        numChannels = 2;
+    }
 
-  void prepare(const juce::dsp::ProcessSpec &spec) {
-    // Защита от дурака
-    if (spec.sampleRate <= 0)
-      return;
+    void prepare(const juce::dsp::ProcessSpec& spec)
+    {
+        // Защита от дурака
+        if (spec.sampleRate <= 0) return;
 
-    sampleRate = spec.sampleRate;
-    blockSize = spec.maximumBlockSize;
-    numChannels = (int)spec.numChannels;
+        sampleRate = spec.sampleRate;
+        blockSize = spec.maximumBlockSize;
+        numChannels = (int)spec.numChannels;
 
-    // 1. Resetting Oversampler
-    // reset() важен, чтобы очистить внутренние буферы
-    oversampler->reset();
+        // 1. Resetting Oversampler
+        // reset() важен, чтобы очистить внутренние буферы
+        oversampler->reset();
 
-    // initProcessing выделяет память под буферы.
-    // Если blockSize увеличился, он перевыделит.
-    oversampler->initProcessing(blockSize);
+        // initProcessing выделяет память под буферы.
+        // Если blockSize увеличился, он перевыделит.
+        oversampler->initProcessing(blockSize);
+        
+        // Вычисляем параметры для High Rate (4x)
+        double highSampleRate = sampleRate * 4.0;
+        int highBlockSize = (int)blockSize * 4;
 
-    // Вычисляем параметры для High Rate (4x)
-    double highSampleRate = sampleRate * 4.0;
-    int highBlockSize = (int)blockSize * 4;
+        juce::dsp::ProcessSpec highSpec { highSampleRate, (juce::uint32)highBlockSize, spec.numChannels };
 
-    juce::dsp::ProcessSpec highSpec{highSampleRate, (juce::uint32)highBlockSize,
-                                    spec.numChannels};
+        // 2. Готовим компоненты
+        filterBankEngine.prepare(highSpec); // Работает на 4x
+        mixEngine.prepare(spec);            // Работает на 1x (Output)
+        networkController.prepare(sampleRate); // Работает на 1x (Analysis)
 
-    // 2. Готовим компоненты
-    filterBankEngine.prepare(highSpec);    // Работает на 4x
-    mixEngine.prepare(spec);               // Работает на 1x (Output)
-    networkController.prepare(sampleRate); // Работает на 1x (Analysis)
+        // 3. АНАЛИТИЧЕСКИЙ РАСЧЁТ ЗАДЕРЖКИ (МГНОВЕННЫЙ, БЕЗ ФРИЗОВ)
+        // Вместо тяжёлого импульсного метода используем точные формулы
+        updateLatencyFromComponents();
+    }
 
-    updateLatencyFromComponents();
-  }
+    void reset()
+    {
+        oversampler->reset();
+        filterBankEngine.reset(); // Сброс фильтров и буферов
+        mixEngine.reset();        // Сброс delay line
+        networkController.reset();// Сброс энвелопов
 
-  void reset() {
-    oversampler->reset();
-    filterBankEngine.reset();  // Сброс фильтров и буферов
-    mixEngine.reset();         // Сброс delay line
-    networkController.reset(); // Сброс энвелопов
+        // Сброс атомиков для UI
+        inputRMS.store(0.0f);
+        outputRMS.store(0.0f);
+        lastTransientLevel.store(0.0f);
+        lastRefSignal.store(0.0f);
+        lastDepthValue.store(0.0f);
+    }
 
-    // Сброс атомиков для UI
-    inputRMS.store(0.0f);
-    outputRMS.store(0.0f);
-    lastTransientLevel.store(0.0f);
-    lastRefSignal.store(0.0f);
-    lastDepthValue.store(0.0f);
-  }
+    // Главный метод, вызываемый из PluginProcessor
+    // (Оставляем без изменений, логика уже верная)
+    void processBlockWithDry(juce::AudioBuffer<float>& ioBuffer, 
+                             const juce::AudioBuffer<float>& dryBuffer,
+                             const ParameterSet& params)
+    {
+        // ... (код processBlockWithDry остается тем же, что был ранее) ...
+        // ВАЖНО: Мы убираем вызов updateLatency() отсюда, чтобы не пересчитывать его каждый блок, 
+        // или делаем его очень легким.
+        // Для динамической смены качества (Eco/Pro) калибровку нужно вызывать при смене параметра.
+        
+        // 0. RMS измерение
+        float rms = 0.0f;
+        for (int ch = 0; ch < dryBuffer.getNumChannels(); ++ch)
+            rms += dryBuffer.getRMSLevel(ch, 0, dryBuffer.getNumSamples());
+        rms /= (float)std::max(1, dryBuffer.getNumChannels());
+        inputRMS.store(rms);
 
-  // Главный метод, вызываемый из PluginProcessor
-  // (Оставляем без изменений, логика уже верная)
-  void processBlockWithDry(juce::AudioBuffer<float> &ioBuffer,
-                           const juce::AudioBuffer<float> &dryBuffer,
-                           const ParameterSet &params) {
-    // ... (код processBlockWithDry остается тем же, что был ранее) ...
-    // ВАЖНО: Мы убираем вызов updateLatency() отсюда, чтобы не пересчитывать
-    // его каждый блок, или делаем его очень легким. Для динамической смены
-    // качества (Eco/Pro) калибровку нужно вызывать при смене параметра.
+        // 1. Network
+        auto netModulations = networkController.process(dryBuffer, params);
+        
+        // Export Network Data for UI
+        float maxRef = 0.0f;
+        for(float v : netModulations) if(v > maxRef) maxRef = v;
+        lastRefSignal.store(maxRef);
 
-    // 0. RMS измерение
-    float rms = 0.0f;
-    for (int ch = 0; ch < dryBuffer.getNumChannels(); ++ch)
-      rms += dryBuffer.getRMSLevel(ch, 0, dryBuffer.getNumSamples());
-    rms /= (float)std::max(1, dryBuffer.getNumChannels());
-    inputRMS.store(rms);
+        // 2. Upsample
+        juce::dsp::AudioBlock<float> ioBlock(ioBuffer);
+        auto highBlock = oversampler->processSamplesUp(ioBlock);
 
-    // 1. Network
-    auto netModulations = networkController.process(dryBuffer, params);
+        // 3. Process
+        float transientLevel = filterBankEngine.process(highBlock, params, netModulations);
+        lastTransientLevel.store(transientLevel);
+        
+        // Export Modulation Depth
+        auto grs = filterBankEngine.getGainReductionValues();
+        float totalAct = 0.0f;
+        for(float g : grs) totalAct += std::abs(1.0f - g);
+        lastDepthValue.store(std::min(1.0f, totalAct));
 
-    // Export Network Data for UI
-    float maxRef = 0.0f;
-    for (float v : netModulations)
-      if (v > maxRef)
-        maxRef = v;
-    lastRefSignal.store(maxRef);
+        // 4. Downsample
+        oversampler->processSamplesDown(ioBlock);
 
-    // 2. Upsample
-    juce::dsp::AudioBlock<float> ioBlock(ioBuffer);
-    auto highBlock = oversampler->processSamplesUp(ioBlock);
+        // 5. Mix (ioBuffer = Wet, dryBuffer = Dry)
+        // mixEngine already configured with the calibrated latency
+        mixEngine.process(ioBlock, dryBuffer, params.mix, params.outputGain, params.focus);
 
-    // 3. Process
-    float transientLevel =
-        filterBankEngine.process(highBlock, params, netModulations);
-    lastTransientLevel.store(transientLevel);
+        // 6. Output RMS
+        float outRms = 0.0f;
+        for (int ch = 0; ch < ioBuffer.getNumChannels(); ++ch)
+            outRms += ioBuffer.getRMSLevel(ch, 0, ioBuffer.getNumSamples());
+        outRms /= (float)std::max(1, ioBuffer.getNumChannels());
+        outputRMS.store(outRms);
+    }
 
-    // Export Modulation Depth
-    auto grs = filterBankEngine.getGainReductionValues();
-    float totalAct = 0.0f;
-    for (float g : grs)
-      totalAct += std::abs(1.0f - g);
-    lastDepthValue.store(std::min(1.0f, totalAct));
-
-    // 4. Downsample
-    oversampler->processSamplesDown(ioBlock);
-
-    // 5. Mix (ioBuffer = Wet, dryBuffer = Dry)
-    // mixEngine already configured with the calibrated latency
-    mixEngine.process(ioBlock, dryBuffer, params.mix, params.outputGain,
-                      params.focus, params.deltaListen);
-
-    // 6. Output RMS
-    float outRms = 0.0f;
-    for (int ch = 0; ch < ioBuffer.getNumChannels(); ++ch)
-      outRms += ioBuffer.getRMSLevel(ch, 0, ioBuffer.getNumSamples());
-    outRms /= (float)std::max(1, ioBuffer.getNumChannels());
-    outputRMS.store(outRms);
-  }
-
-  float getLatency() const { return currentLatency; }
-
-  // Геттеры для UI
-  float getInputRMS() const { return inputRMS.load(); }
-  float getOutputRMS() const { return outputRMS.load(); }
-  float getTransientLevel() const { return lastTransientLevel.load(); }
-  float getLastReferenceSignal() const { return lastRefSignal.load(); }
-  float getLastModulationDepth() const { return lastDepthValue.load(); }
-
-  const std::array<float, 6> &getGainReductionValues() const {
-    return filterBankEngine.getGainReductionValues();
-  }
+    float getLatency() const { return currentLatency; }
+    
+    // Геттеры для UI
+    float getInputRMS() const { return inputRMS.load(); }
+    float getOutputRMS() const { return outputRMS.load(); }
+    float getTransientLevel() const { return lastTransientLevel.load(); }
+    float getLastReferenceSignal() const { return lastRefSignal.load(); }
+    float getLastModulationDepth() const { return lastDepthValue.load(); }
+    
+    const std::array<float, 6>& getGainReductionValues() const {
+        return filterBankEngine.getGainReductionValues();
+    }
+    
+    // UI Metrics: Average thermal temperature for BioScanner visualization
+    float getAverageTemperature() const {
+        return filterBankEngine.getAverageTemperature();
+    }
 
 private:
-  void updateLatencyFromComponents() {
-    const float oversampleLatency =
-        oversampler->getLatencyInSamples(); // уже в базовой частоте
-    const float fbLatencyHigh = (float)filterBankEngine.getLatencySamples();
-    const float fbLatencyBase = fbLatencyHigh / oversamplingFactor;
-    const float toneLatency = filterBankEngine.getToneShapingLatencySamples();
+    // === АНАЛИТИЧЕСКИЙ РАСЧЁТ ЗАДЕРЖКИ (ЗОЛОТОЙ СТАНДАРТ) ===
+    // Молниеносный расчёт по формулам, без импульсов и циклов
+    // Вызывается только в prepare() - гарантирует мгновенную загрузку
+    void updateLatencyFromComponents()
+    {
+        // 1. Oversampler latency (FIR half-band filters)
+        // JUCE filterHalfBandFIREquiripple: ~60 samples @ 1x rate
+        // Для 2 stages (4x): latency = stage1 + stage2/2
+        float oversampleLatency = oversampler->getLatencyInSamples();
+        
+        // 2. FilterBank latency (на высокой частоте)
+        // LinearFIR256: 128 samples @ 4x rate
+        int fbLatencyHigh = filterBankEngine.getLatencySamples(); // high-rate samples
+        float fbLatencyBase = (float)fbLatencyHigh / 4.0f; // convert to base rate
+        
+        // 3. Tone filters (TPT SVF negligible, ~0.5 samples)
+        float toneLatency = 0.0f; // Пренебрежимо мало
+        
+        // 4. Total latency @ base rate
+        currentLatency = oversampleLatency + fbLatencyBase + toneLatency;
+        
+        // 5. Apply to MixEngine delay line
+        mixEngine.setLatencySamples(currentLatency);
+        
+        #if JUCE_DEBUG
+        juce::Logger::writeToLog("Latency (analytical): os=" + juce::String(oversampleLatency, 2) + 
+                                 " fbHigh=" + juce::String(fbLatencyHigh) + 
+                                 " fbBase=" + juce::String(fbLatencyBase, 2) +
+                                 " tone=" + juce::String(toneLatency, 2) +
+                                 " total=" + juce::String(currentLatency, 2));
+        #endif
+    }
 
-    currentLatency = oversampleLatency + fbLatencyBase + toneLatency;
-    mixEngine.setLatencySamples(currentLatency);
+    double sampleRate = 44100.0;
+    juce::uint32 blockSize = 512;
+    int numChannels = 2;
+    float currentLatency = 0.0f;
 
-    juce::Logger::writeToLog(
-        "Latency (analytic): os=" + juce::String(oversampleLatency, 3) +
-        " fbHigh=" + juce::String(fbLatencyHigh, 3) +
-        " fbBase=" + juce::String(fbLatencyBase, 3) +
-        " tone=" + juce::String(toneLatency, 3) +
-        " total=" + juce::String(currentLatency, 3));
-  }
+    // Атомики для UI
+    std::atomic<float> inputRMS { 0.0f };
+    std::atomic<float> outputRMS { 0.0f };
+    std::atomic<float> lastTransientLevel { 0.0f };
+    std::atomic<float> lastRefSignal { 0.0f };
+    std::atomic<float> lastDepthValue { 0.0f };
 
-  double sampleRate = 44100.0;
-  juce::uint32 blockSize = 512;
-  int numChannels = 2;
-  float currentLatency = 0.0f;
-
-  // Атомики для UI
-  std::atomic<float> inputRMS{0.0f};
-  std::atomic<float> outputRMS{0.0f};
-  std::atomic<float> lastTransientLevel{0.0f};
-  std::atomic<float> lastRefSignal{0.0f};
-  std::atomic<float> lastDepthValue{0.0f};
-
-  static constexpr float oversamplingFactor = 4.0f;
-  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
-  FilterBankEngine filterBankEngine;
-  MixEngine mixEngine;
-  NetworkController networkController; // Injected with INetworkManager
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
+    FilterBankEngine filterBankEngine;
+    MixEngine mixEngine;
+    NetworkController networkController;
 };
 
 } // namespace Cohera
+

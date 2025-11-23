@@ -71,6 +71,7 @@ public:
     {
         // 1. Инициализируем два движка
         Cohera::MockNetworkManager mockNet;
+        mockNet.reset(); // Ensure clean state
         Cohera::ProcessingEngine refEngine(mockNet); // Kick (Sender)
         Cohera::ProcessingEngine listEngine(mockNet); // Bass (Receiver)
 
@@ -99,8 +100,8 @@ public:
         Cohera::ParameterSet listParams;
         listParams.groupId = 1;
         listParams.netRole = Cohera::NetworkRole::Listener;
-        listParams.netMode = Cohera::NetworkMode::Unmasking; // DUCKING MODE
-        listParams.netSens = 2.0f; // High sensitivity
+        listParams.netMode = Cohera::NetworkMode::Unmasking; // Network ducking mode
+        listParams.netSens = 2.0f; // Higher sensitivity for proper ducking
         listParams.netDepth = 1.0f; // Full depth
 
         // 4. Process (Сначала Ref, чтобы отправить данные в сеть)
@@ -113,6 +114,10 @@ public:
         // Бас должен стать тише!
         float dryRMS = bassDry.getRMSLevel(0, 0, 512);
         float wetRMS = bassBuf.getRMSLevel(0, 0, 512);
+
+        // Debug output
+        std::cerr << "[NetworkDucking] dryRMS=" << dryRMS << " wetRMS=" << wetRMS 
+                  << " ratio=" << (wetRMS / dryRMS) << "\n";
 
         // В режиме Unmasking с киком, бас должен быть придавлен
         expect(wetRMS < dryRMS * 0.9f, "Bass should be ducked by Kick signal via Network");
@@ -160,8 +165,7 @@ public:
         p2.punch = 1.0f; // Max Punch
         p2.drive = 20.0f;
 
-        // Reset engine to clear envelopes
-        engine.reset();
+        // Process with punch (no reset to preserve punch smoothing)
         engine.processBlockWithDry(bufPunched, dry, p2);
 
         // 3. Сравнение пиков

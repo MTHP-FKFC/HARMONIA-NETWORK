@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../CoheraTypes.h"
+#include <iostream>
 
 // === MODULATION TARGETS ===
 // Структура, которая говорит системе, КАКОЙ параметр модулировать
@@ -33,7 +34,21 @@ public:
     static ModulationTargets calculateModulation(Cohera::NetworkMode mode, float inputEnvelope, float sensitivity)
     {
         ModulationTargets targets;
+
+        // Усиляем сигнал чувствительностью
         float signal = inputEnvelope * sensitivity;
+        
+        // Debug: log interaction calculation (only for Gated mode to avoid spam)
+        if (mode == Cohera::NetworkMode::Gated) {
+            std::cerr << "[InteractionEngine] Gated: input=" << inputEnvelope 
+                      << " sens=" << sensitivity << " signal=" << signal << "\n";
+        }
+        
+        // Debug: log interaction calculation (commented out for standalone testing)
+        // juce::Logger::writeToLog("InteractionEngine: mode=" + juce::String((int)mode) + 
+        //                          " input=" + juce::String(inputEnvelope, 6) + 
+        //                          " sens=" + juce::String(sensitivity, 3) + 
+        //                          " signal=" + juce::String(signal, 6));
 
         switch (mode) {
             // === CLASSIC MIXING MODES ===
@@ -51,7 +66,8 @@ public:
 
             case Cohera::NetworkMode::Gated: // 2: "Играй в паузах"
                 // Reference громкий -> Listener молчит
-                targets.volumeMod = -1.0f * signal;
+                targets.volumeMod = -60.0f * signal; // Aggressive ducking to overcome processing gain
+                std::cerr << "[InteractionEngine] Gated: volumeMod=" << targets.volumeMod << "\n";
                 break;
 
             case Cohera::NetworkMode::StereoBloom: // 3: "Пространственный взрыв"

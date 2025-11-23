@@ -3,20 +3,32 @@
 #include <fstream>
 #include "EngineIntegrationTests.cpp" // Include the test implementations
 #include "RealWorldScenarios.cpp" // Include real-world scenario tests
+#include "DCBlockerSampleRateTest.cpp"
+#include "HarmonicAnalysisTest.cpp"
+#include "FrequencyBalanceTest.cpp"
+#include "MultiSampleRateTest.cpp"
 
 int main(int argc, char* argv[])
 {
     std::cout << "=== COHERA SATURATOR INTEGRATION TESTS ===" << std::endl;
     std::cout << "Starting test runner..." << std::endl;
 
-    // Create log file
+    // Create log file (fallback to workspace if Desktop is not writable, e.g. sandboxed CI)
     juce::File logFile = juce::File::getSpecialLocation(juce::File::userDesktopDirectory)
                         .getChildFile("cohera_test_results.txt");
 
     std::ofstream logFileStream(logFile.getFullPathName().toStdString());
     if (!logFileStream.is_open())
     {
-        std::cout << "ERROR: Cannot create log file!" << std::endl;
+        juce::File fallback = juce::File::getCurrentWorkingDirectory()
+                                .getChildFile("cohera_test_results.txt");
+        logFile = fallback;
+        logFileStream.open(fallback.getFullPathName().toStdString());
+    }
+
+    if (!logFileStream.is_open())
+    {
+        std::cout << "ERROR: Cannot create log file at Desktop or workspace!" << std::endl;
         return 1;
     }
 

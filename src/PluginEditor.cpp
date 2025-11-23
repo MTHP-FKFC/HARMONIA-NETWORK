@@ -85,8 +85,9 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
 
   // --- VISOR ---
   shakerContainer.addAndMakeVisible(spectrumVisor);
-  // BioScanner - оптимизирован и включен обратно
-  shakerContainer.addAndMakeVisible(bioScanner);
+  // BioScanner - новый термальный визуализатор
+  bioScanner = std::make_unique<BioScanner>(audioProcessor);
+  shakerContainer.addAndMakeVisible(*bioScanner);
 
   // --- COSMIC NEBULA SHAPER (Transfer Function Overlay) ---
   nebulaShaper = std::make_unique<NebulaShaper>(audioProcessor);
@@ -261,13 +262,19 @@ CoheraSaturatorAudioProcessorEditor::CoheraSaturatorAudioProcessorEditor(
   shakerContainer.addAndMakeVisible(glitchOverlay);
   glitchOverlay.toFront(true);
 
-  // Запускаем таймер редактора, чтобы PlasmaCore/визуализации обновлялись
-  startTimerHz(30);
-
+  // Timer will start in visibilityChanged()
+  
   // Базовый размер
   // currentScale = 1.0f; // Initialize currentScale
   setSize(900, 650);
   setResizable(false, false); // Disable resize, use scale selector
+}
+
+void CoheraSaturatorAudioProcessorEditor::visibilityChanged() {
+  if (isVisible())
+    startTimerHz(30);
+  else
+    stopTimer();
 }
 
 CoheraSaturatorAudioProcessorEditor::~CoheraSaturatorAudioProcessorEditor() {
@@ -369,8 +376,7 @@ void CoheraSaturatorAudioProcessorEditor::timerCallback() {
   // hud.setEnergyLevel(outputRMS);
   neuralLink.setEnergyLevel(inputRMS);
   glitchOverlay.setEnergyLevel(transientLevel);
-  // BioScanner - оптимизирован и включен обратно
-  bioScanner.setEnergyLevel(outputRMS);
+  // BioScanner теперь автоматически получает температуру от процессора
 
   // Обрабатываем FFT данные
   audioProcessor.processFFTForGUI();
@@ -488,8 +494,9 @@ void CoheraSaturatorAudioProcessorEditor::resized() {
 
   // Visor занимает всё оставшееся место в топе
   spectrumVisor.setBounds(topSection);
-  // BioScanner - оптимизирован и включен обратно
-  bioScanner.setBounds(spectrumVisor.getBounds());
+  // BioScanner - новый термальный визуализатор
+  if (bioScanner)
+    bioScanner->setBounds(spectrumVisor.getBounds());
 
   // Cosmic Nebula Shaper - Transfer Function Overlay
   if (nebulaShaper)

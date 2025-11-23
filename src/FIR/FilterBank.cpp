@@ -47,33 +47,21 @@ void PlaybackFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
     if (numCh == 0)
         return;
 
-    // Safety check: ensure filters are prepared
-    if (config.numBands == 0 || config.sampleRate <= 0.0)
-        return;
-
     // 1) Копируем вход в каждый полосный буфер
     for (int ch = 0; ch < numCh; ++ch)
     {
         const float* src = input.getReadPointer(ch);
-        for (int band = 0; band < config.numBands && band < 6; ++band)
+        for (int band = 0; band < config.numBands; ++band)
         {
-            if (bandBuffers[band] != nullptr)
-                bandBuffers[band]->copyFrom(ch, 0, src, numSamples);
+            bandBuffers[band]->copyFrom(ch, 0, src, numSamples);
         }
     }
 
     // 2) Прогоняем через FIR по каждой полосе / каналу
     for (int ch = 0; ch < numCh; ++ch)
     {
-        for (int band = 0; band < config.numBands && band < 6; ++band)
+        for (int band = 0; band < config.numBands; ++band)
         {
-            if (bandBuffers[band] == nullptr)
-                continue;
-                
-            // Safety check: ensure filter coefficients are set
-            if (firFilters[ch][band].coefficients == nullptr)
-                continue;
-                
             juce::dsp::AudioBlock<float> block(
                 bandBuffers[band]->getArrayOfWritePointers() + ch,
                 1,
@@ -235,7 +223,8 @@ void PlaybackFilterBank::buildFirFilters()
             latencySamples = 64; // Truncated 128-tap latency
         }
     }
-    // Log chosen latency and sample rate for diagnostics
+    // Log chosen latency and sample rate for diagnostics (DEBUG ONLY)
+    #if JUCE_DEBUG
     juce::String fbLine = juce::String::formatted(
         "[FilterBankDiag] phaseMode=%d sampleRate=%.1f latencySamples=%d\n",
         static_cast<int>(config.phaseMode), config.sampleRate, latencySamples);
@@ -253,6 +242,7 @@ void PlaybackFilterBank::buildFirFilters()
             ofs.close();
         }
     }
+    #endif
 
     // Phase 2.2.4: Define constants for filter tap counts
     const int fullTaps = 256;
@@ -439,14 +429,10 @@ void AnalyzerFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
     if (numCh == 0)
         return;
 
-    // Safety check: ensure filters are prepared
-    if (config.numBands == 0 || config.sampleRate <= 0.0)
-        return;
-
     for (int ch = 0; ch < numCh; ++ch)
     {
         const float* src = input.getReadPointer(ch);
-        for (int band = 0; band < config.numBands && band < 6; ++band)
+        for (int band = 0; band < config.numBands; ++band)
         {
             auto* dstBuffer = bandBuffers[band];
             if (dstBuffer == nullptr)
@@ -458,14 +444,10 @@ void AnalyzerFilterBank::splitIntoBands (const juce::AudioBuffer<float>& input,
 
     for (int ch = 0; ch < numCh; ++ch)
     {
-        for (int band = 0; band < config.numBands && band < 6; ++band)
+        for (int band = 0; band < config.numBands; ++band)
         {
             auto* dstBuffer = bandBuffers[band];
             if (dstBuffer == nullptr)
-                continue;
-
-            // Safety check: ensure filter coefficients are set
-            if (firFilters[ch][band].coefficients == nullptr)
                 continue;
 
             juce::dsp::AudioBlock<float> block(

@@ -29,6 +29,16 @@ public:
   CoheraLookAndFeel() {
     // Настраиваем шрифты (футуристичный стиль)
     setDefaultSansSerifTypefaceName("Futura");
+    
+    // ПРЕДЗАГРУЗКА ШРИФТОВ (КЭШИРОВАНИЕ)
+    // Создаем шрифты один раз, чтобы не искать их каждый кадр
+    fontKnobValue = juce::Font("Futura", 14.0f, juce::Font::bold);
+    fontKnobValueSmall = juce::Font("Futura", 11.0f, juce::Font::bold);
+    fontKnobLabel = juce::Font("Futura", 13.0f, juce::Font::bold).withExtraKerningFactor(0.05f);
+    fontButton = juce::Font("Futura", 12.0f, juce::Font::plain);
+    fontButtonBold = juce::Font("Futura", 12.0f, juce::Font::bold);
+    fontPopup = juce::Font("Futura", 14.0f, juce::Font::plain);
+    fontPopupBold = juce::Font("Futura", 14.0f, juce::Font::bold);
   }
 
   // ========================================================================
@@ -129,8 +139,7 @@ public:
 
     // 1. НАЗВАНИЕ ПАРАМЕТРА (СНИЗУ) - рисуем ВНУТРИ полной области компонента
     // ИСПОЛЬЗУЕМ FUTURA + KERNING
-    g.setFont(juce::Font("Futura", 13.0f, juce::Font::bold)
-                  .withExtraKerningFactor(0.05f));
+    g.setFont(fontKnobLabel); // Используем кэшированный шрифт!
     g.setColour(kTextBright);
 
     // Рисуем лейбл в нижней части полной области компонента
@@ -160,14 +169,14 @@ public:
       // Если ручка большая (Drive), рисуем внутри
       if (radius > 30.0f) {
         g.setColour(kTextBright);
-        g.setFont(juce::Font("Futura", 14.0f, juce::Font::bold));
+        g.setFont(fontKnobValue); // Кэш
         g.drawText(valText, center.x - 30, center.y - 10, 60, 20,
                    juce::Justification::centred);
       }
       // Иначе рисуем сверху (Popup effect)
       else {
         g.setColour(mainColor);
-        g.setFont(juce::Font("Futura", 11.0f, juce::Font::bold));
+        g.setFont(fontKnobValueSmall); // Кэш
         g.drawText(valText, x, y, width, 15, juce::Justification::centred);
       }
     }
@@ -210,7 +219,7 @@ public:
   void drawComboBoxTextWhenNothingSelected(juce::Graphics &g, juce::ComboBox &,
                                            juce::Label &label) override {
     label.setJustificationType(juce::Justification::centredLeft);
-    g.setFont(juce::Font("Futura", 13.0f, juce::Font::plain));
+    g.setFont(fontPopup); // Кэш
     g.setColour(kTextBright);
   }
 
@@ -218,7 +227,7 @@ public:
   // � POPUP MENU (Dropdown Style)
   // ========================================================================
   juce::Font getPopupMenuFont() override {
-    return juce::Font("Futura", 14.0f, juce::Font::plain);
+    return fontPopup; // Кэш
   }
 
   void drawPopupMenuBackground(juce::Graphics &g, int width,
@@ -258,9 +267,9 @@ public:
 
     // Текст
     g.setColour(isHighlighted ? kOrangeNeon : kTextBright);
-    // Fix: withBold -> withStyle
-    g.setFont(getPopupMenuFont().withStyle(isHighlighted ? juce::Font::bold
-                                                         : juce::Font::plain));
+    // Вместо создания нового шрифта withStyle (что может быть дорого),
+    // выбираем из двух заранее созданных
+    g.setFont(isHighlighted ? fontPopupBold : fontPopup); // Кэш
 
     g.drawText(text, area.reduced(10, 0), juce::Justification::centredLeft);
 
@@ -316,10 +325,19 @@ public:
 
     // Текст
     g.setColour(isOn ? juce::Colours::black : kTextBright);
-    g.setFont(juce::Font("Futura", 12.0f,
-                         isOn ? juce::Font::bold : juce::Font::plain));
+    g.setFont(isOn ? fontButtonBold : fontButton); // Кэш
     g.drawText(button.getButtonText(), bounds, juce::Justification::centred);
   }
+
+private:
+  // Кэшированные шрифты
+  juce::Font fontKnobValue;
+  juce::Font fontKnobValueSmall;
+  juce::Font fontKnobLabel;
+  juce::Font fontButton;
+  juce::Font fontButtonBold;
+  juce::Font fontPopup;
+  juce::Font fontPopupBold;
 };
 
 } // namespace CoheraUI

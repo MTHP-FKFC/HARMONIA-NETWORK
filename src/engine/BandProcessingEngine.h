@@ -21,7 +21,10 @@ public:
         transientEngine.prepare(spec);
         analogEngine.prepare(spec);
 
-        for(auto& dcb : dcBlockers) dcb.reset();
+        for (auto& dcb : dcBlockers)
+        {
+            dcb.prepare(spec.sampleRate);
+        }
     }
 
     void reset()
@@ -29,6 +32,7 @@ public:
         transientEngine.reset();
         analogEngine.reset();
         for(auto& dcb : dcBlockers) dcb.reset();
+        lastVolumeGain = 1.0f;
     }
 
     // process обрабатывает блок аудио
@@ -102,12 +106,34 @@ public:
         // === 5. TRANSIENT & SATURATION ===
         float maxTrans = transientEngine.process(block, effectiveParams, combinedDriveMult);
 
-        // === 6. OUTPUT GAIN MODULATION (Gated, Unmasking) ===
+        // === 6. VOLUME MODULATION (CRITICAL FIX: RAMPING) ===
+        // Вместо мгновенного умножения multiplyBy, мы делаем RAMP
+        // от значения предыдущего блока к текущему. Это убирает щелчки (Zipper Noise).
+        float targetVolGain = 1.0f;
         if (std::abs(mods.volumeMod) > 0.001f) {
-            float volGain = 1.0f + mods.volumeMod * depth;
-            volGain = std::max(0.0f, volGain); // Не инвертируем фазу
-            block.multiplyBy(volGain);
+            targetVolGain = std::max(0.0f, 1.0f + mods.volumeMod * depth);
         }
+        
+        // Если усиление меняется, применяем плавный переход
+        if (std::abs(targetVolGain - lastVolumeGain) > 0.0001f) {
+            // Manual gain ramp (AudioBlock doesn't have applyGainRamp)
+            size_t numSamples = block.getNumSamples();
+            size_t numChannels = block.getNumChannels();
+            float gainIncrement = (targetVolGain - lastVolumeGain) / static_cast<float>(numSamples);
+            
+            for (size_t i = 0; i < numSamples; ++i) {
+                float sampleGain = lastVolumeGain + gainIncrement * static_cast<float>(i);
+                for (size_t ch = 0; ch < numChannels; ++ch) {
+                    block.getChannelPointer(ch)[i] *= sampleGain;
+                }
+            }
+        } else {
+            // Оптимизация: если не меняется и не 1.0
+            if (targetVolGain != 1.0f) block.multiplyBy(targetVolGain);
+        }
+        
+        // Запоминаем для следующего блока
+        lastVolumeGain = targetVolGain;
 
         // === 7. DC BLOCKER ===
         size_t numSamples = block.getNumSamples();
@@ -125,12 +151,18 @@ public:
 
         return maxTrans;
     }
+    
+    // UI Metrics: Get thermal temperature from analog modeling
+    float getTemperature() const { return analogEngine.getAverageTemperature(); }
 
 private:
     TransientEngine transientEngine;
     AnalogModelingEngine analogEngine;
 
     std::array<DCBlocker, 2> dcBlockers;
+    
+    // Память для сглаживания громкости между блоками
+    float lastVolumeGain = 1.0f;
 };
 
 } // namespace Cohera

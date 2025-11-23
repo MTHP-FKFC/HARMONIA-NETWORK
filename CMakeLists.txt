@@ -203,6 +203,8 @@ if (COHERA_BUILD_TESTS)
         juce::juce_core
     )
     
+    target_compile_definitions(StressTest PRIVATE COHERA_HEADLESS=1)
+    
     set_target_properties(StressTest PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
     )
@@ -242,6 +244,7 @@ if (COHERA_BUILD_TESTS)
         juce::juce_dsp
         juce::juce_core
     )
+    target_compile_definitions(ProcessTestSignals PRIVATE COHERA_HEADLESS=1)
     set_target_properties(ProcessTestSignals PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
 
     # Test Audio Regression Runner
@@ -260,6 +263,7 @@ if (COHERA_BUILD_TESTS)
         juce::juce_dsp
         juce::juce_core
     )
+    target_compile_definitions(TestAudioRegression PRIVATE COHERA_HEADLESS=1)
     set_target_properties(TestAudioRegression PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests")
 
 endif()

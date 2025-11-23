@@ -1,50 +1,95 @@
+/*
+  ==============================================================================
+    BioScanner.h
+    Визуализация теплового ядра: От льда к плазме.
+  ==============================================================================
+*/
+
 #pragma once
 #include "AbstractVisualizer.h"
-#include "../CoheraLookAndFeel.h"
-#include <cmath>
+#include "../../PluginProcessor.h"
 
 class BioScanner : public AbstractVisualizer
 {
 public:
-    BioScanner() : AbstractVisualizer(15) // Уменьшили FPS для производительности
+    BioScanner(CoheraSaturatorAudioProcessor& p) : AbstractVisualizer(60), audioProcessor(p)
     {
-        setInterceptsMouseClicks(false, false);
+        // Таймер запустится автоматически через parentHierarchyChanged
     }
 
-    // Метод для установки уровня энергии (RMS)
-    void setEnergyLevel(float energy) override
-    {
-        currentEnergy = energy;
-    }
-
-protected:
     void updatePhysics() override
     {
-        scanPhase += 0.03f;
-        if (scanPhase > juce::MathConstants<float>::twoPi)
-            scanPhase -= juce::MathConstants<float>::twoPi;
+        // Обновляем термальную физику на основе процессора
+        // Температура уже рассчитывается в processBlock, здесь можно добавить анимации
     }
 
     void paint(juce::Graphics& g) override
     {
-        float w = (float)getWidth();
-        float h = (float)getHeight();
-        float posNormal = (std::sin(scanPhase) + 1.0f) * 0.5f;
-        float x = posNormal * w;
+        auto bounds = getLocalBounds().toFloat();
+        float tempNormal = audioProcessor.getNormalizedTemperature(); // 0.0 to 1.0
+        
+        // --- 1. МАГИЯ ЦВЕТА (Color Morphing) ---
+        // Blue (Hue 0.6) -> Red (Hue 0.0)
+        float hue = juce::jmap(tempNormal, 0.0f, 1.0f, 0.6f, 0.0f);
+        
+        // Saturation растет с нагревом (ярче)
+        float saturation = juce::jmap(tempNormal, 0.5f, 1.0f, 0.5f, 1.0f);
+        
+        juce::Colour coreColor = juce::Colour::fromHSV(hue, saturation, 0.9f, 1.0f);
+        
+        // --- 2. ГЛИТЧ-ЭФФЕКТ (При перегреве > 80%) ---
+        float shakeX = 0.0f;
+        float shakeY = 0.0f;
+        
+        if (tempNormal > 0.8f)
+        {
+            juce::Random& r = juce::Random::getSystemRandom();
+            float chaosLevel = (tempNormal - 0.8f) * 50.0f; // Сила тряски
+            shakeX = r.nextFloat() * chaosLevel - (chaosLevel / 2.0f);
+            shakeY = r.nextFloat() * chaosLevel - (chaosLevel / 2.0f);
+        }
 
-        // Простой яркий цвет вместо сложного градиента
-        float brightness = juce::jlimit(0.3f, 1.0f, currentEnergy + 0.4f);
-        juce::Colour scanColor = CoheraUI::kCyanNeon.withAlpha(brightness);
+        // Применяем смещение
+        auto center = bounds.getCentre().translated(shakeX, shakeY);
+        float radius = (juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f) * 0.8f;
 
-        // Простой прямоугольник вместо градиента
-        g.setColour(scanColor);
-        g.fillRect(x - 1.5f, 0.0f, 3.0f, h);
+        // "Пульсация" радиуса от нагрева
+        float pulse = std::sin(juce::Time::getMillisecondCounter() / 200.0f) * (5.0f * tempNormal);
+        radius += pulse;
 
-        // Убираем текст и линии для производительности
-        // Только основной луч остается
+        // --- 3. ОТРИСОВКА ЯДРА ---
+        
+        // Градиентная заливка (свечение изнутри)
+        juce::ColourGradient grad(
+            coreColor.withAlpha(0.9f), center.x, center.y,
+            coreColor.withAlpha(0.0f), center.x, center.y - radius * 1.5f,
+            true // Radial
+        );
+        g.setGradientFill(grad);
+        g.fillEllipse(center.x - radius, center.y - radius, radius * 2.0f, radius * 2.0f);
+
+        // Отрисовка "Техно-кольца" вокруг
+        g.setColour(coreColor);
+        g.drawEllipse(center.x - radius, center.y - radius, radius * 2.0f, radius * 2.0f, 2.0f);
+
+        // --- 4. ТЕКСТ ДАННЫХ ---
+        g.setFont(juce::Font("Consolas", 14.0f, juce::Font::bold));
+        g.setColour(juce::Colours::white.withAlpha(0.8f));
+        
+        juce::String tempText = juce::String(audioProcessor.getCurrentTemperature(), 1) + " C";
+        
+        // Если перегрев - пишем WARNING
+        if (tempNormal > 0.9f) {
+            if (juce::Time::getMillisecondCounter() % 200 < 100) // Мигание
+                g.drawText("CRITICAL TEMP", bounds, juce::Justification::centredTop);
+        }
+
+        g.drawText(tempText, bounds, juce::Justification::centred);
     }
 
+    void resized() override {}
+
 private:
-    float scanPhase = 0.0f;
-    float currentEnergy = 0.5f; // Default energy level
+    CoheraSaturatorAudioProcessor& audioProcessor;
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BioScanner)
 };

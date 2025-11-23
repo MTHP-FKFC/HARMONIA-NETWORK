@@ -117,11 +117,16 @@ public:
 
     // Применяем Tighten (HPF) к входящему сигналу
     // Чтобы не выделять память, процессим поканально in-place
+    // OPTIMIZATION: Update filter cutoff every 16 samples instead of per-sample
     for (int i = 0; i < numSamples; ++i) {
-      float cutoff = smoothTighten.getNextValue();
+      if (i % 16 == 0) { // Update cutoff every 16 samples
+        float cutoff = smoothTighten.getNextValue();
+        for (int ch = 0; ch < numChannels; ++ch) {
+          preFilters[ch].setCutoffFrequency(cutoff);
+        }
+      }
+      // Прямой доступ к данным блока
       for (int ch = 0; ch < numChannels; ++ch) {
-        preFilters[ch].setCutoffFrequency(cutoff);
-        // Прямой доступ к данным блока
         float *data = ioBlock.getChannelPointer(ch);
         data[i] = preFilters[ch].processSample(ch, data[i]);
       }
@@ -208,10 +213,15 @@ public:
     // отклик.
 
     // --- 5. TONE SHAPING (POST-FILTER / SMOOTH) ---
+    // OPTIMIZATION: Update filter cutoff every 16 samples instead of per-sample
     for (int i = 0; i < numSamples; ++i) {
-      float cutoff = smoothSmooth.getNextValue();
+      if (i % 16 == 0) { // Update cutoff every 16 samples
+        float cutoff = smoothSmooth.getNextValue();
+        for (int ch = 0; ch < numChannels; ++ch) {
+          postFilters[ch].setCutoffFrequency(cutoff);
+        }
+      }
       for (int ch = 0; ch < numChannels; ++ch) {
-        postFilters[ch].setCutoffFrequency(cutoff);
         float *data = ioBlock.getChannelPointer(ch);
         data[i] = postFilters[ch].processSample(ch, data[i]);
       }
@@ -251,6 +261,15 @@ private:
 public:
   const std::array<float, 6> &getGainReductionValues() const {
     return currentGR;
+  }
+  
+  // UI Metrics: Average thermal temperature across all 6 bands
+  float getAverageTemperature() const {
+    float totalTemp = 0.0f;
+    for (const auto& bandEngine : bandEngines) {
+      totalTemp += bandEngine.getTemperature();
+    }
+    return totalTemp / 6.0f;
   }
 };
 

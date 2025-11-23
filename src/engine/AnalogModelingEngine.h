@@ -79,6 +79,11 @@ public:
 
         return { driftValues.driveMultL, driftValues.driveMultR };
     }
+    
+    // UI Metrics: Average temperature across both tubes
+    float getAverageTemperature() const {
+        return (tubes[0].getCurrentTemp() + tubes[1].getCurrentTemp()) * 0.5f;
+    }
 
 private:
     std::array<ThermalModel, 2> tubes;

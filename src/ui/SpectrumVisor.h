@@ -13,10 +13,18 @@ public:
     for (int i = 0; i < 50; ++i)
       cpuHistory.push_back(0.0f);
 
-    startTimerHz(30); // 30 FPS для анимации HUD
+    // Timer starts in visibilityChanged()
   }
 
   ~SpectrumVisor() override { stopTimer(); }
+  
+  // Smart timer management (stop when hidden)
+  void visibilityChanged() override {
+    if (isVisible())
+      startTimerHz(30);
+    else
+      stopTimer();
+  }
 
   // Установка реальных FFT данных
   void setFFTData(const std::array<float, 512> &data) {
@@ -38,6 +46,17 @@ public:
     repaint();
   }
 
+  void resized() override {
+    auto h = (float)getHeight();
+    
+    // Cache gradient once per resize (performance optimization)
+    cachedGradient = juce::ColourGradient(
+        juce::Colour::fromRGB(255, 140, 0).withAlpha(0.6f), 0, 0,
+        juce::Colour::fromRGB(255, 140, 0).withAlpha(0.0f), 0, h,
+        false
+    );
+  }
+  
   void timerCallback() override {
     // Анимация "плавания" HUD (как в телевизоре)
     float time = juce::Time::getMillisecondCounter() / 1000.0f;
@@ -158,13 +177,8 @@ private:
     fillPath.closeSubPath(); // Замыкаем влево
 
     if (fill) {
-      // 🔥 ГРАДИЕНТНАЯ ЗАЛИВКА
-      juce::ColourGradient fillGrad(color.withAlpha(0.4f), 0, 0, // Верх: ярче
-                                    color.withAlpha(0.0f), 0,
-                                    h, // Низ: прозрачный
-                                    false);
-
-      g.setGradientFill(fillGrad);
+      // 🔥 ГРАДИЕНТНАЯ ЗАЛИВКА (using cached gradient)
+      g.setGradientFill(cachedGradient);
       g.fillPath(fillPath);
 
       // Обводка (Sharp Line) - рисуем ТОЛЬКО верхнюю линию, без замыкания
@@ -374,4 +388,7 @@ private:
   juce::String hexString = "0xDEADBEEF";
   float hudOffsetX = 0.0f;
   float hudOffsetY = 0.0f;
+  
+  // Cached resources (performance optimization - create once, use in paint)
+  juce::ColourGradient cachedGradient;
 };

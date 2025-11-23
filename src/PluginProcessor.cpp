@@ -20,10 +20,10 @@ CoheraSaturatorAudioProcessor::CoheraSaturatorAudioProcessor()
 #endif
       apvts(*this, nullptr, "PARAMETERS", createParameterLayout()),
       paramManager(apvts),
-      processingEngine(NetworkManager::getInstance()) {
+      processingEngine() {
 
   // Новая архитектура инициализирована в конструкторе
-  // ProcessingEngine получает NetworkManager через Dependency Injection
+  // ProcessingEngine работает с NetworkManager через внутренний NetworkController
 }
 
 CoheraSaturatorAudioProcessor::~CoheraSaturatorAudioProcessor() {
@@ -309,6 +309,10 @@ void CoheraSaturatorAudioProcessor::processBlock(
     outputRms /= numChannels;
   }
   outputRMS.store(outputRms);
+  
+  // Обновляем термальное состояние для BioScanner
+  float realThermalTemp = processingEngine.getAverageTemperature();
+  currentThermalState.store(realThermalTemp);
 }
 
 // === Сохранение состояния ===
@@ -338,5 +342,9 @@ void CoheraSaturatorAudioProcessor::setStateInformation(const void *data,
 }
 
 juce::AudioProcessorEditor *CoheraSaturatorAudioProcessor::createEditor() {
+#ifndef COHERA_HEADLESS
   return new CoheraSaturatorAudioProcessorEditor(*this);
+#else
+  return nullptr;
+#endif
 }

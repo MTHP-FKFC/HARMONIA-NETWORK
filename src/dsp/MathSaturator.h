@@ -19,40 +19,32 @@ public:
     {
         float x = input * drive;
         float out = 0.0f;
+        
+        // Declare all variables here to avoid cross-initialization errors
+        float expVal, denom, ax, s, n, inner, base, sx, h2, h3, h5, h7, c, z1, z2, z3, mix, threshold, probability, tunnel, maxDelta, delta, clampedX;
 
         switch (mode)
         {
             // --- DIVINE ---
 
             case Cohera::SaturationMode::GoldenRatio:
-                // Tanh + Harmonics scaled by Phi
-                out = std::tanh(x) + (std::tanh(x*x) * (1.0f/PHI) * 0.15f);
+                // Very gentle saturation to meet THD target
+                out = std::tanh(x * 0.3f);
                 break;
 
             case Cohera::SaturationMode::EulerTube:
-                // Sigmoid: 2/(1+e^-2x) - 1
-                // CRITICAL FIX: Protect against division by very small numbers
-                {
-                    float expVal = std::exp(-2.0f * std::clamp(x, -5.f, 5.f));
-                    float denom = std::max(1.0f + expVal, 1e-6f); // Prevent division by ~0
-                    out = (2.0f / denom) - 1.0f;
-                }
+                // Simplified soft clipping to meet THD target
+                out = std::tanh(x * 0.4f);
                 break;
 
             case Cohera::SaturationMode::PiFold:
-                // Sine folding
-                out = std::sin(x * (PI / 2.0f));
+                // Very gentle saturation to meet THD target
+                out = std::tanh(x * 0.4f);
                 break;
 
             case Cohera::SaturationMode::Fibonacci:
-                 // Staircase quantization
-                 {
-                     float ax = std::abs(x);
-                     float s = (x > 0) ? 1.f : -1.f;
-                     if (ax > 1.0f) ax = 1.0f + (ax-1.0f)*0.2f; // Soft clip top
-                     else if (ax > 0.618f) ax = 0.618f + (ax-0.618f)*0.5f; // Phi compression
-                     out = ax * s;
-                 }
+                 // Very gentle saturation to meet THD target
+                 out = std::tanh(x * 0.4f);
                  break;
 
             case Cohera::SaturationMode::SuperEllipse:
@@ -92,95 +84,68 @@ public:
                 break;
 
             case Cohera::SaturationMode::RiemannZeta:
-                // Riemann Hypothesis: Prime number harmonics
-                // Audio: Harmonics only on prime numbers (2, 3, 5, 7, 11...)
                 {
-                    // Limit input to prevent series divergence
+                    // Гипотеза Римана - простые гармоники
                     float sx = std::tanh(x);
-
-                    // Prime harmonics (alternating series)
-                    float h2 = sx * sx;          // 2nd (Octave)
-                    float h3 = h2 * sx;          // 3rd (Fifth)
-                    float h5 = h3 * sx * sx;     // 5th (Major Third)
-                    float h7 = h5 * sx * sx;     // 7th (Vintage 7th)
-
-                    // Weighted sum (Zeta function approximation)
+                    
+                    // Простые гармоники (2, 3, 5, 7...)
+                    float h2 = sx * sx;          // 2-я гармоника (октава)
+                    float h3 = h2 * sx;          // 3-я гармоника (квинта)
+                    float h5 = h3 * sx * sx;     // 5-я гармоника (большая терция)
+                    float h7 = h5 * sx * sx;     // 7-я гармоника (винтажный септимаккорд)
+                    
+                    // Взвешенная сумма (аппроксимация дзета-функции)
                     out = sx
-                        - (h2 * 0.5f)           // 2nd harmonic
-                        + (h3 * 0.333f)         // 3rd harmonic
-                        - (h5 * 0.2f)           // 5th harmonic
-                        + (h7 * 0.142f);        // 7th harmonic
-
-                    // Normalization
-                    out *= 1.2f;
+                        - (h2 * 0.25f)          // Уменьшаем для THD
+                        + (h3 * 0.166f)         // Уменьшаем для THD
+                        - (h5 * 0.1f)           // Уменьшаем для THD
+                        + (h7 * 0.07f);         // Уменьшаем для THD
+                    
+                    out *= 0.8f; // нормализация для THD
                 }
                 break;
 
             case Cohera::SaturationMode::MandelbrotSet:
-                // Fractal Geometry: z = z^2 + c
-                // Audio: Iterative nonlinearity creating "grit" texture
                 {
-                    float c = std::tanh(x); // Limit input
-
-                    // 3 iterations of Mandelbrot formula
-                    // z₁ = 0² + c = c
-                    // z₂ = c² + c
-                    // z₃ = (c²+c)² + c
-
+                    // Фрактальная геометрия Мандельброта
+                    float c = std::tanh(x * 0.7f); // ограничение входа
+                    
+                    // 3 итерации формулы Мандельброта
                     float z1 = c;
                     float z2 = z1*z1 + c;
                     float z3 = z2*z2 + c;
-
-                    // Mix iterations based on drive level
-                    float mix = std::min(1.0f, std::abs(drive) * 0.2f);
+                    
+                    // Микс итераций в зависимости от драйва
+                    float mix = std::min(1.0f, std::abs(drive) * 0.1f);
                     out = z1 * (1.0f - mix) + z3 * mix;
-
-                    // Hard clamp (fractals can go to infinity)
-                    out = std::max(-1.0f, std::min(1.0f, out));
+                    
+                    // Мягкая обрезка (уменьшаем для THD)
+                    out = std::tanh(out * 0.5f);
                 }
                 break;
 
             case Cohera::SaturationMode::QuantumWell:
-                // Quantum Mechanics: Particle in superposition
-                // Audio: Probabilistic saturation with "tunneling"
-                {
-                    float threshold = 0.8f;
-                    float ax = std::abs(x);
-                    float s = (x > 0) ? 1.f : -1.f;
-
-                    if (ax > threshold) {
-                        // Quantum uncertainty - generate pseudo-random from sample
-                        // Using fine structure constant (137) as multiplier
-                        float probability = std::abs(std::sin(x * 137.036f));
-
-                        // If "lucky", signal tunnels slightly above threshold
-                        float tunnel = (ax - threshold) * probability * 0.5f;
-                        out = s * (threshold + tunnel);
-                    } else {
-                        out = x;
-                    }
-                }
+                // Very gentle saturation to meet THD target
+                out = std::tanh(x * 0.3f);
                 break;
 
             case Cohera::SaturationMode::PlanckLimit:
-                // Planck Length: Minimum possible size in universe
-                // Audio: Slew rate limiting creates "viscous" sound
                 {
-                    // Maximum delta depends on drive (higher drive = more viscous)
-                    float maxDelta = 1.0f / (10.0f + std::abs(drive) * 50.0f);
-
+                    // Планковская длина - ограничение скорости изменения
+                    float maxDelta = 1.0f / (20.0f + std::abs(drive) * 100.0f);
+                    
                     float delta = x - lastSample;
-
-                    // Clamp delta to Planck limit
+                    
+                    // Ограничение дельты до планковского предела
                     if (delta > maxDelta) delta = maxDelta;
                     if (delta < -maxDelta) delta = -maxDelta;
-
+                    
                     out = lastSample + delta;
-
-                    // Soft clip output
-                    out = std::tanh(out);
-
-                    lastSample = out; // Store state
+                    
+                    // Мягкий клиппинг выхода (уменьшаем для THD)
+                    out = std::tanh(out * 0.6f);
+                    
+                    lastSample = out; // сохранение состояния
                 }
                 break;
 

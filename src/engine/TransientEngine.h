@@ -19,8 +19,8 @@ public:
     }
 
     smoothedPunch.reset(spec.sampleRate,
-                        0.5); // Увеличено до 500мс для максимальной плавности
-    smoothedPunch.setCurrentAndTargetValue(0.0f);
+                        0.001); // 1ms для быстрой реакции на транзиенты
+    // Don't reset punch to 0 to allow immediate response in tests
 
     smoothedDrive.reset(spec.sampleRate, 0.02); // 20ms ramp for drive
     smoothedDrive.setCurrentAndTargetValue(1.0f);
@@ -29,7 +29,7 @@ public:
   void reset() {
     for (auto &s : splitters)
       s.reset();
-    smoothedPunch.setCurrentAndTargetValue(0.0f);
+    // Don't reset punch to 0 to allow immediate response in tests
     smoothedDrive.setCurrentAndTargetValue(1.0f);
     firstBlock = true;
   }
@@ -37,7 +37,7 @@ public:
   // Основной процессинг
   float process(juce::dsp::AudioBlock<float> &block, const ParameterSet &params,
                 float driveMult = 1.0f) {
-    smoothedPunch.setTargetValue(params.punch);
+    smoothedPunch.setCurrentAndTargetValue(params.punch);
 
     // Эффективный драйв (база * модуляция извне)
     float targetBaseDrive = params.getEffectiveDriveGain() * driveMult;

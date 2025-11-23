@@ -31,6 +31,7 @@ public:
   void paint(juce::Graphics &) override;
   void paintOverChildren(juce::Graphics &) override;
   void resized() override;
+  void visibilityChanged() override;
   void timerCallback() override;
 
 private:
@@ -100,7 +101,7 @@ private:
   NeuralLink neuralLink;
   std::unique_ptr<NebulaShaper> nebulaShaper; // Cosmic particle visualizer
   TechDecor techDecor;
-  BioScanner bioScanner;
+  std::unique_ptr<BioScanner> bioScanner; // Thermal core visualizer
   GlitchOverlay glitchOverlay;
   PlasmaCore plasmaCore; // Central plasma energy core
 

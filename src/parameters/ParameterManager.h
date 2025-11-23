@@ -43,36 +43,40 @@ public:
   ParameterSet getCurrentParams() const {
     ParameterSet params;
 
+    // OPTIMIZATION: Use memory_order_relaxed for real-time audio thread.
+    // We don't need sequential consistency between parameters.
+    const auto order = std::memory_order_relaxed;
+
     // Читаем атомики
-    params.drive = pDrive->load();
-    params.mix = pMix->load() / 100.0f;
-    params.outputGain = juce::Decibels::decibelsToGain(pOutput->load());
+    params.drive = pDrive->load(order);
+    params.mix = pMix->load(order) / 100.0f;
+    params.outputGain = juce::Decibels::decibelsToGain(pOutput->load(order));
 
-    params.saturationMode = static_cast<SaturationMode>((int)pMode->load());
-    params.qualityMode = static_cast<QualityMode>((int)pQuality->load());
-    params.cascade = pCascade->load() > 0.5f;
-    params.deltaListen = pDelta->load() > 0.5f;
+    params.saturationMode = static_cast<SaturationMode>((int)pMode->load(order));
+    params.qualityMode = static_cast<QualityMode>((int)pQuality->load(order));
+    params.cascade = pCascade->load(order) > 0.5f;
+    params.deltaListen = pDelta->load(order) > 0.5f;
 
-    params.preFilterFreq = pTighten->load();
-    params.postFilterFreq = pSmooth->load();
-    params.punch = pPunch->load() / 100.0f;
-    params.dynamics = pDynamics->load() / 100.0f;
+    params.preFilterFreq = pTighten->load(order);
+    params.postFilterFreq = pSmooth->load(order);
+    params.punch = pPunch->load(order) / 100.0f;
+    params.dynamics = pDynamics->load(order) / 100.0f;
 
-    params.netDepth = pNetDepth->load() / 100.0f;
-    params.netSmooth = pNetSmooth->load() / 100.0f;
-    params.netSens = pNetSens->load() / 100.0f;
+    params.netDepth = pNetDepth->load(order) / 100.0f;
+    params.netSmooth = pNetSmooth->load(order) / 100.0f;
+    params.netSens = pNetSens->load(order) / 100.0f;
 
-    params.globalHeat = pHeat->load() / 100.0f;
-    params.analogDrift = pDrift->load() / 100.0f;
-    params.variance = pVariance->load() / 100.0f;
-    params.entropy = pEntropy->load() / 100.0f;
-    params.noise = pNoise->load() / 100.0f;
-    params.focus = pFocus->load() / 100.0f;
+    params.globalHeat = pHeat->load(order) / 100.0f;
+    params.analogDrift = pDrift->load(order) / 100.0f;
+    params.variance = pVariance->load(order) / 100.0f;
+    params.entropy = pEntropy->load(order) / 100.0f;
+    params.noise = pNoise->load(order) / 100.0f;
+    params.focus = pFocus->load(order) / 100.0f;
 
-    params.groupId = (int)pGroup->load();
-    params.netRole = static_cast<NetworkRole>((int)pRole->load());
-    params.netMode = static_cast<NetworkMode>((int)pNetMode->load());
-    params.netReaction = static_cast<NetReaction>((int)pNetReaction->load());
+    params.groupId = (int)pGroup->load(order);
+    params.netRole = static_cast<NetworkRole>((int)pRole->load(order));
+    params.netMode = static_cast<NetworkMode>((int)pNetMode->load(order));
+    params.netReaction = static_cast<NetReaction>((int)pNetReaction->load(order));
 
     return params;
   }

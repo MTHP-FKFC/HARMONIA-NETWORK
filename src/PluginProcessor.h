@@ -4,6 +4,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <mutex>
 #include <vector>
+#include <array>
 
 // Core architecture
 #include "CoheraTypes.h"
@@ -80,6 +81,7 @@ public:
   
   // Parameter access
   juce::AudioProcessorValueTreeState& getAPVTS() { return apvts; }
+  Cohera::ParameterManager& getParamManager() { return paramManager; }
   
   // Core engine access (for ReactorKnob and advanced UI)
   Cohera::ProcessingEngine& getProcessingEngine() { return processingEngine; }
@@ -88,6 +90,12 @@ public:
   float getInputRMS() const { return processingEngine.getInputRMS(); }
   float getOutputRMS() const { return outputRMS.load(); }
   float getTransientLevel() const { return lastTransientLevel.load(); }
+  
+  // Thermal state for BioScanner visualization
+  float getCurrentTemperature() const { return currentThermalState.load(); }
+  float getNormalizedTemperature() const { 
+    return juce::jmap(currentThermalState.load(), 20.0f, 120.0f, 0.0f, 1.0f); 
+  }
   
   // Network activity (for SmartReactorKnob)
   float getNetworkInput() const { return processingEngine.getInputRMS(); }
@@ -104,24 +112,26 @@ public:
     return processingEngine.getGainReductionValues();
   }
   
-  // Transfer function visualization (for NebulaShaper)
+  // Transfer function visualization (for NebulaShaper) - LOCK-FREE
   void pushVisualizerData(float input, float output) {
-    std::lock_guard<std::mutex> lock(visualizerMutex);
-    visualizerFIFO.push_back({input, output});
-    if (visualizerFIFO.size() > 2000) {
-      visualizerFIFO.erase(visualizerFIFO.begin());
+    juce::AbstractFifo::ScopedWrite writer(visualizerFifo, 1);
+    if (writer.blockSize1 > 0) {
+      visualizerBuffer[writer.startIndex1] = {input, output};
+    }
+    if (writer.blockSize2 > 0) {
+      visualizerBuffer[writer.startIndex2] = {input, output};
     }
   }
   
   bool popVisualizerData(float& input, float& output) {
-    std::lock_guard<std::mutex> lock(visualizerMutex);
-    if (visualizerFIFO.empty())
-      return false;
-    auto point = visualizerFIFO.front();
-    visualizerFIFO.erase(visualizerFIFO.begin());
-    input = point.first;
-    output = point.second;
-    return true;
+    juce::AbstractFifo::ScopedRead reader(visualizerFifo, 1);
+    if (reader.blockSize1 > 0) {
+      auto point = visualizerBuffer[reader.startIndex1];
+      input = point.first;
+      output = point.second;
+      return true;
+    }
+    return false;
   }
 
 private:
@@ -149,10 +159,11 @@ private:
   // Atomics for UI thread-safe access
   std::atomic<float> outputRMS{0.0f};
   std::atomic<float> lastTransientLevel{0.0f};
+  std::atomic<float> currentThermalState{20.0f}; // BioScanner temperature
   
-  // Transfer function visualizer (NebulaShaper)
-  std::vector<std::pair<float, float>> visualizerFIFO;
-  std::mutex visualizerMutex;
+  // Transfer function visualizer (NebulaShaper) - LOCK-FREE
+  juce::AbstractFifo visualizerFifo { 4096 };
+  std::array<std::pair<float, float>, 4096> visualizerBuffer;
   
   // Pre-allocated buffers (CRITICAL: No heap allocations in processBlock!)
   juce::AudioBuffer<float> dryBuffer;
