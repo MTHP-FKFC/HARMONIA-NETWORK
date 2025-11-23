@@ -257,6 +257,67 @@ set_target_properties(IndustryStandardTest PROPERTIES
 )
 
 # ============================================================================
+# STRESS TEST SUITE
+# ============================================================================
+message(STATUS "Configuring Stress Test Suite...")
+
+add_executable(StressTest
+    tests/stress_test.cpp
+    src/PluginProcessor.cpp
+    src/PluginProcessor.h
+    src/PluginEditor.cpp
+    src/PluginEditor.h
+    
+    # Core engines
+    src/engine/MixEngine.h
+    src/engine/FilterBankEngine.h
+    src/engine/TransientEngine.h
+    
+    # DSP modules
+    src/dsp/FilterBank.cpp
+    src/dsp/FilterBank.h
+    src/dsp/MathSaturator.h
+    src/dsp/DCBlocker.h
+    src/dsp/Envelope.h
+    src/dsp/TransientSplitter.h
+    src/dsp/ThermalModel.h
+    src/dsp/HarmonicEntropy.h
+    src/dsp/StereoVariance.h
+    src/dsp/MSMatrix.h
+    src/dsp/StereoFocus.h
+    src/dsp/InteractionEngine.h
+    
+    # FIR coefficients
+    src/FIR/fir_coeffs_multi_sr.h
+    src/FIR/fir_minphase_128.h
+    
+    # Network and utils
+    src/network/NetworkManager.h
+    src/network/NetworkController.h
+    src/utils/TrackAudioFifo.h
+    
+    # UI minimal (for SimpleFFT dependency)
+    src/ui/SimpleFFT.h
+)
+
+target_include_directories(StressTest PRIVATE src)
+
+target_link_libraries(StressTest PRIVATE
+    juce::juce_audio_processors
+    juce::juce_dsp
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_graphics
+)
+
+set_target_properties(StressTest PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests"
+)
+
+# ============================================================================
 # REGRESSION TEST SUITE (Week 0A)
 # ============================================================================
 
