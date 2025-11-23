@@ -1,0 +1,479 @@
+
+    AU Validation Tool
+    Version: 1.10.0 
+    Copyright 2003-2019, Apple Inc. All Rights Reserved.
+    Specify -h (-help) for command options
+
+--------------------------------------------------
+VALIDATING AUDIO UNIT: 'aufx' - 'Csat' - 'Cohr'
+--------------------------------------------------
+Manufacturer String: CoheraAudio
+AudioUnit Name: Cohera Saturator
+Component Version: 0.1.0 (0x100)
+
+* * PASS
+--------------------------------------------------
+TESTING OPEN TIMES:
+COLD:
+Time to open AudioUnit:         145.919 ms
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+WARM:
+Time to open AudioUnit:         7.612  ms
+This AudioUnit is a version 2 implementation.
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+FIRST TIME:
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+Time for initialization:        1.698 ms
+
+* * PASS
+--------------------------------------------------
+VERIFYING DEFAULT SCOPE FORMATS:
+Input Scope Bus Configuration:
+ Default Bus Count:1
+    Bus Name: Input
+    Default Format: AudioStreamBasicDescription:  2 ch,  44100 Hz, Float32, deinterleaved
+
+Output Scope Bus Configuration:
+ Default Bus Count:1
+    Bus Name: Output
+    Default Format: AudioStreamBasicDescription:  2 ch,  44100 Hz, Float32, deinterleaved
+
+* * PASS
+--------------------------------------------------
+VERIFYING REQUIRED PROPERTIES:
+
+* * PASS
+--------------------------------------------------
+VERIFYING RECOMMENDED PROPERTIES:
+  VERIFYING PROPERTY: Latency
+    PASS
+  VERIFYING PROPERTY: Tail Time
+    PASS
+  VERIFYING PROPERTY: Bypass Effect
+    PASS
+
+* * PASS
+--------------------------------------------------
+VERIFYING OPTIONAL PROPERTIES:
+
+* * PASS
+--------------------------------------------------
+VERIFYING SPECIAL PROPERTIES:
+
+VERIFYING CUSTOM UI
+Cocoa Views Available: 1
+  JUCE_AUCocoaViewClass_f239fd2f55d2cd3f
+    PASS
+
+HAS FACTORY PRESETS
+    ID:   0    Name: Untitled
+
+VERIFYING CLASS INFO
+    PASS
+
+TESTING HOST CALLBACKS
+    PASS
+
+* * PASS
+--------------------------------------------------
+PUBLISHED PARAMETER INFO:
+
+# # # 24 Global Scope Parameters:
+Parameter ID:0
+Name: Drive
+Parameter Type: Generic
+Values: Minimum = 0.0, Default = 0.0, Maximum = 100.0
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:1
+Name: Mix
+Parameter Type: Generic
+Values: Minimum = 0, Default = 100, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:2
+Name: Output
+Parameter Type: Generic
+Values: Minimum = -12.0, Default = 0.0, Maximum = 12.0
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:3
+Name: Interaction Mode
+Parameter Type: Indexed
+Values: Minimum = Unmasking (Duck), Default = Unmasking (Duck), Maximum = Harmonic Shield
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:4
+Name: Cascade (Output Limiter)
+Parameter Type: Boolean
+Values: Minimum = Off, Default = Off, Maximum = On
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:5
+Name: Network Reaction
+Parameter Type: Indexed
+Values: Minimum = Clean Gain, Default = Drive Boost, Maximum = Bit Crush
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:6
+Name: Tighten (Pre HPF)
+Parameter Type: Generic
+Values: Minimum = 10, Default = 10, Maximum = 1000
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:7
+Name: Smooth (Post LPF)
+Parameter Type: Generic
+Values: Minimum = 2000, Default = 22000, Maximum = 22000
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:8
+Name: Dynamics Preservation
+Parameter Type: Generic
+Values: Minimum = 0, Default = 50, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:9
+Name: Interaction Depth
+Parameter Type: Generic
+Values: Minimum = 0, Default = 100, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:10
+Name: Reaction Smooth
+Parameter Type: Generic
+Values: Minimum = 0, Default = 10, Maximum = 200
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:11
+Name: Sensitivity
+Parameter Type: Generic
+Values: Minimum = 0, Default = 100, Maximum = 200
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:12
+Name: Global Heat
+Parameter Type: Generic
+Values: Minimum = 0, Default = 0, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:13
+Name: Punch
+Parameter Type: Generic
+Values: Minimum = -100, Default = 0, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:14
+Name: Analog Drift
+Parameter Type: Generic
+Values: Minimum = 0, Default = 0, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:15
+Name: Stereo Variance
+Parameter Type: Generic
+Values: Minimum = 0, Default = 0, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:16
+Name: Noise Floor
+Parameter Type: Generic
+Values: Minimum = 0, Default = 0, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:17
+Name: Stereo Focus
+Parameter Type: Generic
+Values: Minimum = -100, Default = 0, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:18
+Name: Delta Listen
+Parameter Type: Boolean
+Values: Minimum = Off, Default = Off, Maximum = On
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:19
+Name: Harmonic Entropy
+Parameter Type: Generic
+Values: Minimum = 0, Default = 0, Maximum = 100
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:20
+Name: Algorithm
+Parameter Type: Indexed
+Values: Minimum = Golden Ratio, Default = Golden Ratio, Maximum = Rectifier
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:21
+Name: Quality
+Parameter Type: Indexed
+Values: Minimum = Eco (Low CPU), Default = Pro (High Quality), Maximum = Pro (High Quality)
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:22
+Name: Group ID
+Parameter Type: Generic
+Values: Minimum = 0, Default = 0, Maximum = 7
+Flags: Values Have Strings, High Resolution, Can Ramp, Readable, Writable 
+  -parameter PASS
+
+Parameter ID:23
+Name: Role
+Parameter Type: Indexed
+Values: Minimum = Listener, Default = Listener, Maximum = Reference
+Flags: Values Have Strings, High Resolution, Readable, Writable 
+  -parameter PASS
+
+Testing that parameters retain value across reset and initialization
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+  PASS
+
+* * PASS
+--------------------------------------------------
+FORMAT TESTS:
+
+Reported Channel Capabilities (explicit):
+      [-1, -2]  
+
+Input/Output Channel Handling:
+1-1   1-2   1-4   1-5   1-6   1-7   1-8   2-2   2-4   2-5   2-6   2-7   2-8   4-4   4-5   5-5   6-6   7-7   8-8
+X     X     X     X     X     X     X     X     X     X     X     X     X     X     X     X     X     X     X     
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+
+* * PASS
+--------------------------------------------------
+RENDER TESTS:
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+
+Input Format: AudioStreamBasicDescription:  2 ch,  44100 Hz, Float32, deinterleaved
+Output Format: AudioStreamBasicDescription:  2 ch,  44100 Hz, Float32, deinterleaved
+Render Test at 512 frames
+Slicing Render Test at 64 frames
+  PASS
+
+
+Render Test at 64 frames, sample rate: 22050 Hz
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+Render Test at 137 frames, sample rate: 96000 Hz
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+Render Test at 4096 frames, sample rate: 48000 Hz
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+Render Test at 4096 frames, sample rate: 192000 Hz
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+Render Test at 4096 frames, sample rate: 11025 Hz
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+Render Test at 512 frames, sample rate: 44100 Hz
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+  PASS
+
+1 Channel Test:
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+Render Test at 512 frames
+  PASS
+
+1 to 2 Channel Render Test at 256 frames
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+  PASS
+[MixEngineDiag] Setting dry delay to 93.000 samples
+
+[MixEngineDiag] Setting dry delay to 93.000 samples
+Latency (analytic): os=59.500 fbHigh=32.000 fbBase=8.000 tone=25.500 total=93.000
+Host latency updated: 93
+
+Checking connection semantics:
+Connection format:
+AudioStreamBasicDescription:  2 ch,  44100 Hz, Float32, deinterleaved
+  PASS
+
+Bad Max Frames - Render should fail
+  PASS
+
+Checking parameter setting
+Using AudioUnitSetParameter
+Using AudioUnitScheduleParameter
+  PASS
+
+Checking ramped parameter scheduling
+  PASS
+
+Test MIDI
+  PASS
+
+* * PASS
+--------------------------------------------------
+AU VALIDATION SUCCEEDED.
+--------------------------------------------------
